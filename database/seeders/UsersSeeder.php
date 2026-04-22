@@ -26,7 +26,7 @@ class UsersSeeder extends Seeder
             'is_jastiper'=> false,
         ]);
 
-        User::craete([
+        User::create([
             'full_name' => 'Budi Penumpang',
             'username'  => 'budibareng',
             'email'     => 'budi@barengin.com',

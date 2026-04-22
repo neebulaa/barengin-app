@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('trip_orders', function (Blueprint $table) {
+        Schema::create('jastip_item_variants', function(Blueprint $table){
             $table->id();
-            $table->foreignUuid('transactions_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->integer('quantity');
-            $table->decimal('total');
-            $table->enum('paid', ['panding', 'unpaid']);
+            $table->foreignId('jastip_items_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->string('var_name');
+            $table->string('var_value');
+            $table->decimal('additioanl_price', 15, 2);
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('trip_orders');
+        Schema::dropIfExists('jastip_item_variants');
     }
 };
