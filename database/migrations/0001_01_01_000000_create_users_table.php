@@ -14,15 +14,19 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id('user_id');
             $table->string('full_name');
-            $table->text("bio")->nullable();
             $table->string('username')->unique();
             $table->string('email')->unique();
             $table->string('password');
+            $table->string('profile_image')->nullable();
             $table->string('phone')->nullable();
             $table->enum("gender", ['male', 'female', 'other'])->default('other');
             $table->date('birth_date')->nullable();
-            $table->string('profile_image')->nullable();
+            $table->text("bio")->nullable();
+            $table->decimal("jastiper_rating", 3,2)->nullable();
             $table->boolean('is_admin')->default(false);
+            $table->boolean('is_guider')->default(false);
+            $table->boolean('is_jastiper')->default(false);
+            $table->string('google_id')->nullable()->unique();
             $table->timestamps();
         });
 
