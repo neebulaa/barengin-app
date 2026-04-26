@@ -6,20 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        Schema::create('guide_rating_trips', function(Blueprint $table){
+            $table->id();
             $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
-            $table->decimal('total_amount');
-            $table->enum('type', ['jastip', 'trip']);
-            $table->string('payment_method');
-            $table->string('va_number', 25);
-            $table->dateTime('expired_at');
+            $table->foreignId('trips_id')->constrained();
+            $table->decimal('amount_rating', 3,2);
+            $table->text('comment')->nullable();
             $table->timestamps();
         });
     }
@@ -29,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transactions');
+        Schema::dropIfExists('guide_rating_trips');
     }
 };

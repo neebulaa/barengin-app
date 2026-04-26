@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('image_activities', function (Blueprint $table) {
+        Schema::create('trip_order_fees', function(Blueprint $table){
             $table->id();
-            $table->foreignId('detail_trip_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->string('activity_img_name');
+            $table->foreignId('trip_order_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->string('fee_name');
+            $table->decimal('amount', 15,2);
             $table->timestamps();
         });
     }
@@ -24,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('image_activities');
+        Schema::dropIfExists('trip_order_fees');
     }
 };

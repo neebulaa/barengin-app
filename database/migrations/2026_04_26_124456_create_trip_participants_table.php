@@ -6,20 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        Schema::create('trip_participants', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_order_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
-            $table->decimal('total_amount');
-            $table->enum('type', ['jastip', 'trip']);
-            $table->string('payment_method');
-            $table->string('va_number', 25);
-            $table->dateTime('expired_at');
+            $table->string('full_name');
+            $table->string('paspor', 12)->nullable();
+            $table->string('phone_number', 15);
+            $table->string('nik', 16);
             $table->timestamps();
         });
     }
@@ -29,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transactions');
+        Schema::dropIfExists('trip_participants');
     }
 };

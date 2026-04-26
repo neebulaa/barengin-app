@@ -26,6 +26,7 @@ return new class extends Migration
             $table->boolean('is_admin')->default(false);
             $table->boolean('is_guider')->default(false);
             $table->boolean('is_jastiper')->default(false);
+            $table->boolean('is_verified')->default(false);
             $table->string('google_id')->nullable()->unique();
             $table->timestamps();
         });
