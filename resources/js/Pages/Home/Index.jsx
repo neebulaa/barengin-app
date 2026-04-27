@@ -1,6 +1,7 @@
 import MainLayout from "@/Layouts/MainLayout";
 import Button from "@/Components/Button";
 import { GoHeart } from "react-icons/go";
+import { useState } from "react";
 
 export default function Home() {
     // --- Data Dummy untuk Mapping ---
@@ -10,28 +11,28 @@ export default function Home() {
             title: "Malang, Jawa Timur",
             duration: "3 Hari, 2 Malam",
             rating: "4,9",
-            image: "https://images.unsplash.com/photo-1555899434-94d1368aa7af?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
+            image: "/assets/hero-bg.jpg",
         },
         {
             id: 2,
             title: "Pati, Jawa Tengah",
             duration: "3 Hari, 2 Malam",
             rating: "4,9",
-            image: "https://images.unsplash.com/photo-1604928141064-207cea6f571f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
+            image: "/assets/hero-bg.jpg",
         },
         {
             id: 3,
             title: "Bali",
             duration: "3 Hari, 2 Malam",
             rating: "4,9",
-            image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
+            image: "/assets/hero-bg.jpg",
         },
         {
             id: 4,
             title: "Pontianak, Kalbar",
             duration: "3 Hari, 2 Malam",
             rating: "4,8",
-            image: "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
+            image: "/assets/hero-bg.jpg",
         },
     ];
 
@@ -46,7 +47,7 @@ export default function Home() {
             rating: "4,9",
             tag: "Berlangsung hingga 3 Okt 2025",
             tagColor: "bg-blue-500",
-            image: "https://via.placeholder.com/200x150?text=Kacang+Mente",
+            image: "/assets/hero-bg.jpg",
         },
         {
             id: 2,
@@ -58,7 +59,7 @@ export default function Home() {
             rating: "4,9",
             tag: "Akan Buka 1 Okt 2025",
             tagColor: "bg-red-500",
-            image: "https://via.placeholder.com/200x150?text=Celana",
+            image: "/assets/hero-bg.jpg",
         },
         {
             id: 3,
@@ -70,7 +71,7 @@ export default function Home() {
             rating: "4,9",
             tag: "Berlangsung hingga 3 Okt 2025",
             tagColor: "bg-blue-500",
-            image: "https://via.placeholder.com/200x150?text=Kacang+Mente",
+            image: "/assets/hero-bg.jpg",
         },
         {
             id: 4,
@@ -82,18 +83,19 @@ export default function Home() {
             rating: "4,9",
             tag: "Akan Buka 1 Okt 2025",
             tagColor: "bg-red-500",
-            image: "https://via.placeholder.com/200x150?text=Celana",
+            image: "/assets/hero-bg.jpg",
         },
     ];
+    const [activeTab, setActiveTab] = useState("trip");
 
     return (
         <>
             {/* 1. Hero Section */}
             <header
-                className="relative pt-24 pb-32 md:pt-40 md:pb-48 bg-cover bg-center"
+                className="relative pt-24 pb-[26rem]  md:pt-40 md:pb-48 bg-cover bg-center"
                 style={{
                     backgroundImage:
-                        "linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')",
+                        "linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/assets/hero-bg.jpg')",
                 }}
             >
                 <div className="container mx-auto px-6 text-center text-white">
@@ -107,63 +109,221 @@ export default function Home() {
                 </div>
 
                 {/* Search Card (Floating) */}
-                <div className="absolute -bottom-24 left-1/2 transform -translate-x-1/2 w-[90%] md:w-3/4 bg-white rounded-2xl shadow-xl p-6">
-                    <div className="flex space-x-6 border-b border-gray-200 mb-6 pb-2 text-sm font-medium">
-                        <button className="text-blue-600 border-b-2 border-blue-600 pb-2 flex items-center gap-2">
+                <div className="absolute -bottom-24 left-1/2 transform -translate-x-1/2 w-[90%] lg:w-4/5 bg-white rounded-2xl shadow-xl p-6 z-10">
+                    {/* Tab Navigation */}
+                    <div className="flex space-x-8 border-b border-gray-200 mb-6 pb-0 text-sm font-medium">
+                        <button
+                            onClick={() => setActiveTab("trip")}
+                            className={`pb-3 flex items-center gap-2 transition border-b-2 ${activeTab === "trip" ? "text-blue-600 border-blue-600" : "text-gray-500 border-transparent hover:text-blue-500"}`}
+                        >
                             <i className="fa-solid fa-suitcase"></i> Trip Bareng
                         </button>
-                        <button className="text-gray-500 pb-2 flex items-center gap-2">
+                        <button
+                            onClick={() => setActiveTab("pergi")}
+                            className={`pb-3 flex items-center gap-2 transition border-b-2 ${activeTab === "pergi" ? "text-blue-600 border-blue-600" : "text-gray-500 border-transparent hover:text-blue-500"}`}
+                        >
                             <i className="fa-solid fa-user-group"></i> Pergi
                             Bareng
                         </button>
-                        <button className="text-gray-500 pb-2 flex items-center gap-2">
+                        <button
+                            onClick={() => setActiveTab("jastip")}
+                            className={`pb-3 flex items-center gap-2 transition border-b-2 ${activeTab === "jastip" ? "text-blue-600 border-blue-600" : "text-gray-500 border-transparent hover:text-blue-500"}`}
+                        >
                             <i className="fa-solid fa-cart-shopping"></i> Jastip
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div className="col-span-1">
-                            <label className="block text-xs text-gray-500 mb-1">
-                                Tujuan
-                            </label>
-                            <div className="relative">
-                                <i className="fa-solid fa-plane-departure absolute left-3 top-3 text-gray-400"></i>
+                    {/* 1. FORM TRIP BARENG (Default) */}
+                    {activeTab === "trip" && (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-fade-in">
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Tujuan
+                                </label>
+                                <div className="relative">
+                                    <i className="fa-solid fa-plane-departure absolute left-3 top-3.5 text-gray-400"></i>
+                                    <input
+                                        type="text"
+                                        placeholder="Jakarta"
+                                        className="w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Tanggal Mulai
+                                </label>
                                 <input
-                                    type="text"
-                                    placeholder="Jakarta"
-                                    className="w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                                    type="date"
+                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-gray-600 text-sm"
                                 />
                             </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Tanggal Selesai
+                                </label>
+                                <input
+                                    type="date"
+                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-gray-600 text-sm"
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <Button
+                                    type="primary"
+                                    className="w-full py-2 flex justify-center items-center gap-2 rounded-full"
+                                >
+                                    <i className="fa-solid fa-magnifying-glass"></i>{" "}
+                                    Cari
+                                </Button>
+                            </div>
                         </div>
-                        <div className="col-span-1">
-                            <label className="block text-xs text-gray-500 mb-1">
-                                Tanggal Mulai
-                            </label>
-                            <input
-                                type="date"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-gray-600"
-                            />
+                    )}
+
+                    {/* 2. FORM PERGI BARENG */}
+                    {activeTab === "pergi" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end animate-fade-in">
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Dari mana
+                                </label>
+                                <div className="relative">
+                                    <i className="fa-solid fa-location-dot absolute left-3 top-3.5 text-gray-400"></i>
+                                    <input
+                                        type="text"
+                                        placeholder="Jln Sentul, Bogor Selatan"
+                                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Ke mana
+                                </label>
+                                <div className="relative">
+                                    <i className="fa-solid fa-plane absolute left-3 top-3.5 text-gray-400"></i>
+                                    <input
+                                        type="text"
+                                        placeholder="Bandar Soekarno Hatta"
+                                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Tanggal Pergi
+                                </label>
+                                <div className="relative">
+                                    <i className="fa-regular fa-calendar absolute left-3 top-3.5 text-gray-400"></i>
+                                    <input
+                                        type="text"
+                                        placeholder="01/01/2026"
+                                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm text-gray-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Waktu Kumpul
+                                </label>
+                                <div className="relative">
+                                    <i className="fa-regular fa-clock absolute left-3 top-3.5 text-gray-400"></i>
+                                    <input
+                                        type="text"
+                                        placeholder="09:00"
+                                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm text-gray-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Jumlah Orang
+                                </label>
+                                <div className="relative">
+                                    <i className="fa-regular fa-user absolute left-3 top-3.5 text-gray-400"></i>
+                                    <input
+                                        type="number"
+                                        placeholder="1"
+                                        min="1"
+                                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm text-gray-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <Button
+                                    type="primary"
+                                    className="w-full py-2 flex justify-center items-center gap-2 rounded-full"
+                                >
+                                    <i className="fa-solid fa-magnifying-glass"></i>{" "}
+                                    Cari
+                                </Button>
+                            </div>
                         </div>
-                        <div className="col-span-1">
-                            <label className="block text-xs text-gray-500 mb-1">
-                                Tanggal Selesai
-                            </label>
-                            <input
-                                type="date"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-gray-600"
-                            />
+                    )}
+
+                    {/* 3. FORM JASTIP */}
+                    {activeTab === "jastip" && (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-fade-in">
+                            <div className="col-span-1 md:col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Mau Jastip dari mana
+                                </label>
+                                <div className="relative">
+                                    <i className="fa-solid fa-location-dot absolute left-3 top-3.5 text-gray-400"></i>
+                                    <input
+                                        type="text"
+                                        placeholder="Jln Sentul, Bogor Selatan"
+                                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Kategori Jastip
+                                </label>
+                                <div className="relative">
+                                    {/* Class appearance-none menghilangkan panah bawaan browser, kita ganti pakai ikon FontAwesome */}
+                                    <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm appearance-none bg-white text-gray-600">
+                                        <option value="">
+                                            Makanan dan Snack
+                                        </option>
+                                        <option value="fashion">Pakaian</option>
+                                        <option value="elektronik">
+                                            Elektronik
+                                        </option>
+                                    </select>
+                                    <i className="fa-solid fa-chevron-down absolute right-3 top-3.5 text-gray-400 pointer-events-none text-xs"></i>
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-xs text-gray-500 mb-1">
+                                    Status
+                                </label>
+                                <div className="relative">
+                                    <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-sm appearance-none bg-white text-gray-600">
+                                        <option value="ongoing">
+                                            Sedang Berlangsung
+                                        </option>
+                                        <option value="outgoing">
+                                            Sudah Tutup
+                                        </option>
+                                        <option value="upcoming">
+                                            Akan Berlangsung
+                                        </option>
+                                    </select>
+                                    <i className="fa-solid fa-chevron-down absolute right-3 top-3.5 text-gray-400 pointer-events-none text-xs"></i>
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <Button
+                                    type="primary"
+                                    className="w-full py-2 flex justify-center items-center gap-2 rounded-full"
+                                >
+                                    <i className="fa-solid fa-magnifying-glass"></i>{" "}
+                                    Cari
+                                </Button>
+                            </div>
                         </div>
-                        <div className="col-span-1">
-                            {/* Integrasi Komponen Button Milikmu */}
-                            <Button
-                                type="primary"
-                                className="w-full py-2 flex justify-center items-center gap-2 rounded-full"
-                            >
-                                <i className="fa-solid fa-magnifying-glass"></i>{" "}
-                                Cari
-                            </Button>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </header>
 
@@ -188,13 +348,10 @@ export default function Home() {
 
                 <div className="relative rounded-2xl overflow-hidden h-[400px] mb-8">
                     <img
-                        src="https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                        src="/assets/hero-bg.jpg"
                         alt="About"
                         className="w-full h-full object-cover"
                     />
-                    <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white text-gray-900 px-6 py-3 rounded-full font-medium shadow-lg text-sm hover:scale-105 transition">
-                        Baca Lebih Lanjut
-                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 text-sm text-gray-600">
@@ -409,38 +566,38 @@ export default function Home() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 relative">
                     <img
-                        src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                        src="/assets/hero-bg.jpg"
                         className="rounded-xl w-full h-48 object-cover"
                         alt="Gallery"
                     />
                     <img
-                        src="https://images.unsplash.com/photo-1555899434-94d1368aa7af?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                        src="/assets/hero-bg.jpg"
                         className="rounded-xl w-full h-48 object-cover"
                         alt="Gallery"
                     />
                     <img
-                        src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                        src="/assets/hero-bg.jpg"
                         className="rounded-xl w-full h-48 object-cover"
                         alt="Gallery"
                     />
                     <img
-                        src="https://images.unsplash.com/photo-1604928141064-207cea6f571f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                        src="/assets/hero-bg.jpg"
                         className="rounded-xl w-full h-48 object-cover"
                         alt="Gallery"
                     />
 
                     <img
-                        src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                        src="/assets/hero-bg.jpg"
                         className="rounded-xl w-full h-48 object-cover col-span-2"
                         alt="Gallery"
                     />
                     <img
-                        src="https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                        src="/assets/hero-bg.jpg"
                         className="rounded-xl w-full h-48 object-cover"
                         alt="Gallery"
                     />
                     <img
-                        src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
+                        src="/assets/hero-bg.jpg"
                         className="rounded-xl w-full h-48 object-cover"
                         alt="Gallery"
                     />
@@ -526,7 +683,7 @@ export default function Home() {
 
                     <div>
                         <img
-                            src="https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                            src="/assets/hero-bg.jpg"
                             alt="Contact"
                             className="w-full h-64 object-cover rounded-2xl mb-8"
                         />
