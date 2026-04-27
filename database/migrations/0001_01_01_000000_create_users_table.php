@@ -19,10 +19,9 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->string('profile_image')->nullable();
             $table->string('phone')->nullable();
-            $table->enum("gender", ['male', 'female', 'other'])->default('other');
+            $table->enum("gender", ['male', 'female', 'silent'])->default('silent');
             $table->date('birth_date')->nullable();
             $table->text("bio")->nullable();
-            $table->decimal("jastiper_rating", 3,2)->nullable();
             $table->boolean('is_admin')->default(false);
             $table->boolean('is_guider')->default(false);
             $table->boolean('is_jastiper')->default(false);

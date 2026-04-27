@@ -17,4 +17,8 @@ class PostCommand extends Model
     public function user(){
         return $this->belongsTo(User::class, 'user_id','user_id');
     }
+
+    public function parent(){
+        return $this->belongsTo(User::class, 'user_id','user_id');
+    }
 }
