@@ -16,10 +16,10 @@ return new class extends Migration
             $table->string('name');
             $table->text('description');
             $table->integer('people_amount');
-            $table->dateTime('start_date');
-            $table->dateTime('end_date');
+            $table->date('start_date');
+            $table->date('end_date');
             $table->decimal('rating', 3, 2)->nullable();
-            $table->decimal('price');
+            $table->decimal('price', 15,2);
             $table->timestamps();
         });
     }

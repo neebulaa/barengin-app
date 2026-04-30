@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('jastip_items', function(Blueprint $table){
             $table->id();
-            $table->foreignId('jastips_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('jastip_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->string('name');
             $table->enum('category', ['Fashion', 'Skincare', 'Food', 'Merchandise']);
             $table->text('description');

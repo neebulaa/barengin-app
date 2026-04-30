@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('trip_orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignUuid('transactions_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignUuid('transaction_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->integer('quantity');
             $table->decimal('total');
-            $table->enum('paid', ['panding', 'unpaid']);
+            $table->enum('order_status', ['paid','panding', 'unpaid']);
             $table->timestamps();
         });
     }

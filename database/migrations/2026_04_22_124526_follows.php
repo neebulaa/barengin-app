@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('shipping_jastips', function(Blueprint $table){
+        Schema::create('follows', function(Blueprint $table){
             $table->id();
-            $table->foreignId('jastip_order_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->enum('shipping_method', ['pickup' ,'delivery']);
-            $table->decimal('shipping_cost', 15,2);
+            $table->foreignId('follower_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('following_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
             $table->timestamps();
         });
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('');
+        Schema::dropIfExists('follows');
     }
 };

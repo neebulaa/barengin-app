@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('jastip_item_images', function(Blueprint $table){
             $table->id();
-            $table->foreignId('jastip_items_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('jastip_item_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->string('image_name');
         });
     }
