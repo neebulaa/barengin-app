@@ -131,7 +131,7 @@ class AuthController extends Controller
     }
 
     public function forgotPassword(){
-        return Inertia::render('ForgotPassword', [
+        return Inertia::render('Auth/ForgotPassword', [
             'turnstileSiteKey' => config('services.turnstile.site_key'),
         ]);
     }
@@ -242,5 +242,15 @@ class AuthController extends Controller
             'type' => 'error',
             'message' => __($status),
         ]);
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
     }
 }
