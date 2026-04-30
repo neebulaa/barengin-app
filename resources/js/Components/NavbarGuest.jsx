@@ -1,144 +1,207 @@
 import { useState } from "react";
-// import { IoIosBus } from "react-icons/io"; // Kalo ga dipake bisa dihapus aja bro biar bersih
+import { Link } from "@inertiajs/react";
+import Button from "@/Components/Button.jsx";
+import NavDropdown from "@/Components/NavDropdown.jsx";
+import NavLink from "@/Components/NavLink.jsx";
+import { FaRoute, FaCarSide, FaChevronDown } from "react-icons/fa";
 
 export default function NavbarGuest() {
-    // State untuk dropdown desktop & mobile
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    // State BARU untuk menu hamburger mobile
+    const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
+    const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+    const dropdownItems = [
+        { label: "Trip Bareng", href: "/trip-bareng", icon: FaRoute },
+        { label: "Pergi Bareng", href: "/pergi-bareng", icon: FaCarSide },
+    ];
+
+    const closeAll = () => {
+        setIsDesktopDropdownOpen(false);
+        setIsMobileDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    };
+
     return (
-        <header className="bg-white border-b border-gray-200 shadow-sm relative z-50">
-            <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6 lg:px-8 flex justify-between items-center">
-                
-                {/* 1. Logo (Kiri) */}
-                <div className="flex-shrink-0 flex items-center">
+        <header className="bg-white border-b border-neutral-200 shadow-sm relative z-50">
+            <div className="max-w-[1200px] mx-auto px-4 py-2 sm:px-6 lg:px-8 flex justify-between items-center">
+                <Link
+                    href="/"
+                    className="flex items-center gap-2"
+                    onClick={closeAll}
+                >
                     <img
                         src="/assets/barengin_logows.png"
-                        className="h-18 w-auto"
+                        className="h-15 w-auto"
                         alt="Barengin"
                     />
+                </Link>
+
+                {/* Desktop nav */}
+                <nav className="hidden md:flex space-x-6 items-center text-neutral-700">
+                    <NavLink href="/">Beranda</NavLink>
+                    <NavDropdown
+                        label="Jalan Bareng"
+                        items={dropdownItems}
+                        isOpen={isDesktopDropdownOpen}
+                        onToggle={() => setIsDesktopDropdownOpen((v) => !v)}
+                        onNavigate={() => setIsDesktopDropdownOpen(false)}
+                        onClose={() => setIsDesktopDropdownOpen(false)}
+                        menuWidthClass="w-60"
+                        withDividers
+                    />
+
+                    <NavLink href="/jastip">Jastip</NavLink>
+                    <NavLink href="/forum">Forum</NavLink>
+                    <NavLink href="/leaderboard">Leaderboard</NavLink>
+                </nav>
+
+                <div className="hidden md:flex items-center space-x-4">
+                    <NavLink href="/login">Masuk</NavLink>
+
+                    <Button
+                        isButtonLink
+                        href="/sign-up"
+                        type="primary"
+                        variant="solid"
+                        size="sm"
+                    >
+                        Daftar
+                    </Button>
                 </div>
 
-                {/* 2. Menu Navigasi Desktop (Tengah) */}
-                <nav className="hidden md:flex space-x-10 items-center">
-                    <a href="#" className="text-gray-900 font-medium hover:text-[#0077D3] transition">
-                        Beranda
-                    </a>
-
-                    <div className="relative">
-                        <button
-                            className={`font-medium transition flex items-center gap-1.5 focus:outline-none ${isDropdownOpen ? 'text-[#0077D3]' : 'text-gray-900 hover:text-[#0077D3]'}`}
-                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        >
-                            Jalan Bareng
+                {/* Mobile hamburger */}
+                <div className="md:hidden flex items-center">
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileMenuOpen((v) => !v)}
+                        className="text-neutral-600 hover:text-primary-700 focus:outline-none transition-colors cursor-pointer"
+                        aria-expanded={isMobileMenuOpen}
+                        aria-label="Toggle menu"
+                    >
+                        {isMobileMenuOpen ? (
                             <svg
-                                className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-[#0077D3]' : 'text-gray-900'}`}
+                                className="w-7 h-7"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg"
                             >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-
-                        {isDropdownOpen && (
-                            <div className="absolute left-0 mt-3 w-48 rounded-xl shadow-lg bg-white border border-gray-100 z-50 overflow-hidden">
-                                <div className="py-2" role="menu">
-                                    <a href="/trip-bareng" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0077D3] transition">
-                                        Trip Bareng
-                                    </a>
-                                    <a href="/pergi-bareng" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0077D3] transition">
-                                        Pergi Bareng
-                                    </a>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <a href="#" className="text-gray-900 font-medium hover:text-[#0077D3] transition">
-                        Jastip
-                    </a>
-                    <a href="#" className="text-gray-900 font-medium hover:text-[#0077D3] transition">
-                        Forum
-                    </a>
-                </nav>
-
-                {/* 3. Tombol Aksi Desktop (Kanan) */}
-                <div className="hidden md:flex items-center space-x-6">
-                    <a href="/login" className="text-gray-900 font-medium hover:text-[#0077D3] transition">
-                        Masuk
-                    </a>
-                    <a href="/sign-up" className="bg-[#0077D3] text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition">
-                        Daftar
-                    </a>
-                </div>
-
-                {/* 4. Hamburger Menu Button (Mobile) */}
-                <div className="md:hidden flex items-center">
-                    <button 
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} // Tambahin onClick di sini
-                        className="text-gray-600 hover:text-[#0077D3] focus:outline-none transition"
-                    >
-                        {/* Ganti ikon jadi X kalau menu lagi kebuka */}
-                        {isMobileMenuOpen ? (
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
                             </svg>
                         ) : (
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                            <svg
+                                className="w-7 h-7"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M4 6h16M4 12h16m-7 6h7"
+                                />
                             </svg>
                         )}
                     </button>
                 </div>
             </div>
 
-            {/* --- 5. ISI MENU MOBILE (Muncul kalau isMobileMenuOpen = true) --- */}
+            {/* Mobile menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white border-t border-gray-100 absolute w-full left-0 shadow-lg">
+                <div className="md:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">
                     <div className="px-4 pt-2 pb-4 space-y-1">
-                        <a href="#" className="block px-3 py-3 rounded-md text-base font-medium text-gray-900 hover:text-[#0077D3] hover:bg-gray-50">
+                        <Link
+                            href="/"
+                            onClick={closeAll}
+                            className="block px-3 py-3 rounded-md text-base font-medium text-neutral-700 hover:text-primary-700 hover:bg-neutral-50 transition-colors"
+                        >
                             Beranda
-                        </a>
-                        
-                        {/* Dropdown Mobile untuk Jalan Bareng */}
-                        <div className="space-y-1">
-                            <button 
-                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                className="w-full flex justify-between items-center px-3 py-3 rounded-md text-base font-medium text-gray-900 hover:text-[#0077D3] hover:bg-gray-50 focus:outline-none"
+                        </Link>
+
+                        <div className="px-3 py-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setIsMobileDropdownOpen((v) => !v)
+                                }
+                                className="w-full flex justify-between items-center rounded-md text-base font-medium text-neutral-700 hover:text-primary-700 focus:outline-none transition-colors cursor-pointer"
+                                aria-expanded={isMobileDropdownOpen}
                             >
                                 Jalan Bareng
-                                <svg className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-[#0077D3]' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
+                                <FaChevronDown
+                                    className={[
+                                        "text-neutral-600 transition-transform duration-200",
+                                        isMobileDropdownOpen
+                                            ? "rotate-180"
+                                            : "",
+                                    ].join(" ")}
+                                />
                             </button>
-                            {/* Sub-menu Mobile */}
-                            {isDropdownOpen && (
-                                <div className="pl-6 space-y-1 pb-2">
-                                    <a href="/trip-bareng" className="block px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-[#0077D3] hover:bg-gray-50">Trip Bareng</a>
-                                    <a href="/pergi-bareng" className="block px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-[#0077D3] hover:bg-gray-50">Pergi Bareng</a>
+
+                            {isMobileDropdownOpen && (
+                                <div className="mt-2 pl-2 space-y-1">
+                                    {dropdownItems.map((item) => (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            onClick={closeAll}
+                                            className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
+                                        >
+                                            {item.icon && (
+                                                <item.icon className="w-4 h-4 mr-2" />
+                                            )}{" "}
+                                            {item.label}
+                                        </Link>
+                                    ))}
                                 </div>
                             )}
                         </div>
 
-                        <a href="#" className="block px-3 py-3 rounded-md text-base font-medium text-gray-900 hover:text-[#0077D3] hover:bg-gray-50">
+                        <Link
+                            href="/jastip"
+                            onClick={closeAll}
+                            className="block px-3 py-3 rounded-md text-base font-medium text-neutral-700 hover:text-primary-700 hover:bg-neutral-50 transition-colors"
+                        >
                             Jastip
-                        </a>
-                        <a href="#" className="block px-3 py-3 rounded-md text-base font-medium text-gray-900 hover:text-[#0077D3] hover:bg-gray-50">
+                        </Link>
+
+                        <Link
+                            href="/forum"
+                            onClick={closeAll}
+                            className="block px-3 py-3 rounded-md text-base font-medium text-neutral-700 hover:text-primary-700 hover:bg-neutral-50 transition-colors"
+                        >
                             Forum
-                        </a>
+                        </Link>
                     </div>
-                    
-                    {/* Tombol Login & Register di Mobile */}
-                    <div className="pt-4 pb-6 border-t border-gray-200 px-4 space-y-3">
-                        <a href="/login" className="flex justify-center w-full px-4 py-2.5 text-base font-medium text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition">
+
+                    <div className="pt-4 pb-6 border-t border-neutral-200 px-4 space-y-3">
+                        <Button
+                            isButtonLink
+                            href="/login"
+                            type="primary"
+                            variant="outline"
+                            className="w-full"
+                            onClick={closeAll}
+                        >
                             Masuk
-                        </a>
-                        <a href="/sign-up" className="flex justify-center w-full px-4 py-2.5 text-base font-medium text-white bg-[#0077D3] hover:bg-blue-700 rounded-lg transition">
+                        </Button>
+                        <Button
+                            isButtonLink
+                            href="/sign-up"
+                            type="primary"
+                            variant="solid"
+                            className="w-full"
+                            onClick={closeAll}
+                        >
                             Daftar
-                        </a>
+                        </Button>
                     </div>
                 </div>
             )}

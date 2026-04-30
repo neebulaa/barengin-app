@@ -7,7 +7,6 @@
 @source '../**/*.js';
 
 @theme {
-    /* === FONT FAMILY === */
     --font-sans:
         "Instrument Sans", ui-sans-serif, system-ui, sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
@@ -16,12 +15,11 @@
         "Poppins", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
         "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-    /* === COLOR === */
     /* Primary */
     --color-primary-50: #f4faff;
-    --color-primary-100: #cfeBff;
+    --color-primary-100: #cfebff;
     --color-primary-200: #91cefa;
-    --color-primary-300: #64B9f6;
+    --color-primary-300: #64b9f6;
     --color-primary-400: #48acf4;
     --color-primary-500: #2c9def;
     --color-primary-600: #0c8ce9;
@@ -29,7 +27,7 @@
 
     /* Success */
     --color-success-50: #e4ffe9;
-    --color-success-100: #D1FFDA;
+    --color-success-100: #d1ffda;
     --color-success-200: #b1f5bf;
     --color-success-300: #89e79c;
     --color-success-400: #70d583;
@@ -58,21 +56,19 @@
 
     --color-black: #000;
     --color-white: #fff;
+
+    --color-neutral-700: #1F1F1F;
+    --color-neutral-600: #4B4B4B;
+    --color-neutral-500: #8E8E8E;
+    --color-neutral-400: #CACACA;
+    --color-neutral-300: #E1E1E1;
+    --color-neutral-200: #EEEEEE;
+    --color-neutral-100: #F5F5F5;
+    --color-neutral-50:  #FAFAFA;
 }
 
 html {
     font-family: var(--font-poppins);
-}
-
-.date-input::-webkit-calendar-picker-indicator {
-  /* opacity: 0; */
-  /* display: none; */
-  -webkit-appearance: none;
-}
-
-/* Optional: rapihin tampilan di Safari/iOS */
-.date-input::-webkit-inner-spin-button,
-.date-input::-webkit-clear-button {
-  /* display: none; */
-  -webkit-appearance: none;
+    color: var(--color-neutral-700);
+    font-size: 14.4px;
 }

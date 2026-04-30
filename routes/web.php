@@ -16,9 +16,9 @@ Route::get('/prever', function(){
 })->middleware('auth');
 
 
-    Route::get('/onboarding', [OnboardingController::class, 'onboarding'])->name('onboarding.index');
-    Route::post('/onboarding', [OnboardingController::class, 'setupProfile']);
-    Route::post('/onboarding/complete', [OnboardingController::class, 'completeOnboarding']);
+Route::get('/onboarding', [OnboardingController::class, 'onboarding'])->name('onboarding.index');
+Route::post('/onboarding', [OnboardingController::class, 'setupProfile']);
+Route::post('/onboarding/complete', [OnboardingController::class, 'completeOnboarding']);
     
 
 Route::middleware('guest')->group(function(){
@@ -39,5 +39,4 @@ Route::middleware('guest')->group(function(){
 
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
     ->name('auth.google.callback');
-    
 });

@@ -34,11 +34,13 @@ export default function MainLayout({ children }) {
                     content="width=device-width, initial-scale=1"
                 />
 
-                <link rel="icon" href="/assets/logo/logo-transparent.png" />
+                <link rel="icon" href="/assets/barengin_logows.png" />
             </Head>
 
-            {!hideLayout &&
-                (user ? <NavbarAuth user={user} /> : <NavbarGuest />)}
+            <div className="w-full sticky top-0 z-[1000000]">
+                {!hideLayout &&
+                    (!user ? <NavbarAuth user={user} /> : <NavbarGuest />)}
+            </div>
 
             <div className="flex-grow w-full">
                 {/* <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8f"> */}
