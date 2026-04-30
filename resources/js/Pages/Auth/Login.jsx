@@ -175,18 +175,18 @@ export default function Login() {
                     />
                     <div className="absolute inset-0 bg-black/25 bottom-0" />
 
-                    <div className="absolute bottom-12 left-12 right-12 text-white">
-                        <h2 className="text-3xl font-semibold leading-tight xl:text-4xl">
-                            Jalan Jalan sejenak, biar hati ikut pulang
-                        </h2>
-                        <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95 xl:text-md">
-                            Rasakan serunya petualangan tanpa batas dengan
-                            berbagai pilihan destinasi dan aktivitas, mulai dari
-                            alam bebas hingga wisata kota yang penuh warna.
-                        </p>
-                    </div>
-                </div>
-            </div>
+          <div className="absolute bottom-12 left-12 right-12 text-white">
+            <h2 className="text-3xl font-semibold leading-tight xl:text-[40px] max-w-[680px]">
+              Jalan Jalan sejenak, biar hati ikut pulang
+            </h2>
+            <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95 xl:text-md">
+              Rasakan serunya petualangan tanpa batas dengan berbagai pilihan
+              destinasi dan aktivitas, mulai dari alam bebas hingga wisata kota
+              yang penuh warna.
+            </p>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

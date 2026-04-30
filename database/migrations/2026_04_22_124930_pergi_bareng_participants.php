@@ -11,17 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('jastips', function (Blueprint $table) {
+        Schema::create('pergi_bareng_participants', function(Blueprint $table){
             $table->id();
+            $table->foreignId('pergi_bareng_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
-            $table->string('origin_city');
-            $table->string('destination_city');
-            $table->text('pickup_location');
-            $table->date('arrival_date');
-            $table->date('start_date');
-            $table->date('end_date');
-            $table->boolean('allow_pickup')->default(false);
-            $table->boolean('allow_delivery')->default(false);
+            $table->string('full_name');
+            $table->string('paspor', 12)->nullable();
+            $table->string('phone_number', 15);
+            $table->string('nik', 16);
             $table->timestamps();
         });
     }
@@ -31,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('jastips');
+        Schema::dropIfExists('pergi_bareng_participants');
     }
 };

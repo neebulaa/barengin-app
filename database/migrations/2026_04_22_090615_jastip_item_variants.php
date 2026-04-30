@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('jastip_item_variants', function(Blueprint $table){
             $table->id();
-            $table->foreignId('jastip_items_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('jastip_item_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->string('var_name');
             $table->string('var_value');
-            $table->decimal('additioanl_price', 15, 2);
+            $table->decimal('additioanl_price', 15, 2)->nullable();
             $table->timestamps();
         });
     }

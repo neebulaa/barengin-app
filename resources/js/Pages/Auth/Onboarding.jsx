@@ -127,9 +127,8 @@ export default function Onboarding({user}) {
                     type="date"
                     value={data.birth_date}
                     onChange={(e) => setData("birth_date", e.target.value)}
-                    className="date-input h-14 w-full rounded-xl border border-zinc-300 px-4 pr-12 text-[16px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+                    className="date-input h-14 w-full rounded-xl border border-zinc-300 px-4 text-[16px] text-zinc-700 focus:border-blue-500 focus:outline-none"
                   />
-                  <FiCalendar className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xl text-zinc-500" />
                 </div>
 
                 {errors.birth_date && (
@@ -167,7 +166,7 @@ export default function Onboarding({user}) {
           <div className="absolute inset-0 bg-black/25 bottom-0" />
 
           <div className="absolute bottom-12 left-12 right-12 text-white">
-            <h2 className="text-3xl font-semibold leading-tight xl:text-4xl">
+            <h2 className="text-3xl font-semibold leading-tight xl:text-[40px] max-w-[680px]">
               Jalan Jalan sejenak, biar hati ikut pulang
             </h2>
             <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95 xl:text-md">

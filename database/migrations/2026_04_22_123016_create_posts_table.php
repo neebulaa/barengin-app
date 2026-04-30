@@ -11,17 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('jastips', function (Blueprint $table) {
+        Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
-            $table->string('origin_city');
-            $table->string('destination_city');
-            $table->text('pickup_location');
-            $table->date('arrival_date');
-            $table->date('start_date');
-            $table->date('end_date');
-            $table->boolean('allow_pickup')->default(false);
-            $table->boolean('allow_delivery')->default(false);
+            $table->text('content');
+            $table->boolean('allows_command');
+            $table->string('location')->nullable();
+            $table->integer('like')->nullable();
             $table->timestamps();
         });
     }
@@ -31,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('jastips');
+        Schema::dropIfExists('posts');
     }
 };
