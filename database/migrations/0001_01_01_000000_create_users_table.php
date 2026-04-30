@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->string('profile_image')->nullable();
             $table->string('phone')->nullable();
-            $table->enum("gender", ['male', 'female', 'other'])->default('other');
+            $table->enum("gender", ['male', 'female']);
             $table->date('birth_date')->nullable();
             $table->text("bio")->nullable();
             $table->decimal("jastiper_rating", 3,2)->nullable();
@@ -27,7 +27,10 @@ return new class extends Migration
             $table->boolean('is_guider')->default(false);
             $table->boolean('is_jastiper')->default(false);
             $table->string('google_id')->nullable()->unique();
+            $table->boolean('onboarding_completed')->default(false);
+            $table->rememberToken();
             $table->timestamps();
+
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

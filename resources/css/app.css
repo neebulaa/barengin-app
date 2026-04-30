@@ -63,3 +63,16 @@
 html {
     font-family: var(--font-poppins);
 }
+
+.date-input::-webkit-calendar-picker-indicator {
+  /* opacity: 0; */
+  /* display: none; */
+  -webkit-appearance: none;
+}
+
+/* Optional: rapihin tampilan di Safari/iOS */
+.date-input::-webkit-inner-spin-button,
+.date-input::-webkit-clear-button {
+  /* display: none; */
+  -webkit-appearance: none;
+}

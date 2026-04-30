@@ -70,7 +70,7 @@ export default function NavbarGuest() {
                     <a href="/login" className="text-gray-900 font-medium hover:text-[#0077D3] transition">
                         Masuk
                     </a>
-                    <a href="/register" className="bg-[#0077D3] text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition">
+                    <a href="/sign-up" className="bg-[#0077D3] text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition">
                         Daftar
                     </a>
                 </div>
@@ -136,7 +136,7 @@ export default function NavbarGuest() {
                         <a href="/login" className="flex justify-center w-full px-4 py-2.5 text-base font-medium text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition">
                             Masuk
                         </a>
-                        <a href="/register" className="flex justify-center w-full px-4 py-2.5 text-base font-medium text-white bg-[#0077D3] hover:bg-blue-700 rounded-lg transition">
+                        <a href="/sign-up" className="flex justify-center w-full px-4 py-2.5 text-base font-medium text-white bg-[#0077D3] hover:bg-blue-700 rounded-lg transition">
                             Daftar
                         </a>
                     </div>
