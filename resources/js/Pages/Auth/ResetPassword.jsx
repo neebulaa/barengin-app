@@ -56,12 +56,12 @@ export default function ResetPassword({ token, email }) {
                             <Input
                                 id="password"
                                 type={hidePassword ? "password" : "text"}
-                                label="Password"
+                                label="Password Baru"
                                 value={data.password}
                                 onChange={(e) =>
                                     setData("password", e.target.value)
                                 }
-                                placeholder="Password"
+                                placeholder="Password Baru"
                                 error={errors.password}
                                 size="md"
                                 rightAddon={
@@ -89,7 +89,7 @@ export default function ResetPassword({ token, email }) {
                             <Input
                                 id="password_confirmation"
                                 type={hidePasswordConfirm ? "password" : "text"}
-                                label="Konfirmasi Password"
+                                label="Konfirmasi Password Baru"
                                 value={data.password_confirmation}
                                 onChange={(e) =>
                                     setData(
@@ -97,7 +97,7 @@ export default function ResetPassword({ token, email }) {
                                         e.target.value,
                                     )
                                 }
-                                placeholder="Password"
+                                placeholder="Konfirmasi Password Baru"
                                 error={errors.password_confirmation}
                                 size="md"
                                 rightAddon={
