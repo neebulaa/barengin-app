@@ -6,6 +6,7 @@ import NavLink from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
 import { FaRoute, FaCarSide } from "react-icons/fa";
+import Container from "@/Components/Container.jsx";
 
 export default function NavbarGuest() {
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
@@ -25,7 +26,7 @@ export default function NavbarGuest() {
 
     return (
         <header className="bg-white border-b border-neutral-200 shadow-sm relative z-50">
-            <div className="max-w-[1200px] mx-auto px-4 py-2 sm:px-6 lg:px-8 flex justify-between items-center">
+            <Container className="flex justify-between items-center">
                 <Link
                     href="/"
                     className="flex items-center gap-2"
@@ -107,7 +108,7 @@ export default function NavbarGuest() {
                         )}
                     </button>
                 </div>
-            </div>
+            </Container>
 
             {isMobileMenuOpen && (
                 <div className="md:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">

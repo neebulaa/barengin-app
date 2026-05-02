@@ -10,6 +10,7 @@ import { FaRoute, FaCarSide, FaPaperPlane } from "react-icons/fa";
 import { MdDashboard } from "react-icons/md";
 import { HiOutlineDocumentText } from "react-icons/hi";
 import { FiLogOut } from "react-icons/fi";
+import Container from "@/Components/Container.jsx";
 
 export default function NavbarAuth() {
     const { props } = usePage();
@@ -51,7 +52,7 @@ export default function NavbarAuth() {
 
     return (
         <header className="bg-white border-b border-neutral-200 shadow-sm relative z-50">
-            <div className="max-w-[1200px] mx-auto px-4 py-2 sm:px-6 lg:px-8 flex justify-between items-center">
+            <Container className="flex justify-between items-center">
                 <Link
                     href="/"
                     className="flex items-center gap-2"
@@ -83,7 +84,7 @@ export default function NavbarAuth() {
                     <NavLink href="/leaderboard">Leaderboard</NavLink>
                 </nav>
 
-                <div className="hidden md:flex items-center space-x-4">
+                <div className="hidden md:flex items-center space-x-3">
                     <Button
                         isButtonLink
                         href="/chat"
@@ -173,7 +174,7 @@ export default function NavbarAuth() {
                         )}
                     </button>
                 </div>
-            </div>
+            </Container>
 
             {isMobileMenuOpen && (
                 <div className="md:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">

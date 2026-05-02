@@ -24,9 +24,11 @@ export default function Input({
     const hasLeftIcon = Boolean(leftIcon);
     const hasRight = Boolean(rightIcon || rightAddon);
 
+    // Icon is positioned at left-3 (~12px). With icon box w-5 (=20px),
+    // input padding-left should be 12 + 20 + 8 = 40px => pl-10.
     const inputPadding = [
         "px-4",
-        hasLeftIcon ? "pl-11" : "",
+        hasLeftIcon ? "pl-10" : "",
         hasRight ? "pr-12" : "",
     ]
         .filter(Boolean)
@@ -37,7 +39,32 @@ export default function Input({
         "focus:border-primary-700 focus:outline-none " +
         "disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70";
 
-    // kalau ada leftAddon, kita tampilkan input-group container
+    const LeftIcon = () =>
+        leftIcon ? (
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
+                <div className="flex h-5 w-5 items-center justify-center">
+                    {leftIcon}
+                </div>
+            </div>
+        ) : null;
+
+    const RightIcon = () =>
+        rightIcon ? (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500">
+                <div className="flex h-5 w-5 items-center justify-center">
+                    {rightIcon}
+                </div>
+            </div>
+        ) : null;
+
+    const RightAddon = () =>
+        rightAddon ? (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {rightAddon}
+            </div>
+        ) : null;
+
+    // If leftAddon exists, render input-group container
     if (leftAddon) {
         return (
             <div className={wrapperClassName}>
@@ -64,11 +91,7 @@ export default function Input({
                     </div>
 
                     <div className="relative flex-1">
-                        {leftIcon ? (
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
-                                {leftIcon}
-                            </div>
-                        ) : null}
+                        <LeftIcon />
 
                         <input
                             {...props}
@@ -76,23 +99,14 @@ export default function Input({
                                 "h-full w-full bg-transparent",
                                 "text-sm text-neutral-700 placeholder:text-neutral-500",
                                 "focus:outline-none",
-                                hasLeftIcon ? "pl-11" : "px-4",
+                                hasLeftIcon ? "pl-10" : "px-4",
                                 hasRight ? "pr-12" : "",
                                 inputClassName,
                             ].join(" ")}
                         />
 
-                        {rightIcon ? (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500">
-                                {rightIcon}
-                            </div>
-                        ) : null}
-
-                        {rightAddon ? (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                {rightAddon}
-                            </div>
-                        ) : null}
+                        <RightIcon />
+                        <RightAddon />
                     </div>
                 </div>
 
@@ -103,7 +117,7 @@ export default function Input({
         );
     }
 
-    // normal input without input-group
+    // Normal input (no input-group)
     return (
         <div className={wrapperClassName}>
             {label ? (
@@ -116,11 +130,7 @@ export default function Input({
             ) : null}
 
             <div className={["relative", className].join(" ")}>
-                {leftIcon ? (
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
-                        {leftIcon}
-                    </div>
-                ) : null}
+                <LeftIcon />
 
                 <input
                     {...props}
@@ -134,17 +144,8 @@ export default function Input({
                     ].join(" ")}
                 />
 
-                {rightIcon ? (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500">
-                        {rightIcon}
-                    </div>
-                ) : null}
-
-                {rightAddon ? (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {rightAddon}
-                    </div>
-                ) : null}
+                <RightIcon />
+                <RightAddon />
             </div>
 
             {error ? (
