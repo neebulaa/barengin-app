@@ -15,7 +15,6 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
-    protected $primaryKey = 'user_id';
     protected $appends = ['public_profile_image'];
 
     /**
@@ -24,7 +23,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $guarded = [
-        'user_id'
+        'id'
     ];
     
 
@@ -58,7 +57,7 @@ class User extends Authenticatable
 
     public function getPublicProfileImageAttribute(){
         if (! $this->profile_image) {
-            return asset('assets/sample-images/default-profile.png');
+            return asset('assets/default-profile.png');
         }
 
         // jika sudah berupa URL lengkap (google avatar images)

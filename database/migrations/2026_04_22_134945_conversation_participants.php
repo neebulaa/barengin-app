@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('conversation_participants', function(Blueprint $table){
             $table->id();
             $table->foreignId('conversation_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->timestamps();
         });
     }

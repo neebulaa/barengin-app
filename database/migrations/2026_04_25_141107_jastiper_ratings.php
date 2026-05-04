@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('jastiper_ratings', function(Blueprint $table){
             $table->id();
-            $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('jastip_id')->constrained();
             $table->decimal('amount_rating', 3,2);
             $table->text('comment')->nullable();

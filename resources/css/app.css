@@ -57,16 +57,14 @@
     --color-black: #000;
     --color-white: #fff;
 
-    --color-neutral-700: #1F1F1F;
-    --color-neutral-600: #4B4B4B;
-    --color-neutral-500: #8E8E8E;
-    --color-neutral-400: #CACACA;
-    --color-neutral-300: #E1E1E1;
-    --color-neutral-200: #EEEEEE;
-    --color-neutral-100: #F5F5F5;
-    --color-neutral-50:  #FAFAFA;
-
-
+    --color-neutral-700: #1f1f1f;
+    --color-neutral-600: #4b4b4b;
+    --color-neutral-500: #8e8e8e;
+    --color-neutral-400: #cacaca;
+    --color-neutral-300: #e1e1e1;
+    --color-neutral-200: #eeeeee;
+    --color-neutral-100: #f5f5f5;
+    --color-neutral-50: #fafafa;
 
     /* Container */
     --container-padding: 1rem; /* default horizontal padding */
@@ -87,4 +85,27 @@ html {
     html {
         font-size: 13.5px;
     }
+}
+
+/* Thin horizontal scrollbar for media scrollers */
+.scrollbar-slim {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #a3a3a3 transparent;
+}
+
+.scrollbar-slim::-webkit-scrollbar {
+    height: 6px; /* Chrome/Safari */
+}
+
+.scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-slim::-webkit-scrollbar-thumb {
+    background-color: #a3a3a3; /* neutral-400 */
+    border-radius: 999px;
+}
+
+.scrollbar-slim::-webkit-scrollbar-thumb:hover {
+    background-color: #737373; /* neutral-500 */
 }

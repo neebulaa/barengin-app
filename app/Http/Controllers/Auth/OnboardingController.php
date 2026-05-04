@@ -55,7 +55,7 @@ class OnboardingController extends Controller
             $request->merge(['phone' => $phone]);
 
             $request->validate([
-                'phone' => 'unique:users,phone,' . $user->user_id . ',user_id',
+                'phone' => 'unique:users,phone,' . $user->user_id . ',id',
             ]);
         }
 

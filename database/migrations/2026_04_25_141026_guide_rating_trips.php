@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('guide_rating_trips', function(Blueprint $table){
             $table->id();
-            $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('trips_id')->constrained();
             $table->decimal('amount_rating', 3,2);
             $table->text('comment')->nullable();

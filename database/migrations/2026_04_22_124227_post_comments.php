@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('post_commands', function(Blueprint $table){
+        Schema::create('post_comments', function(Blueprint $table){
             $table->id();
             $table->foreignId('post_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('parent_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignId('parent_id')->nullable()->constrained('post_comments', 'id')->onDelete('cascade')->onUpdate('cascade');
             $table->text('comment_text')->nullable();
             $table->integer('like')->nullable();
             $table->timestamps();
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('post_commands');
+        Schema::dropIfExists('post_comments');
     }
 };

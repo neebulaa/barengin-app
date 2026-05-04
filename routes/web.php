@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
+use App\Http\Controllers\ForumController;
 
 Route::get('/', function () {
     return inertia('Home/Index');
@@ -46,7 +47,6 @@ Route::middleware('guest')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    
     // Onboarding
     Route::get('/onboarding', [OnboardingController::class, 'onboarding'])->name('onboarding.index');
     Route::post('/onboarding', [OnboardingController::class, 'setupProfile'])->name('onboarding.store');
@@ -60,3 +60,8 @@ Route::middleware('auth')->group(function () {
 Route::get('/trip-bareng', function () {
     return inertia('TripBareng/Index');
 })->name('trip-bareng');
+
+Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
+    ->whereNumber('id')
+    ->name('forum.show');

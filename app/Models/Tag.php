@@ -10,8 +10,8 @@ class Tag extends Model
         'tag_name'
     ];
 
-    public function post_tags(){
-        return $this->hasMany(PostTag::class);
+    public function posts()
+    {
+        return $this->belongsToMany(Post::class, 'post_tags');
     }
-
 }

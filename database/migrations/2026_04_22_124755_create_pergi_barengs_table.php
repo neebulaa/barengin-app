@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('pergi_barengs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('initiator_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('initiator_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
             $table->string('name');
             $table->text('description');
             $table->dateTime('time_appointment');

@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
             $table->text('content');
-            $table->boolean('allows_command');
+            $table->boolean('allows_comment')->default(true);
             $table->string('location')->nullable();
             $table->integer('like')->nullable();
             $table->timestamps();
