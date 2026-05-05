@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
 import CommentComposer from "./CommentComposer";
+import { FaHeart } from "react-icons/fa";
 
-function ReplyRow({ reply, isCurrentUser }) {
+function ReplyRow({ reply, isCurrentUser, onToggleLikeReply }) {
     return (
-        <div className={`pl-12 pt-3`}> 
+        <div className="pl-12 pt-3">
             <div className="flex gap-3">
                 <img
                     src={reply.avatar}
@@ -31,13 +32,35 @@ function ReplyRow({ reply, isCurrentUser }) {
                     <p className="mt-1 text-sm text-neutral-800 leading-relaxed whitespace-pre-line">
                         {reply.text}
                     </p>
+
+                    <div className="mt-2 flex items-center gap-4 text-neutral-600">
+                        <button
+                            type="button"
+                            className={[
+                                "inline-flex items-center gap-2 transition text-sm",
+                                reply.likedByMe
+                                    ? "text-rose-600"
+                                    : "hover:text-neutral-900",
+                            ].join(" ")}
+                            onClick={() => onToggleLikeReply?.(reply.id)}
+                        >
+                            <FiHeart className="text-base" />
+                            {reply.likes}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     );
 }
 
-export default function ResponseItem({ response, onReplySubmit, currentUserId }) {
+export default function ResponseItem({
+    response,
+    onReplySubmit,
+    currentUserId,
+    onToggleLikeComment,
+    onToggleLikeReply,
+}) {
     const [openReplyComposer, setOpenReplyComposer] = useState(false);
     const [openReplies, setOpenReplies] = useState(false);
 
@@ -45,8 +68,6 @@ export default function ResponseItem({ response, onReplySubmit, currentUserId })
         () => response.replies?.length ?? 0,
         [response.replies],
     );
-
-    const isCurrentUserComment = response.userId === currentUserId;
 
     return (
         <div className="px-5 py-4 border-t border-neutral-200">
@@ -71,20 +92,28 @@ export default function ResponseItem({ response, onReplySubmit, currentUserId })
                         {response.text}
                     </p>
 
-                    {/* Actions */}
                     <div className="mt-3 flex items-center gap-5 text-neutral-600">
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 hover:text-neutral-900 transition text-sm"
+                            className={[
+                                "inline-flex items-center gap-2 transition text-sm cursor-pointer",
+                                response.likedByMe
+                                    ? "text-rose-600"
+                                    : "hover:text-neutral-900",
+                            ].join(" ")}
+                            onClick={() => onToggleLikeComment?.(response.id)}
                         >
-                            <FiHeart className="text-base" />
+                            {response.likedByMe ? (
+                                <FaHeart className="text-lg" size={14}/>
+                            ) : (
+                                <FiHeart className="text-lg" size={14}/>
+                            )}
                             {response.likes}
                         </button>
 
-                        {/* Toggle replies ONLY when clicking the comment icon */}
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 hover:text-neutral-900 transition text-sm"
+                            className="inline-flex items-center gap-2 hover:text-neutral-900 transition text-sm cursor-pointer"
                             onClick={() => setOpenReplies((v) => !v)}
                             aria-expanded={openReplies}
                             aria-controls={`replies-${response.id}`}
@@ -94,17 +123,15 @@ export default function ResponseItem({ response, onReplySubmit, currentUserId })
                             {replyCount}
                         </button>
 
-                        {/* Reply composer toggle */}
                         <button
                             type="button"
-                            className="text-sm font-medium hover:text-neutral-900 transition"
+                            className="text-sm font-medium hover:text-neutral-900 transition cursor-pointer"
                             onClick={() => setOpenReplyComposer((v) => !v)}
                         >
                             Balas
                         </button>
                     </div>
 
-                    {/* Reply composer (level 2) */}
                     {openReplyComposer ? (
                         <div className="mt-3 pl-12">
                             <CommentComposer
@@ -114,17 +141,13 @@ export default function ResponseItem({ response, onReplySubmit, currentUserId })
                                 onCancel={() => setOpenReplyComposer(false)}
                                 onSubmit={(text) => {
                                     onReplySubmit?.(response.id, text);
-
-                                    // optional: auto-open replies after replying
                                     setOpenReplies(true);
-
                                     setOpenReplyComposer(false);
                                 }}
                             />
                         </div>
                     ) : null}
 
-                    {/* Replies list (collapsed by default) */}
                     {(openReplies || openReplyComposer) && replyCount > 0 ? (
                         <div id={`replies-${response.id}`} className="mt-2">
                             {response.replies.map((r) => (
@@ -132,6 +155,7 @@ export default function ResponseItem({ response, onReplySubmit, currentUserId })
                                     key={r.id}
                                     reply={r}
                                     isCurrentUser={r.userId === currentUserId}
+                                    onToggleLikeReply={onToggleLikeReply}
                                 />
                             ))}
                         </div>

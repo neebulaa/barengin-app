@@ -15,7 +15,7 @@ class PostComment extends Model
         'comment_text',
         'like',
     ];
-    
+
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
@@ -30,5 +30,10 @@ class PostComment extends Model
     public function replies(): HasMany
     {
         return $this->hasMany(PostComment::class, 'parent_id');
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(PostCommentLike::class);
     }
 }

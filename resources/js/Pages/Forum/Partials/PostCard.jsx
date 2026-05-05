@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "@inertiajs/react";
 import TagPillList from "./TagPillList";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
+import { FaHeart } from "react-icons/fa";
 
 function PostMediaScroll({ images = [] }) {
     if (!images.length) return null;
@@ -27,7 +28,9 @@ function PostMediaScroll({ images = [] }) {
     );
 }
 
-export default function PostCard({ post, onTagClick }) {
+export default function PostCard({ post, onTagClick, onLike }) {
+    const liked = Boolean(post.likedByMe);
+
     return (
         <article className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
             <div className="p-5 flex gap-4">
@@ -53,7 +56,6 @@ export default function PostCard({ post, onTagClick }) {
 
                     {post.tags?.length ? (
                         <div className="mt-3">
-                            {/* ✅ clickable tags on the post */}
                             <TagPillList
                                 tags={post.tags}
                                 onTagClick={onTagClick}
@@ -66,15 +68,26 @@ export default function PostCard({ post, onTagClick }) {
                     <div className="mt-4 flex items-center gap-5 text-neutral-600">
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 hover:text-neutral-800 transition"
+                            onClick={onLike}
+                            className={[
+                                "inline-flex items-center gap-2 transition cursor-pointer",
+                                liked
+                                    ? "text-rose-600"
+                                    : "hover:text-neutral-800",
+                            ].join(" ")}
+                            aria-pressed={liked}
                         >
-                            <FiHeart className="text-lg" />
+                            {liked ? (
+                                <FaHeart className="text-lg" size={14}/>
+                            ) : (
+                                <FiHeart className="text-lg" size={14}/>
+                            )}
                             <span className="text-sm">{post.likes}</span>
                         </button>
 
                         <Link
                             href={`/forum/posts/${post.id}`}
-                            className="inline-flex items-center gap-2 hover:text-neutral-800 transition"
+                            className="inline-flex items-center gap-2 hover:text-neutral-800 transition cursor-pointer"
                         >
                             <FiMessageCircle className="text-lg" />
                             <span className="text-sm">{post.comments}</span>

@@ -47,6 +47,42 @@ export default function ForumIndex({ posts, tags, filters }) {
         [tagNames],
     );
 
+    // ✅ optimistic like toggle in feed
+    const toggleLikePost = (postId) => {
+        if (!user) return;
+
+        // snapshot for rollback
+        const before = items;
+
+        // optimistic update
+        setItems((prev) =>
+            (prev ?? []).map((p) => {
+                if (p.id !== postId) return p;
+
+                const liked = Boolean(p.liked_by_me);
+                const count = Number(p.likes_count ?? 0);
+
+                return {
+                    ...p,
+                    liked_by_me: !liked,
+                    likes_count: Math.max(0, count + (liked ? -1 : 1)),
+                };
+            }),
+        );
+
+        router.post(
+            `/forum/posts/${postId}/like`,
+            {},
+            {
+                preserveScroll: true,
+                onError: () => {
+                    // rollback
+                    setItems(before);
+                },
+            },
+        );
+    };
+
     const postCards = useMemo(() => {
         return (items ?? []).map((p) => ({
             id: p.id,
@@ -55,9 +91,10 @@ export default function ForumIndex({ posts, tags, filters }) {
             time: formatRelativeTime(p.created_at),
             content: p.content,
 
-            // ✅ synced counts from backend
-            likes: compactNumber(p.likes),
-            comments: compactNumber(p.comments_count),
+            likes: compactNumber(p.likes_count ?? 0),
+            likedByMe: Boolean(p.liked_by_me),
+
+            comments: compactNumber(p.comments_count ?? 0),
 
             tags: (p.tags ?? []).map((t) => t.tag_name),
             images: (p.images ?? []).map((img) => img.url),
@@ -176,6 +213,7 @@ export default function ForumIndex({ posts, tags, filters }) {
                                     key={post.id}
                                     post={post}
                                     onTagClick={onTagClick}
+                                    onLike={() => toggleLikePost(post.id)}
                                 />
                             ))}
 
@@ -233,7 +271,6 @@ function formatRelativeTime(iso) {
 
     const diffSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
     if (diffSeconds < 0) return "baru saja";
-
     if (diffSeconds < 60) return "baru saja";
 
     const minutes = Math.floor(diffSeconds / 60);

@@ -13,10 +13,16 @@ import CommentComposer from "./Partials/CommentComposer";
 export default function PostShow() {
     const { post, comments, responseCount, sort, auth } = usePage().props;
 
+    const [localPost, setLocalPost] = useState(post);
     const [localComments, setLocalComments] = useState(comments ?? []);
     const tempIdRef = useRef(0);
 
-    // ✅ Critical fix: ONLY reset on explicit sort change (not on reload after posting)
+    // keep localPost synced when page changes (sort change reloads, etc.)
+    useEffect(() => {
+        setLocalPost(post);
+    }, [post]);
+
+    // ONLY reset comments on explicit sort change
     const lastSortRef = useRef(sort);
     useEffect(() => {
         if (lastSortRef.current !== sort) {
@@ -27,17 +33,20 @@ export default function PostShow() {
 
     const postCard = useMemo(() => {
         return {
-            id: post.id,
-            author: post.user?.name ?? "Unknown",
-            avatar: post.user?.avatar ?? "/assets/default-profile.png",
-            time: formatRelativeTime(post.created_at),
-            content: post.content,
-            likes: compactNumber(post.likes ?? 0),
+            id: localPost.id,
+            author: localPost.user?.name ?? "Unknown",
+            avatar: localPost.user?.avatar ?? "/assets/default-profile.png",
+            time: formatRelativeTime(localPost.created_at),
+            content: localPost.content,
+
+            likes: compactNumber(localPost.likes_count ?? 0),
+            likedByMe: Boolean(localPost.liked_by_me),
+
             comments: compactNumber(responseCount ?? 0),
-            tags: (post.tags ?? []).map((t) => t.tag_name),
-            images: (post.images ?? []).map((img) => img.url),
+            tags: (localPost.tags ?? []).map((t) => t.tag_name),
+            images: (localPost.images ?? []).map((img) => img.url),
         };
-    }, [post, responseCount]);
+    }, [localPost, responseCount]);
 
     const responses = useMemo(() => {
         return (localComments ?? []).map((c) => ({
@@ -46,7 +55,10 @@ export default function PostShow() {
             avatar: c.user?.avatar ?? "/assets/default-profile.png",
             time: formatRelativeTime(c.created_at),
             text: c.comment_text,
-            likes: compactNumber(c.likes ?? 0),
+
+            likes: compactNumber(c.likes_count ?? 0),
+            likedByMe: Boolean(c.liked_by_me),
+
             userId: c.user?.id,
             replies: sortRepliesOldestFirst(c.replies ?? []).map((r) => ({
                 id: r.id,
@@ -54,12 +66,108 @@ export default function PostShow() {
                 avatar: r.user?.avatar ?? "/assets/default-profile.png",
                 time: formatRelativeTime(r.created_at),
                 text: r.comment_text,
-                likes: compactNumber(r.likes ?? 0),
+
+                likes: compactNumber(r.likes_count ?? 0),
+                likedByMe: Boolean(r.liked_by_me),
+
                 userId: r.user?.id,
             })),
         }));
     }, [localComments]);
 
+    // ---- optimistic like handlers ----
+    const togglePostLike = () => {
+        if (!auth?.user) return;
+
+        const prev = localPost;
+        const isLiked = Boolean(prev.liked_by_me);
+        const next = {
+            ...prev,
+            liked_by_me: !isLiked,
+            likes_count: Math.max(
+                0,
+                Number(prev.likes_count ?? 0) + (isLiked ? -1 : 1),
+            ),
+        };
+
+        setLocalPost(next);
+
+        router.post(
+            `/forum/posts/${prev.id}/like`,
+            {},
+            {
+                preserveScroll: true,
+                onError: () => setLocalPost(prev),
+                // no reload needed; optimistic is enough
+            },
+        );
+    };
+
+    const toggleCommentLike = (commentId) => {
+        if (!auth?.user) return;
+
+        setLocalComments((prev) => {
+            const snapshot = prev ?? [];
+            return snapshot.map((c) => {
+                if (String(c.id) !== String(commentId)) return c;
+                const isLiked = Boolean(c.liked_by_me);
+                return {
+                    ...c,
+                    liked_by_me: !isLiked,
+                    likes_count: Math.max(
+                        0,
+                        Number(c.likes_count ?? 0) + (isLiked ? -1 : 1),
+                    ),
+                };
+            });
+        });
+
+        router.post(
+            `/forum/comments/${commentId}/like`,
+            {},
+            {
+                preserveScroll: true,
+                onError: () => {
+                    // rollback by reloading just comments (simple and safe)
+                    router.reload({ only: ["comments"], preserveScroll: true });
+                },
+            },
+        );
+    };
+
+    const toggleReplyLike = (replyId) => {
+        if (!auth?.user) return;
+
+        setLocalComments((prev) =>
+            (prev ?? []).map((c) => ({
+                ...c,
+                replies: (c.replies ?? []).map((r) => {
+                    if (String(r.id) !== String(replyId)) return r;
+                    const isLiked = Boolean(r.liked_by_me);
+                    return {
+                        ...r,
+                        liked_by_me: !isLiked,
+                        likes_count: Math.max(
+                            0,
+                            Number(r.likes_count ?? 0) + (isLiked ? -1 : 1),
+                        ),
+                    };
+                }),
+            })),
+        );
+
+        router.post(
+            `/forum/comments/${replyId}/like`,
+            {},
+            {
+                preserveScroll: true,
+                onError: () =>
+                    router.reload({ only: ["comments"], preserveScroll: true }),
+            },
+        );
+    };
+
+    // ---- your existing optimistic comment + reply creation (unchanged counts structure) ----
     const submitNewComment = (text) => {
         if (!auth?.user) return;
 
@@ -69,9 +177,10 @@ export default function PostShow() {
         const optimistic = {
             id: tempId,
             comment_text: text,
-            likes: 0,
             created_at: nowIso,
             __optimistic: true,
+            likes_count: 0,
+            liked_by_me: false,
             user: {
                 id: auth.user.id,
                 name: auth.user.full_name ?? "You",
@@ -82,7 +191,6 @@ export default function PostShow() {
             replies: [],
         };
 
-        // ✅ Always pinned to top (even when sort=popular)
         setLocalComments((prev) => [optimistic, ...(prev ?? [])]);
 
         router.post(
@@ -96,7 +204,6 @@ export default function PostShow() {
                     );
                 },
                 onSuccess: () => {
-                    // reload ONLY to get server IDs/counts, but do NOT reset ordering
                     router.reload({
                         only: ["comments", "responseCount", "post"],
                         preserveScroll: true,
@@ -108,7 +215,6 @@ export default function PostShow() {
                                 commentText: text,
                             });
 
-                            // Replace optimistic in-place => no jump
                             setLocalComments((prev) => {
                                 const arr = [...(prev ?? [])];
                                 const idx = arr.findIndex(
@@ -120,6 +226,9 @@ export default function PostShow() {
                                     : { ...arr[idx], __optimistic: false };
                                 return arr;
                             });
+
+                            // keep post likes/comments count in sync if needed
+                            setLocalPost(page.props.post ?? localPost);
                         },
                     });
                 },
@@ -136,9 +245,10 @@ export default function PostShow() {
         const optimisticReply = {
             id: tempId,
             comment_text: text,
-            likes: 0,
             created_at: nowIso,
             __optimistic: true,
+            likes_count: 0,
+            liked_by_me: false,
             user: {
                 id: auth.user.id,
                 name: auth.user.full_name ?? "You",
@@ -148,7 +258,6 @@ export default function PostShow() {
             },
         };
 
-        // ✅ Replies always append at bottom
         setLocalComments((prev) =>
             (prev ?? []).map((c) => {
                 if (String(c.id) !== String(commentId)) return c;
@@ -181,7 +290,6 @@ export default function PostShow() {
                     );
                 },
                 onSuccess: () => {
-                    // reload only to sync replies IDs, but keep replies bottom
                     router.reload({
                         only: ["comments", "responseCount"],
                         preserveScroll: true,
@@ -222,7 +330,7 @@ export default function PostShow() {
                     </div>
 
                     <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-                        <PostCard post={postCard} />
+                        <PostCard post={postCard} onLike={togglePostLike} />
 
                         <ResponseSortBar
                             sort={sort ?? "popular"}
@@ -252,6 +360,8 @@ export default function PostShow() {
                                     response={r}
                                     onReplySubmit={submitReply}
                                     currentUserId={auth?.user?.id}
+                                    onToggleLikeComment={toggleCommentLike}
+                                    onToggleLikeReply={toggleReplyLike}
                                 />
                             ))}
                         </div>

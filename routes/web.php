@@ -54,7 +54,7 @@ Route::middleware('auth')->group(function () {
 
     // Logout 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    
+
     // Forum
     Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
     Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
@@ -65,6 +65,12 @@ Route::middleware('auth')->group(function () {
         ->name('forum.posts.comments.store');
     Route::post('/forum/comments/{comment}/replies', [ForumController::class, 'storeReply'])
         ->name('forum.comments.replies.store');
+
+    Route::post('/forum/posts/{post}/like', [ForumController::class, 'togglePostLike'])
+        ->name('forum.posts.like.toggle');
+
+    Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike'])
+        ->name('forum.comments.like.toggle');
 });
 
 
