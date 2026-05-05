@@ -33,8 +33,13 @@ export default function ForumIndex({ posts, tags, filters }) {
         setNextUrl(posts?.next_page_url ?? null);
         setIsLoadingMore(false);
         setQ(filters?.q ?? "");
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [feedKey]);
+
+    useEffect(() => {
+        setItems(posts?.data ?? []);
+        setNextUrl(posts?.next_page_url ?? null);
+        setIsLoadingMore(false);
+    }, [posts?.data, posts?.next_page_url]);
 
     useEffect(() => {
         return () => {
@@ -96,7 +101,9 @@ export default function ForumIndex({ posts, tags, filters }) {
             likes: compactNumber(p.likes_count ?? 0),
             likedByMe: Boolean(p.liked_by_me),
 
+            allowsComment: Boolean(p.allows_comment),
             comments: compactNumber(p.comments_count ?? 0),
+            location: p.location ?? "",
 
             tags: (p.tags ?? []).map((t) => t.tag_name),
             images: (p.images ?? []).map((img) => img.url),
@@ -265,6 +272,38 @@ export default function ForumIndex({ posts, tags, filters }) {
                 open={openCreatePost}
                 onClose={() => setOpenCreatePost(false)}
                 user={user}
+                tags={tags ?? []}
+                onSubmit={(payload) => {
+                    const fd = new FormData();
+                    fd.append("content_html", payload.content_html ?? "");
+                    fd.append(
+                        "allows_comment",
+                        payload.allows_comment ? "1" : "0",
+                    );
+                    if (payload.location)
+                        fd.append("location", payload.location);
+
+                    (payload.images ?? []).forEach((file) => {
+                        fd.append("images[]", file);
+                    });
+
+                    (payload.tag_names ?? []).forEach((t) =>
+                        fd.append("tag_names[]", t),
+                    );
+
+                    router.post("/forum/posts", fd, {
+                        forceFormData: true,
+                        preserveScroll: true,
+
+                        // optional: refresh only posts on success
+                        onSuccess: () => {
+                            router.reload({
+                                only: ["posts"],
+                                preserveScroll: true,
+                            });
+                        },
+                    });
+                }}
             />
         </div>
     );

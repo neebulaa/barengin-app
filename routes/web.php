@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\PostController;
 
 Route::get('/', function () {
     return inertia('Home/Index');
@@ -60,6 +61,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
         ->whereNumber('id')
         ->name('forum.show');
+
+    Route::post('/forum/posts', [PostController::class, 'store'])->name('forum.posts.store');
     
     Route::post('/forum/posts/{post}/comments', [ForumController::class, 'storeComment'])
         ->name('forum.posts.comments.store');

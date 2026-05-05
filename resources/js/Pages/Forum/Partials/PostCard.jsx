@@ -3,6 +3,7 @@ import { Link } from "@inertiajs/react";
 import TagPillList from "./TagPillList";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
+import { FiMapPin } from "react-icons/fi";
 
 function PostMediaScroll({ images = [] }) {
     if (!images.length) return null;
@@ -55,17 +56,26 @@ export default function PostCard({ post, onTagClick, onLike }) {
 
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
-                        <h3 className="font-semibold text-neutral-900">
-                            {post.author}
-                        </h3>
+                        <div className="flex flex-col">
+                            <h3 className="font-semibold text-neutral-900">
+                                {post.author}
+                            </h3>
+                            {post.location ? (
+                                <div className="text-sm text-neutral-500">
+                                    <FiMapPin className="inline mb-0.5 mr-1" />
+                                    {post.location}
+                                </div>
+                            ) : null}
+                        </div>
                         <span className="text-sm text-neutral-500">
                             {post.time}
                         </span>
                     </div>
 
-                    <p className="mt-1 text-neutral-800 leading-relaxed">
-                        {post.content}
-                    </p>
+                    <div
+                        className="mt-1 text-neutral-800 leading-relaxed prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: post.content }}
+                    />
 
                     {post.tags?.length ? (
                         <div className="mt-3">
@@ -98,13 +108,15 @@ export default function PostCard({ post, onTagClick, onLike }) {
                             <span className="text-sm">{post.likes}</span>
                         </button>
 
-                        <Link
-                            href={`/forum/posts/${post.id}`}
-                            className="inline-flex items-center gap-2 hover:text-neutral-800 transition cursor-pointer"
-                        >
-                            <FiMessageCircle className="text-lg" />
-                            <span className="text-sm">{post.comments}</span>
-                        </Link>
+                        {post.allowsComment && (
+                            <Link
+                                href={`/forum/posts/${post.id}`}
+                                className="inline-flex items-center gap-2 hover:text-neutral-800 transition cursor-pointer"
+                            >
+                                <FiMessageCircle className="text-lg" />
+                                <span className="text-sm">{post.comments}</span>
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>
