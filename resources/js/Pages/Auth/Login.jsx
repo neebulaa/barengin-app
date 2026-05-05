@@ -115,7 +115,7 @@ export default function Login() {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Loading..." : "Login"}
+                                {processing ? "Loading..." : "Masuk"}
                             </Button>
 
                             <Button
@@ -129,7 +129,7 @@ export default function Login() {
                                 disabled={processing}
                             >
                                 <FcGoogle size={20}/>
-                                Login with Google
+                                Masuk dengan Google
                             </Button>
 
                             <p className="pt-2 text-center text-sm text-neutral-700">
@@ -138,7 +138,7 @@ export default function Login() {
                                     href="/register"
                                     className="font-semibold underline hover:opacity-80"
                                 >
-                                    Register
+                                    Daftar
                                 </Link>
                             </p>
                         </form>

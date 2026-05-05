@@ -1,5 +1,6 @@
 import React from "react";
 import { FiTrendingUp } from "react-icons/fi";
+import { FaSort } from "react-icons/fa";
 
 export default function ResponseSortBar({
     sort = "popular", // popular | newest
@@ -13,9 +14,9 @@ export default function ResponseSortBar({
                 onClick={() =>
                     onChangeSort?.(sort === "popular" ? "newest" : "popular")
                 }
-                className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-700 hover:text-neutral-900 transition"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-700 hover:text-neutral-900 transition cursor-pointer"
             >
-                <FiTrendingUp className="text-base" />
+                <FaSort className="text-base" />
                 {sort === "popular" ? "Populer" : "Terbaru"}
             </button>
 

@@ -257,9 +257,16 @@ function formatRelativeTime(iso) {
 
 function compactNumber(n) {
     const num = Number(n ?? 0);
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
-    return `${num}`;
+    if (!Number.isFinite(num)) return "0";
+
+    const format = (value, suffix) => {
+        const s = value.toFixed(1);
+        return `${s.endsWith(".0") ? s.slice(0, -2) : s}${suffix}`;
+    };
+
+    if (num >= 1_000_000) return format(num / 1_000_000, "M");
+    if (num >= 1_000) return format(num / 1_000, "k");
+    return String(num);
 }
 
 function PostCardSkeleton() {

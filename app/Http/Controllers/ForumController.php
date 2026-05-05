@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Tag;
 use Illuminate\Http\Request;
+use App\Models\PostComment;
+use Illuminate\Support\Facades\Auth;
 
 class ForumController extends Controller
 {
@@ -99,7 +101,7 @@ class ForumController extends Controller
 
     public function show(Request $request, int $id)
     {
-        $sort = $request->query('sort', 'popular'); // popular | newest
+        $sort = $request->query('sort', 'newest'); // popular | newest
 
         $post = Post::query()
             ->with([
@@ -113,13 +115,16 @@ class ForumController extends Controller
             ->whereNull('parent_id')
             ->with([
                 'user:id,full_name,profile_image',
-                'replies.user:id,full_name,profile_image',
+                'replies' => function ($q) {
+                    $q->latest()->with('user:id,full_name,profile_image');
+                },
             ]);
 
         if ($sort === 'newest') {
-            $commentsQuery->latest();
+            $commentsQuery->orderByDesc('created_at');
         } else {
-            $commentsQuery->orderByDesc('like')->latest();
+            $commentsQuery->orderByDesc('like')
+                ->orderByDesc('created_at');
         }
 
         $comments = $commentsQuery->get();
@@ -186,5 +191,51 @@ class ForumController extends Controller
                 ])->values(),
             ])->values(),
         ]);
+    }
+
+    public function storeComment(Request $request, Post $post)
+    {
+        $request->validate([
+            'comment_text' => ['required', 'string', 'max:2000'],
+        ]);
+
+        // Optional: block if post disallows comments
+        if (! $post->allows_comment) {
+            abort(403, 'Comments are disabled for this post.');
+        }
+
+        PostComment::create([
+            'post_id' => $post->id,
+            'user_id' => Auth::id(),
+            'parent_id' => null,
+            'comment_text' => $request->comment_text,
+        ]);
+
+        return redirect()->back();
+    }
+
+    public function storeReply(Request $request, PostComment $comment)
+    {
+        $request->validate([
+            'comment_text' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $post = $comment->post; // requires comment->post() relation
+
+        if (! $post || ! $post->allows_comment) {
+            abort(403, 'Comments are disabled for this post.');
+        }
+
+        // Force reply to be under a top-level comment
+        $parentId = $comment->parent_id ? $comment->parent_id : $comment->id;
+
+        PostComment::create([
+            'post_id' => $comment->post_id,
+            'user_id' => Auth::id(),
+            'parent_id' => $parentId,
+            'comment_text' => $request->comment_text,
+        ]);
+
+        return redirect()->back();
     }
 }

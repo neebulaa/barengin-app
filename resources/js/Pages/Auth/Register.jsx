@@ -6,6 +6,7 @@ import Input from "@/Components/Input.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import FlashMessage from "@/Components/FlashMessage.jsx";
 import Checkbox from "@/Components/Checkbox.jsx";
+import { FcGoogle } from "react-icons/fc";
 
 export default function Register() {
     const [hidePassword, setHidePassword] = useState(true);
@@ -161,7 +162,7 @@ export default function Register() {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Loading..." : "Register"}
+                                {processing ? "Loading..." : "Daftar"}
                             </Button>
 
                             <Button
@@ -174,12 +175,8 @@ export default function Register() {
                                 }
                                 disabled={processing}
                             >
-                                <img
-                                    src="/assets/icons/google.png"
-                                    alt="Google"
-                                    className="h-5 w-5"
-                                />
-                                Login with Google
+                                <FcGoogle size={20} />
+                                Masuk dengan Google
                             </Button>
 
                             <p className="pt-2 text-center text-sm text-neutral-700">
@@ -188,7 +185,7 @@ export default function Register() {
                                     href="/login"
                                     className="font-semibold underline hover:opacity-80"
                                 >
-                                    Login
+                                    Masuk
                                 </Link>
                             </p>
                         </form>

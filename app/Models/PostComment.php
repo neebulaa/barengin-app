@@ -8,6 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PostComment extends Model
 {
+    protected $fillable = [
+        'post_id',
+        'user_id',
+        'parent_id',
+        'comment_text',
+        'like',
+    ];
+    
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);

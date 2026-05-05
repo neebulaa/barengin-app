@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Post extends Model
 {
+    protected $fillable = [
+        'user_id',
+        'content',
+        'allows_comment',
+        'location',
+        'like',
+    ];
+
     public function images(): HasMany
     {
         return $this->hasMany(PostImage::class);

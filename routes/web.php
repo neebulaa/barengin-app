@@ -54,6 +54,17 @@ Route::middleware('auth')->group(function () {
 
     // Logout 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    
+    // Forum
+    Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+    Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
+        ->whereNumber('id')
+        ->name('forum.show');
+    
+    Route::post('/forum/posts/{post}/comments', [ForumController::class, 'storeComment'])
+        ->name('forum.posts.comments.store');
+    Route::post('/forum/comments/{comment}/replies', [ForumController::class, 'storeReply'])
+        ->name('forum.comments.replies.store');
 });
 
 
@@ -61,7 +72,3 @@ Route::get('/trip-bareng', function () {
     return inertia('TripBareng/Index');
 })->name('trip-bareng');
 
-Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
-Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
-    ->whereNumber('id')
-    ->name('forum.show');

@@ -2,9 +2,9 @@ import React, { useMemo, useState } from "react";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
 import CommentComposer from "./CommentComposer";
 
-function ReplyRow({ reply }) {
+function ReplyRow({ reply, isCurrentUser }) {
     return (
-        <div className="pl-12 pt-3">
+        <div className={`pl-12 pt-3`}> 
             <div className="flex gap-3">
                 <img
                     src={reply.avatar}
@@ -13,9 +13,16 @@ function ReplyRow({ reply }) {
                 />
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold text-neutral-900 text-sm">
-                            {reply.author}
-                        </p>
+                        <div className="flex items-center gap-2">
+                            <p className="font-semibold text-neutral-900 text-sm">
+                                {reply.author}
+                            </p>
+                            {isCurrentUser && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-medium bg-blue-100 text-blue-800">
+                                    You
+                                </span>
+                            )}
+                        </div>
                         <span className="text-xs text-neutral-500">
                             {reply.time}
                         </span>
@@ -30,7 +37,7 @@ function ReplyRow({ reply }) {
     );
 }
 
-export default function ResponseItem({ response, onReplySubmit }) {
+export default function ResponseItem({ response, onReplySubmit, currentUserId }) {
     const [openReplyComposer, setOpenReplyComposer] = useState(false);
     const [openReplies, setOpenReplies] = useState(false);
 
@@ -38,6 +45,8 @@ export default function ResponseItem({ response, onReplySubmit }) {
         () => response.replies?.length ?? 0,
         [response.replies],
     );
+
+    const isCurrentUserComment = response.userId === currentUserId;
 
     return (
         <div className="px-5 py-4 border-t border-neutral-200">
@@ -116,10 +125,14 @@ export default function ResponseItem({ response, onReplySubmit }) {
                     ) : null}
 
                     {/* Replies list (collapsed by default) */}
-                    {openReplies && replyCount > 0 ? (
+                    {(openReplies || openReplyComposer) && replyCount > 0 ? (
                         <div id={`replies-${response.id}`} className="mt-2">
                             {response.replies.map((r) => (
-                                <ReplyRow key={r.id} reply={r} />
+                                <ReplyRow
+                                    key={r.id}
+                                    reply={r}
+                                    isCurrentUser={r.userId === currentUserId}
+                                />
                             ))}
                         </div>
                     ) : null}
