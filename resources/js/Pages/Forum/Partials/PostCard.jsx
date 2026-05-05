@@ -7,6 +7,19 @@ import { FaHeart } from "react-icons/fa";
 function PostMediaScroll({ images = [] }) {
     if (!images.length) return null;
 
+    if (images.length === 1) {
+        return (
+            <div className="mt-4">
+                <img
+                    src={images[0]}
+                    alt="Post media"
+                    className="w-full h-64 md:h-72 object-cover rounded-2xl"
+                    loading="lazy"
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="mt-4">
             <div className="flex gap-3 overflow-x-auto pb-1 pr-1 snap-x snap-mandatory scrollbar-slim">
@@ -78,9 +91,9 @@ export default function PostCard({ post, onTagClick, onLike }) {
                             aria-pressed={liked}
                         >
                             {liked ? (
-                                <FaHeart className="text-lg" size={14}/>
+                                <FaHeart className="text-lg" size={14} />
                             ) : (
-                                <FiHeart className="text-lg" size={14}/>
+                                <FiHeart className="text-lg" size={14} />
                             )}
                             <span className="text-sm">{post.likes}</span>
                         </button>

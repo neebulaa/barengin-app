@@ -11,9 +11,11 @@ import PostCard from "./Partials/PostCard";
 import TagPillList from "./Partials/TagPillList";
 
 import { FiSearch } from "react-icons/fi";
+import CreatePostModal from "./Partials/CreatePostModal";
 
 export default function ForumIndex({ posts, tags, filters }) {
     const user = usePage().props.auth?.user;
+    const [openCreatePost, setOpenCreatePost] = useState(false);
 
     const [q, setQ] = useState(filters?.q ?? "");
 
@@ -176,7 +178,7 @@ export default function ForumIndex({ posts, tags, filters }) {
 
     return (
         <div className="bg-white lg:pl-28">
-            <ForumSideNav />
+            <ForumSideNav onCreatePost={() => setOpenCreatePost(true)} />
 
             <Container className="py-10">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -205,6 +207,7 @@ export default function ForumIndex({ posts, tags, filters }) {
                                 user?.public_profile_image ??
                                 "/assets/default-profile.png"
                             }
+                            onOpen={() => setOpenCreatePost(true)}
                         />
 
                         <div className="mt-8 space-y-6">
@@ -257,6 +260,12 @@ export default function ForumIndex({ posts, tags, filters }) {
             </Container>
 
             <div className="h-24 lg:hidden" />
+
+            <CreatePostModal
+                open={openCreatePost}
+                onClose={() => setOpenCreatePost(false)}
+                user={user}
+            />
         </div>
     );
 }
