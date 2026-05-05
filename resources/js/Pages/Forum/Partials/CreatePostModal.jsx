@@ -379,12 +379,12 @@ export default function CreatePostModal({
 
     return (
         <div className="fixed inset-0 z-[9999]">
-            <div
-                className="absolute inset-0 bg-black/40"
-                onClick={closeAndCleanup}
-            />
-
-            <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="absolute inset-0 flex items-center justify-center p-4 bg-black/40" onClick={(e) => {
+                e.stopPropagation();
+                if(e.target === e.currentTarget) {
+                    closeAndCleanup();
+                }
+            }}>
                 <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col">
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
