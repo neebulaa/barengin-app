@@ -37,14 +37,18 @@ function ReplyRow({ reply, isCurrentUser, onToggleLikeReply }) {
                         <button
                             type="button"
                             className={[
-                                "inline-flex items-center gap-2 transition text-sm",
+                                "inline-flex items-center gap-2 transition text-sm cursor-pointer",
                                 reply.likedByMe
                                     ? "text-rose-600"
                                     : "hover:text-neutral-900",
                             ].join(" ")}
                             onClick={() => onToggleLikeReply?.(reply.id)}
                         >
-                            <FiHeart className="text-base" />
+                            {reply.likedByMe ? (
+                                <FaHeart className="text-base" size={14} />
+                            ) : (
+                                <FiHeart className="text-base" size={14} />
+                            )}
                             {reply.likes}
                         </button>
                     </div>
@@ -104,9 +108,9 @@ export default function ResponseItem({
                             onClick={() => onToggleLikeComment?.(response.id)}
                         >
                             {response.likedByMe ? (
-                                <FaHeart className="text-lg" size={14}/>
+                                <FaHeart className="text-lg" size={14} />
                             ) : (
-                                <FiHeart className="text-lg" size={14}/>
+                                <FiHeart className="text-lg" size={14} />
                             )}
                             {response.likes}
                         </button>
