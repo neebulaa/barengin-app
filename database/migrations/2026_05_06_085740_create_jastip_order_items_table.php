@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('jastip_item_variants', function(Blueprint $table){
+        Schema::create('jastip_order_items', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('jastip_order_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('jastip_item_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->string('var_name');
-            $table->string('var_value');
-            $table->decimal('additional_price', 15, 2)->nullable();
+            $table->foreignId('jastip_item_variant_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->integer('quantity');
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('jastip_item_variants');
+        Schema::dropIfExists('jastip_order_items');
     }
 };

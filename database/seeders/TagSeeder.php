@@ -33,7 +33,7 @@ class TagSeeder extends Seeder
         ];
 
         foreach ($tags as $t) {
-            Tag::firstOrCreate(['tag_name' => $t]);
+            Tag::firstOrCreate(['tag_name' => $t, 'tag_key' => mb_strtolower($t)]);
         }
     }
 }

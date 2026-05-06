@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DetailTrip extends Model
+class TripActivity extends Model
 {
-    protected $fillable = ['trip_id','activity_order','activity_name', 'activity_start_time', 'activity_end_time', 'description_activity'];
+    protected $fillable = ['trip_id','activity_order','activity_name', 'activity_start_datetime', 'activity_end_datetime', 'activity_description'];
     protected function casts(){
         return [
-            'activity_start_time' => 'datetime',
-            'activity_start_end' => 'datetime'
+            'activity_start_datetime' => 'datetime',
+            'activity_end_datetime' => 'datetime'
         ];
     }
 

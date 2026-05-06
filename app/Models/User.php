@@ -91,7 +91,7 @@ class User extends Authenticatable
         return $this->hasMany(Message::class);
     }
 
-    public function conversation_participants(){
+    public function conversations(){
         return $this->belongsToMany(Conversation::class, 'conversation_participants');
     }
 
@@ -125,5 +125,9 @@ class User extends Authenticatable
 
     public function pergi_bareng_ratings(){
         return $this->hasMany(PergiBarengRating::class);
+    }
+    
+    public function pergi_bareng_requests(){
+        return $this->hasMany(PergiBarengRequest::class);
     }
 }
