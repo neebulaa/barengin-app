@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignUuid('transaction_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('trip_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->integer('quantity');
             $table->decimal('total');
             $table->enum('order_status', ['paid','panding', 'unpaid']);

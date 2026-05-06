@@ -208,6 +208,7 @@ export default function CreatePostModal({
     const fileInputRef = useRef(null);
     const editorRef = useRef(null);
     const tagInputRef = useRef(null);
+    const tagBoxRef = useRef(null);
 
     const canPost = useMemo(() => {
         const text = getPlainTextFromHtml(contentHtml);
@@ -222,7 +223,7 @@ export default function CreatePostModal({
         [tags],
     );
 
-    const SUGGESTION_LIMIT = 5;
+    const SUGGESTION_LIMIT = 3;
 
     const filteredTagSuggestions = useMemo(() => {
         const q = normalizeTagName(tagQuery).toLowerCase();
@@ -275,6 +276,20 @@ export default function CreatePostModal({
         return () => document.removeEventListener("selectionchange", onSel);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, view]);
+
+    useEffect(() => {
+        if (!tagBoxOpen) return;
+
+        const handleClickOutside = (e) => {
+            if (tagBoxRef.current && !tagBoxRef.current.contains(e.target)) {
+                setTagBoxOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
+    }, [tagBoxOpen]);
 
     const exec = (cmd) => {
         editorRef.current?.focus();
@@ -379,12 +394,15 @@ export default function CreatePostModal({
 
     return (
         <div className="fixed inset-0 z-[9999]">
-            <div className="absolute inset-0 flex items-center justify-center p-4 bg-black/40" onClick={(e) => {
-                e.stopPropagation();
-                if(e.target === e.currentTarget) {
-                    closeAndCleanup();
-                }
-            }}>
+            <div
+                className="absolute inset-0 flex items-center justify-center p-4 bg-black/40"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (e.target === e.currentTarget) {
+                        closeAndCleanup();
+                    }
+                }}
+            >
                 <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col">
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
@@ -420,14 +438,62 @@ export default function CreatePostModal({
                                     </div>
 
                                     {location ? (
-                                        <div className="text-xs text-neutral-500 mt-0.5">
+                                        <div className="text-xs text-neutral-500">
                                             <FiMapPin className="inline mb-0.5 mr-1" />
                                             {location}
                                         </div>
                                     ) : null}
 
+                                    {/* WYSIWYG editor (bold/italic only) */}   
+                                    <div
+                                        ref={editorRef}
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        className={[
+                                            "w-full outline-none",
+                                            "text-neutral-700",
+                                            "whitespace-pre-wrap break-words",
+                                            "min-h-[44px]",
+                                            "max-h-30 md:max-h-32 overflow-y-auto",
+                                            "py-2 text-sm",
+                                        ].join(" ")}
+                                        data-placeholder="Apa yang Baru?"
+                                        onInput={() => {
+                                            syncHtmlFromDom();
+                                            syncFormatState();
+                                        }}
+                                        onKeyUp={syncFormatState}
+                                        onMouseUp={syncFormatState}
+                                        onPaste={(e) => {
+                                            e.preventDefault();
+                                            const text =
+                                                e.clipboardData.getData(
+                                                    "text/plain",
+                                                );
+                                            document.execCommand(
+                                                "insertText",
+                                                false,
+                                                text,
+                                            );
+                                            syncHtmlFromDom();
+                                            syncFormatState();
+                                        }}
+                                    />
+
+                                    <style>{`
+                                      [contenteditable][data-placeholder]:empty:before {
+                                        content: attr(data-placeholder);
+                                        color: #a3a3a3;
+                                      }
+                                    `}</style>
+
+                                    <PreviewMedia
+                                        images={images}
+                                        onRemove={removeImage}
+                                    />
+
                                     {/* Tag chips + tag input (chip model) */}
-                                    <div className="mt-3">
+                                    <div className="mt-2">
                                         {chipTags.length ? (
                                             <div className="flex flex-wrap gap-2 mb-2">
                                                 {chipTags.map((t) => (
@@ -442,7 +508,10 @@ export default function CreatePostModal({
                                             </div>
                                         ) : null}
 
-                                        <div className="relative">
+                                        <div
+                                            className="relative"
+                                            ref={tagBoxRef}
+                                        >
                                             <div className="flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2">
                                                 <FiHash className="text-neutral-500" />
                                                 <input
@@ -488,11 +557,7 @@ export default function CreatePostModal({
 
                                             {/* Suggestions (always on top) */}
                                             {tagBoxOpen ? (
-                                                <div className="absolute left-0 top-full mt-2 w-full max-w-xs rounded-xl border border-neutral-200 bg-white shadow-lg overflow-hidden z-[99999]">
-                                                    <div className="px-3 py-2 text-xs text-neutral-500 border-b border-neutral-200">
-                                                        Suggestions
-                                                    </div>
-
+                                                <div className="absolute left-0 bottom-full mb-2 w-full max-w-max rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden z-[99999]">
                                                     <div className="max-h-40 overflow-y-auto">
                                                         {filteredTagSuggestions.map(
                                                             (t) => (
@@ -509,7 +574,7 @@ export default function CreatePostModal({
                                                                             t,
                                                                         )
                                                                     }
-                                                                    className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-sm"
+                                                                    className="w-full text-left px-2 py-2 hover:bg-neutral-50 text-xs"
                                                                 >
                                                                     #{t}
                                                                 </button>
@@ -545,54 +610,6 @@ export default function CreatePostModal({
                                             ) : null}
                                         </div>
                                     </div>
-
-                                    {/* WYSIWYG editor (bold/italic only) */}
-                                    <div
-                                        ref={editorRef}
-                                        contentEditable
-                                        suppressContentEditableWarning
-                                        className={[
-                                            "mt-3 w-full outline-none",
-                                            "text-neutral-700",
-                                            "whitespace-pre-wrap break-words",
-                                            "min-h-[44px]",
-                                            "max-h-30 md:max-h-32 overflow-y-auto",
-                                            "py-2 text-sm",
-                                        ].join(" ")}
-                                        data-placeholder="Apa yang Baru?"
-                                        onInput={() => {
-                                            syncHtmlFromDom();
-                                            syncFormatState();
-                                        }}
-                                        onKeyUp={syncFormatState}
-                                        onMouseUp={syncFormatState}
-                                        onPaste={(e) => {
-                                            e.preventDefault();
-                                            const text =
-                                                e.clipboardData.getData(
-                                                    "text/plain",
-                                                );
-                                            document.execCommand(
-                                                "insertText",
-                                                false,
-                                                text,
-                                            );
-                                            syncHtmlFromDom();
-                                            syncFormatState();
-                                        }}
-                                    />
-
-                                    <style>{`
-                                      [contenteditable][data-placeholder]:empty:before {
-                                        content: attr(data-placeholder);
-                                        color: #a3a3a3;
-                                      }
-                                    `}</style>
-
-                                    <PreviewMedia
-                                        images={images}
-                                        onRemove={removeImage}
-                                    />
 
                                     {/* Toolbar */}
                                     <div className="mt-4 flex items-center gap-2 text-neutral-700">
