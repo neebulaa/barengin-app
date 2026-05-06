@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('trip_participants', function (Blueprint $table) {
             $table->id();
             $table->foreignId('trip_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            // $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->string('full_name');
             $table->string('paspor', 12)->nullable();
             $table->string('phone_number', 15);

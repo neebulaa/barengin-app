@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->integer('quantity');
             $table->decimal('total');
-            $table->enum('order_status', ['paid','panding', 'unpaid']);
+            $table->enum('order_status', ['paid','pending', 'unpaid']);
             $table->timestamps();
         });
     }
