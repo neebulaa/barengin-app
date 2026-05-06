@@ -92,7 +92,7 @@ class User extends Authenticatable
     }
 
     public function conversation_participants(){
-        return $this->hasMany(ConversationParticipant::class);
+        return $this->belongsToMany(Conversation::class, 'conversation_participants');
     }
 
     public function followers(){ 
@@ -108,11 +108,11 @@ class User extends Authenticatable
     }
 
     public function post_command_users(){
-        return $this->hasMany(PostCommand::class);
+        return $this->hasMany(PostComment::class);
     }
 
     public function post_command_parents(){
-        return $this->hasMany(PostCommand::class);
+        return $this->hasMany(PostComment::class);
     }
 
     public function jastips(){

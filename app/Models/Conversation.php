@@ -23,6 +23,6 @@ class Conversation extends Model
     }
 
     public function conversation_participants(){
-        return $this->hasMany(ConversationParticipant::class);
+        return $this->belongsToMany(User::class, 'conversation_participants');
     }
 }

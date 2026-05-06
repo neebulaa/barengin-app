@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ForumController;
 
 Route::get('/', function () {
@@ -77,4 +78,6 @@ Route::middleware('auth')->group(function () {
 Route::get('/trip-bareng', function () {
     return inertia('TripBareng/Index');
 })->name('trip-bareng');
+
+Route::get('/chat',[ChatController::class, 'index'])->name('chat');
 
