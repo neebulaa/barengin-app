@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ImageActivity extends Model
 {
-    protected $fillable = ['detail_trip_id','activity_img_name'];
+    protected $fillable = ['trip_activity_id','activity_img_name'];
     public function detail_trip(){
-        return $this->belongsTo(DetailTrip::class);
+        return $this->belongsTo(TripActivity::class);
     }
 }

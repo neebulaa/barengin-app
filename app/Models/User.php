@@ -108,11 +108,11 @@ class User extends Authenticatable
     }
 
     public function post_command_users(){
-        return $this->hasMany(PostCommand::class);
+        return $this->hasMany(PostComment::class);
     }
 
     public function post_command_parents(){
-        return $this->hasMany(PostCommand::class);
+        return $this->hasMany(PostComment::class);
     }
 
     public function jastips(){
@@ -125,5 +125,9 @@ class User extends Authenticatable
 
     public function pergi_bareng_ratings(){
         return $this->hasMany(PergiBarengRating::class);
+    }
+    
+    public function pergi_bareng_requests(){
+        return $this->hasMany(PergiBarengRequest::class);
     }
 }
