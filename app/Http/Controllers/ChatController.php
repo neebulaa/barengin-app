@@ -14,7 +14,7 @@ class ChatController extends Controller
     {
         $userID = Auth::id();
 
-        $conversations = Conversation::whereHas('conversation_participants', function($q) use ($userID){
+        $conversations = Conversation::whereHas('participants', function($q) use ($userID){
             $q->where('user_id', $userID);
         })->with([
             'conversation_participants',
@@ -28,7 +28,7 @@ class ChatController extends Controller
         if($request->has('id')){
             $activeConversation = Conversation::with([
                 'messages.sender', 
-                'conversation_participants',
+                'participants',
                 'trip',
                 'pergi_bareng'
             ])->findOrFail($request->id);

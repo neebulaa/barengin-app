@@ -1,25 +1,483 @@
-import React from "react"
-import MainLayout from "@/Layouts/MainLayout"
-import NavbarAuth from "../../Components/NavbarAuth"
-import Container from "../../Components/Container";
+import React, { useEffect, useMemo, useState } from "react";
+import MainLayout from "@/Layouts/MainLayout";
+import Container from "@/Components/Container";
+import InputField from "@/Components/Input";
+import Button from "@/Components/Button";
 
-export default function ChatPersonalIndex(){
-    return(
-        <>
-            <NavbarAuth />
-            <Container>
-                <div className="grid grid-cols-2 mt-3">
-                    <div className="">
-                        <div className="flex">
-                            <h3 className="text-2xl font-bold text-grey-700 mb-5" >Chat Messages</h3>
-                            
+import {
+    BiMessageSquareAdd,
+    BiSearch,
+} from "react-icons/bi";
+import {
+    FiFilter,
+    FiPaperclip,
+    FiSend,
+} from "react-icons/fi";
+
+function cn(...a) {
+    return a.filter(Boolean).join(" ");
+}
+
+function Avatar({ src, alt, className = "" }) {
+    return (
+        <img
+            src={src}
+            alt={alt}
+            className={cn(
+                "h-11 w-11 rounded-full object-cover bg-neutral-200",
+                className,
+            )}
+        />
+    );
+}
+
+function Segment({ value, onChange }) {
+    return (
+        <div className="flex w-full rounded-full border border-neutral-300 bg-white p-1">
+            {[
+                { value: "personal", label: "Personal" },
+                { value: "groups", label: "Groups" },
+            ].map((it) => {
+                const active = it.value === value;
+                return (
+                    <button
+                        key={it.value}
+                        type="button"
+                        onClick={() => onChange(it.value)}
+                        className={cn(
+                            "flex-1 rounded-full px-4 py-2 text-sm font-medium transition",
+                            active
+                                ? "bg-primary-700 text-white"
+                                : "text-primary-700 hover:bg-primary-50",
+                        )}
+                    >
+                        {it.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function ChatListItem({
+    active,
+    avatar,
+    title,
+    subtitle,
+    time,
+    unread,
+    onClick,
+    badgeLabel,
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+                "w-full rounded-2xl px-4 py-3 text-left transition",
+                active ? "bg-primary-50" : "hover:bg-neutral-100",
+            )}
+        >
+            <div className="flex items-center gap-3">
+                <Avatar src={avatar} alt={title} />
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <div className="truncate text-[15px] font-semibold text-neutral-700">
+                                {title}
+                            </div>
+                            <div className="truncate text-sm text-neutral-500">
+                                {subtitle}
+                            </div>
+                        </div>
+
+                        <div className="shrink-0 text-xs text-neutral-500">
+                            {time}
                         </div>
                     </div>
-                    <div className="bg-red-100 ">
-                        <h2>Profile Pic</h2>
+
+                    <div className="mt-2 flex items-center justify-between">
+                        {badgeLabel ? (
+                            <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-1 text-[11px] font-medium text-neutral-700">
+                                {badgeLabel}
+                            </span>
+                        ) : (
+                            <span />
+                        )}
+
+                        {unread ? (
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-700 px-1 text-[11px] font-semibold text-white">
+                                {unread}
+                            </span>
+                        ) : null}
                     </div>
                 </div>
+            </div>
+        </button>
+    );
+}
+
+function Bubble({ mine, text, time, withTicks, avatar }) {
+    return (
+        <div className={cn("flex w-full", mine ? "justify-end" : "justify-start")}>
+            <div className="flex max-w-[560px] items-end gap-3">
+                {!mine ? (
+                    <Avatar src={avatar} alt="avatar" className="h-9 w-9" />
+                ) : null}
+
+                <div
+                    className={cn(
+                        "rounded-xl border border-primary-700 bg-white px-4 py-3",
+                        mine ? "rounded-br-sm" : "rounded-bl-sm",
+                    )}
+                >
+                    <div className="whitespace-pre-line text-sm text-neutral-700">
+                        {text}
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-neutral-500">
+                        <span>{time}</span>
+                        {mine && withTicks ? (
+                            <span className="text-primary-700">✓✓</span>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function ChatPersonalIndex() {
+    const [tab, setTab] = useState("personal");
+    const [q, setQ] = useState("");
+    const [filter, setFilter] = useState("all"); // all | unread
+
+    // dummy data (replace dari props inertia nanti)
+    const personalChats = [
+        {
+            id: "u1",
+            avatar: "https://i.pravatar.cc/120?img=5",
+            title: "Jane Cooper",
+            subtitle: "gatau sih waitt",
+            time: "08:50",
+            unread: 0,
+            headerTitle: "Jane Cooper",
+            headerSub: "Online",
+        },
+        {
+            id: "u2",
+            avatar: "/assets/default-profile.png",
+            title: "Jungkukchan",
+            subtitle: "ini wtsnya diambil",
+            time: "08:50",
+            unread: 2,
+            headerTitle: "Jungkukchan",
+            headerSub: "Online",
+        },
+        {
+            id: "u3",
+            avatar: "https://i.pravatar.cc/120?img=12",
+            title: "Yuki",
+            subtitle: "nanti yaa baru ku up lagi",
+            time: "08:50",
+            unread: 0,
+            headerTitle: "Yuki",
+            headerSub: "Online",
+        },
+        {
+            id: "u4",
+            avatar: "/assets/default-profile.png",
+            title: "Lister Chan",
+            subtitle: "sipp broo",
+            time: "08:50",
+            unread: 0,
+            headerTitle: "Lister Chan",
+            headerSub: "Online",
+        },
+    ];
+
+    const groupChats = [
+        {
+            id: "g1",
+            avatar: "https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba?w=200&h=200&fit=crop",
+            title: "Pergi ke Stasiun Bogor",
+            subtitle: "Nga sabar nih..",
+            time: "08:50",
+            unread: 0,
+            badgeLabel: "Pergi Bareng",
+            headerTitle: "Pergi ke Stasiun Bogor",
+            headerSub: "4 Anggota",
+        },
+        {
+            id: "g2",
+            avatar: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=200&h=200&fit=crop",
+            title: "Trip Canbur",
+            subtitle: "Gaiss see you esok!!",
+            time: "08:50",
+            unread: 0,
+            badgeLabel: "Trip Bareng",
+            headerTitle: "Trip Canbur",
+            headerSub: "6 Anggota",
+        },
+    ];
+
+    const chats = tab === "personal" ? personalChats : groupChats;
+
+    const [activeId, setActiveId] = useState(chats?.[0]?.id);
+
+    useEffect(() => {
+        setActiveId((prev) => {
+            const exists = (chats ?? []).some((c) => c.id === prev);
+            return exists ? prev : chats?.[0]?.id;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tab]);
+
+    const activeChat = useMemo(
+        () => (chats ?? []).find((c) => c.id === activeId) ?? chats?.[0],
+        [activeId, chats],
+    );
+
+    const filteredChats = useMemo(() => {
+        const base = chats ?? [];
+        return base
+            .filter((c) => {
+                if (!q) return true;
+                const hit =
+                    (c.title ?? "").toLowerCase().includes(q.toLowerCase()) ||
+                    (c.subtitle ?? "").toLowerCase().includes(q.toLowerCase());
+                return hit;
+            })
+            .filter((c) => {
+                if (filter === "unread") return Number(c.unread ?? 0) > 0;
+                return true;
+            });
+    }, [chats, q, filter]);
+
+    const [message, setMessage] = useState("");
+
+    const messages = [
+        {
+            id: 1,
+            mine: false,
+            text: "Hello Rudi,\nSaya adalah orang yang ingin ini itu semoga ininya di itukan.\nKuda Jaran cuy",
+            time: "08.33",
+        },
+        {
+            id: 2,
+            mine: false,
+            text: "Hello Rudi,\nSaya adalah orang yang ingin ini itu\nsemoga ininya di itukan.",
+            time: "08.33",
+        },
+        {
+            id: 3,
+            mine: true,
+            text: "Hello, Jgane",
+            time: "08.39",
+            withTicks: true,
+        },
+        {
+            id: 4,
+            mine: true,
+            text: "Semoga yang diiinikan segera\ndiitukan yaa 🙌",
+            time: "08.39",
+            withTicks: true,
+        },
+    ];
+
+    const submit = (e) => {
+        e.preventDefault();
+        // TODO: kirim ke backend pakai Inertia router.post
+        setMessage("");
+    };
+
+    return (
+        <MainLayout>
+            <Container className="max-w-[1400px]">
+                <div className="grid min-h-[calc(100vh-96px)] grid-cols-1 md:grid-cols-[420px_1fr] border-l border-r border-neutral-200">
+                    {/* LEFT SIDEBAR */}
+                    <aside className="border-r border-neutral-200 bg-white px-8 py-8">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-2xl font-semibold text-neutral-700">
+                                Chat Messages
+                            </h3>
+
+                            <button
+                                type="button"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
+                                aria-label="New Chat"
+                            >
+                                <BiMessageSquareAdd className="text-3xl" />
+                            </button>
+                        </div>
+
+                        <div className="mt-6">
+                            <Segment value={tab} onChange={setTab} />
+                        </div>
+
+                        <div className="mt-6">
+                            <InputField
+                                value={q}
+                                onChange={(e) => setQ(e.target.value)}
+                                placeholder="Search Chat..."
+                                leftIcon={<BiSearch className="text-xl" />}
+                                rounded
+                                size="md"
+                            />
+                        </div>
+
+                        <div className="mt-6 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setFilter("all")}
+                                    className={cn(
+                                        "rounded-full px-4 py-2 text-sm font-medium transition",
+                                        filter === "all"
+                                            ? "bg-primary-100 text-primary-700"
+                                            : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200",
+                                    )}
+                                >
+                                    All
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setFilter("unread")}
+                                    className={cn(
+                                        "rounded-full px-4 py-2 text-sm font-medium transition",
+                                        filter === "unread"
+                                            ? "bg-neutral-200 text-neutral-700"
+                                            : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200",
+                                    )}
+                                >
+                                    Unread 2
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-neutral-700 hover:bg-neutral-100"
+                                aria-label="Filter"
+                            >
+                                <FiFilter className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="mt-6 space-y-2">
+                            {filteredChats.map((c) => (
+                                <ChatListItem
+                                    key={c.id}
+                                    active={c.id === activeId}
+                                    avatar={c.avatar}
+                                    title={c.title}
+                                    subtitle={c.subtitle}
+                                    time={c.time}
+                                    unread={c.unread}
+                                    badgeLabel={c.badgeLabel}
+                                    onClick={() => setActiveId(c.id)}
+                                />
+                            ))}
+                        </div>
+                    </aside>
+
+                    {/* RIGHT CHAT PANEL */}
+                    <section className="relative bg-white">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 border-b border-neutral-200 px-10 py-6">
+                            <Avatar
+                                src={activeChat?.avatar}
+                                alt={activeChat?.headerTitle ?? "Chat"}
+                            />
+                            <div className="min-w-0">
+                                <div className="truncate text-lg font-semibold text-neutral-700">
+                                    {activeChat?.headerTitle ?? "Chat"}
+                                </div>
+                                <div
+                                    className={cn(
+                                        "text-sm",
+                                        tab === "personal"
+                                            ? "text-success-700"
+                                            : "text-neutral-500",
+                                    )}
+                                >
+                                    {activeChat?.headerSub ?? ""}
+                                </div>
+                            </div>
+
+                            <div className="ml-auto hidden md:block">
+                                {/* optional: kamu bisa pakai Button dari repo untuk action lain */}
+                                <Button
+                                    type="primary"
+                                    variant="soft"
+                                    size="sm"
+                                    className="rounded-full"
+                                    onClick={() => {}}
+                                >
+                                    View
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="h-[calc(100vh-96px-84px-96px)] overflow-y-auto px-10 py-10">
+                            <div className="space-y-8">
+                                {messages.map((m) => (
+                                    <Bubble
+                                        key={m.id}
+                                        mine={m.mine}
+                                        text={m.text}
+                                        time={m.time}
+                                        withTicks={m.withTicks}
+                                        avatar={activeChat?.avatar}
+                                    />
+                                ))}
+
+                                {/* contoh image bubble placeholder biar mirip gambar */}
+                                <div className="flex w-full justify-end">
+                                    <div className="w-[560px] rounded-xl border border-primary-700 bg-white p-3">
+                                        <div className="h-44 w-full rounded-lg bg-neutral-900" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Composer */}
+                        <div className="border-t border-neutral-200 px-10 py-6">
+                            <form
+                                onSubmit={submit}
+                                className="flex items-center gap-4"
+                            >
+                                <div className="relative flex-1">
+                                    <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">
+                                        <FiPaperclip className="h-5 w-5" />
+                                    </div>
+
+                                    <input
+                                        value={message}
+                                        onChange={(e) =>
+                                            setMessage(e.target.value)
+                                        }
+                                        placeholder="Your Messages"
+                                        className={cn(
+                                            "h-14 w-full rounded-full border border-neutral-300 bg-white pl-12 pr-4 text-sm text-neutral-700 placeholder:text-neutral-500",
+                                            "focus:border-primary-700 focus:outline-none",
+                                        )}
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary-700 text-white hover:opacity-90"
+                                    aria-label="Send"
+                                >
+                                    <FiSend className="h-6 w-6" />
+                                </button>
+                            </form>
+                        </div>
+                    </section>
+                </div>
             </Container>
-        </>
+        </MainLayout>
     );
 }
