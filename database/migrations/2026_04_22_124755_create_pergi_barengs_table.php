@@ -19,10 +19,9 @@ return new class extends Migration
             $table->dateTime('time_appointment');
             $table->enum('transportation', ['Mobil Pribadi', 'Transportasi Online','Transportasi Umum', 'Sewa Mobil']);
             $table->integer('people_amount');
-            $table->string('origin_city');
-            $table->string('destination_city');
             $table->text('departure_loc');
             $table->text('destination_loc');
+            $table->string("img_name")->nullable();
             $table->timestamps();
         });
     }

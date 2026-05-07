@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Tag;
 use Illuminate\Http\Request;
+use App\Models\PostComment;
+use Illuminate\Support\Facades\Auth;
+use App\Models\PostLike;
+use App\Models\PostCommentLike;
 
 class ForumController extends Controller
 {
@@ -21,10 +25,12 @@ class ForumController extends Controller
         return asset('storage/posts/' . $imgName);
     }
 
-    public function index(Request $request)
+        public function index(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
         $tag = trim((string) $request->query('tag', ''));
+
+        $userId = Auth::id();
 
         $postsQuery = Post::query()
             ->with([
@@ -32,9 +38,9 @@ class ForumController extends Controller
                 'images:id,post_id,img_name',
                 'tags:id,tag_name',
             ])
-            // count ALL post_comments rows (top-level + replies) for each post
             ->withCount([
                 'comments as comments_count',
+                'likes as likes_count',
             ])
             ->latest();
 
@@ -55,23 +61,35 @@ class ForumController extends Controller
             ->orderBy('tag_name')
             ->get();
 
+        // Collect post ids to check likes-by-me in one query
+        $postIds = collect($posts->items())->pluck('id')->values();
+
+        $likedPostIds = collect();
+        if ($userId) {
+            $likedPostIds = \App\Models\PostLike::query()
+                ->where('user_id', $userId)
+                ->whereIn('post_id', $postIds)
+                ->pluck('post_id');
+        }
+
         return inertia('Forum/Index', [
             'filters' => [
                 'q' => $q,
                 'tag' => $tag,
             ],
 
-            'posts' => $posts->through(function ($post) {
+            'posts' => $posts->through(function ($post) use ($likedPostIds) {
                 return [
                     'id' => $post->id,
                     'content' => $post->content,
                     'allows_comment' => (bool) $post->allows_comment,
                     'location' => $post->location,
 
-                    // synced counts
-                    'likes' => (int) ($post->like ?? 0),
-                    'comments_count' => (int) ($post->comments_count ?? 0),
+                    // ✅ new like system
+                    'likes_count' => (int) ($post->likes_count ?? 0),
+                    'liked_by_me' => $likedPostIds->contains($post->id),
 
+                    'comments_count' => (int) ($post->comments_count ?? 0),
                     'created_at' => $post->created_at,
 
                     'user' => [
@@ -99,7 +117,8 @@ class ForumController extends Controller
 
     public function show(Request $request, int $id)
     {
-        $sort = $request->query('sort', 'popular'); // popular | newest
+        $sort = $request->query('sort', 'newest'); // popular | newest
+        $userId = Auth::id();
 
         $post = Post::query()
             ->with([
@@ -107,25 +126,57 @@ class ForumController extends Controller
                 'images:id,post_id,img_name',
                 'tags:id,tag_name',
             ])
+            ->withCount([
+                'likes as likes_count',
+            ])
             ->findOrFail($id);
 
+        // comments (top-level)
         $commentsQuery = $post->comments()
             ->whereNull('parent_id')
+            ->withCount(['likes as likes_count'])
             ->with([
                 'user:id,full_name,profile_image',
-                'replies.user:id,full_name,profile_image',
+                'replies' => function ($q) {
+                    // replies should be oldest -> newest (bottom is newest)
+                    $q->orderBy('created_at', 'asc')
+                        ->with('user:id,full_name,profile_image')
+                        ->withCount(['likes as likes_count']);
+                },
             ]);
 
         if ($sort === 'newest') {
-            $commentsQuery->latest();
+            $commentsQuery->orderByDesc('created_at');
         } else {
-            $commentsQuery->orderByDesc('like')->latest();
+            $commentsQuery->orderByDesc('likes_count')
+                ->orderByDesc('created_at');
         }
 
         $comments = $commentsQuery->get();
 
         $responseCount = $comments->count()
             + $comments->sum(fn ($c) => $c->replies->count());
+
+        // liked_by_me sets in bulk (comments + replies)
+        $commentIds = $comments->pluck('id');
+        $replyIds = $comments->flatMap(fn ($c) => $c->replies->pluck('id'));
+        $allCommentIds = $commentIds->merge($replyIds)->values();
+
+        $likedCommentIds = collect();
+        if ($userId && $allCommentIds->count()) {
+            $likedCommentIds = \App\Models\PostCommentLike::query()
+                ->where('user_id', $userId)
+                ->whereIn('post_comment_id', $allCommentIds)
+                ->pluck('post_comment_id');
+        }
+
+        $postLikedByMe = false;
+        if ($userId) {
+            $postLikedByMe = \App\Models\PostLike::query()
+                ->where('user_id', $userId)
+                ->where('post_id', $post->id)
+                ->exists();
+        }
 
         return inertia('Forum/PostShow', [
             'sort' => $sort,
@@ -137,10 +188,10 @@ class ForumController extends Controller
                 'allows_comment' => (bool) $post->allows_comment,
                 'location' => $post->location,
 
-                // synced counts
-                'likes' => (int) ($post->like ?? 0),
-                'comments_count' => (int) $responseCount,
+                'likes_count' => (int) ($post->likes_count ?? 0),
+                'liked_by_me' => (bool) $postLikedByMe,
 
+                'comments_count' => (int) $responseCount,
                 'created_at' => $post->created_at,
 
                 'user' => [
@@ -164,7 +215,10 @@ class ForumController extends Controller
             'comments' => $comments->map(fn ($c) => [
                 'id' => $c->id,
                 'comment_text' => $c->comment_text,
-                'likes' => (int) ($c->like ?? 0),
+
+                'likes_count' => (int) ($c->likes_count ?? 0),
+                'liked_by_me' => $likedCommentIds->contains($c->id),
+
                 'created_at' => $c->created_at,
 
                 'user' => [
@@ -176,7 +230,10 @@ class ForumController extends Controller
                 'replies' => $c->replies->map(fn ($r) => [
                     'id' => $r->id,
                     'comment_text' => $r->comment_text,
-                    'likes' => (int) ($r->like ?? 0),
+
+                    'likes_count' => (int) ($r->likes_count ?? 0),
+                    'liked_by_me' => $likedCommentIds->contains($r->id),
+
                     'created_at' => $r->created_at,
                     'user' => [
                         'id' => $r->user?->id,
@@ -186,5 +243,91 @@ class ForumController extends Controller
                 ])->values(),
             ])->values(),
         ]);
+    }
+
+    public function storeComment(Request $request, Post $post)
+    {
+        $request->validate([
+            'comment_text' => ['required', 'string', 'max:2000'],
+        ]);
+
+        // Optional: block if post disallows comments
+        if (! $post->allows_comment) {
+            abort(403, 'Comments are disabled for this post.');
+        }
+
+        PostComment::create([
+            'post_id' => $post->id,
+            'user_id' => Auth::id(),
+            'parent_id' => null,
+            'comment_text' => $request->comment_text,
+        ]);
+
+        return redirect()->back();
+    }
+
+    public function storeReply(Request $request, PostComment $comment)
+    {
+        $request->validate([
+            'comment_text' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $post = $comment->post; // requires comment->post() relation
+
+        if (! $post || ! $post->allows_comment) {
+            abort(403, 'Comments are disabled for this post.');
+        }
+
+        // Force reply to be under a top-level comment
+        $parentId = $comment->parent_id ? $comment->parent_id : $comment->id;
+
+        PostComment::create([
+            'post_id' => $comment->post_id,
+            'user_id' => Auth::id(),
+            'parent_id' => $parentId,
+            'comment_text' => $request->comment_text,
+        ]);
+
+        return redirect()->back();
+    }
+
+    public function togglePostLike(Post $post)
+    {
+        $userId = Auth::id();
+
+        $existing = PostLike::where('post_id', $post->id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+        } else {
+            PostLike::create([
+                'post_id' => $post->id,
+                'user_id' => $userId,
+            ]);
+        }
+
+        return back();
+    }
+
+    public function toggleCommentLike(PostComment $comment)
+    {
+        $userId = Auth::id();
+
+        $existing = PostCommentLike::where('post_comment_id', $comment->id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+        } else {
+            PostCommentLike::create([
+                'post_comment_id' => $comment->id,
+                'user_id' => $userId,
+            ]);
+        }
+
+        return back();
     }
 }

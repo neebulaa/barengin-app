@@ -11,9 +11,11 @@ import PostCard from "./Partials/PostCard";
 import TagPillList from "./Partials/TagPillList";
 
 import { FiSearch } from "react-icons/fi";
+import CreatePostModal from "./Partials/CreatePostModal";
 
 export default function ForumIndex({ posts, tags, filters }) {
     const user = usePage().props.auth?.user;
+    const [openCreatePost, setOpenCreatePost] = useState(false);
 
     const [q, setQ] = useState(filters?.q ?? "");
 
@@ -31,8 +33,13 @@ export default function ForumIndex({ posts, tags, filters }) {
         setNextUrl(posts?.next_page_url ?? null);
         setIsLoadingMore(false);
         setQ(filters?.q ?? "");
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [feedKey]);
+
+    useEffect(() => {
+        setItems(posts?.data ?? []);
+        setNextUrl(posts?.next_page_url ?? null);
+        setIsLoadingMore(false);
+    }, [posts?.data, posts?.next_page_url]);
 
     useEffect(() => {
         return () => {
@@ -47,6 +54,42 @@ export default function ForumIndex({ posts, tags, filters }) {
         [tagNames],
     );
 
+    // ✅ optimistic like toggle in feed
+    const toggleLikePost = (postId) => {
+        if (!user) return;
+
+        // snapshot for rollback
+        const before = items;
+
+        // optimistic update
+        setItems((prev) =>
+            (prev ?? []).map((p) => {
+                if (p.id !== postId) return p;
+
+                const liked = Boolean(p.liked_by_me);
+                const count = Number(p.likes_count ?? 0);
+
+                return {
+                    ...p,
+                    liked_by_me: !liked,
+                    likes_count: Math.max(0, count + (liked ? -1 : 1)),
+                };
+            }),
+        );
+
+        router.post(
+            `/forum/posts/${postId}/like`,
+            {},
+            {
+                preserveScroll: true,
+                onError: () => {
+                    // rollback
+                    setItems(before);
+                },
+            },
+        );
+    };
+
     const postCards = useMemo(() => {
         return (items ?? []).map((p) => ({
             id: p.id,
@@ -55,9 +98,12 @@ export default function ForumIndex({ posts, tags, filters }) {
             time: formatRelativeTime(p.created_at),
             content: p.content,
 
-            // ✅ synced counts from backend
-            likes: compactNumber(p.likes),
-            comments: compactNumber(p.comments_count),
+            likes: compactNumber(p.likes_count ?? 0),
+            likedByMe: Boolean(p.liked_by_me),
+
+            allowsComment: Boolean(p.allows_comment),
+            comments: compactNumber(p.comments_count ?? 0),
+            location: p.location ?? "",
 
             tags: (p.tags ?? []).map((t) => t.tag_name),
             images: (p.images ?? []).map((img) => img.url),
@@ -139,7 +185,7 @@ export default function ForumIndex({ posts, tags, filters }) {
 
     return (
         <div className="bg-white lg:pl-28">
-            <ForumSideNav />
+            <ForumSideNav onCreatePost={() => setOpenCreatePost(true)} />
 
             <Container className="py-10">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -168,6 +214,7 @@ export default function ForumIndex({ posts, tags, filters }) {
                                 user?.public_profile_image ??
                                 "/assets/default-profile.png"
                             }
+                            onOpen={() => setOpenCreatePost(true)}
                         />
 
                         <div className="mt-8 space-y-6">
@@ -176,6 +223,7 @@ export default function ForumIndex({ posts, tags, filters }) {
                                     key={post.id}
                                     post={post}
                                     onTagClick={onTagClick}
+                                    onLike={() => toggleLikePost(post.id)}
                                 />
                             ))}
 
@@ -219,6 +267,44 @@ export default function ForumIndex({ posts, tags, filters }) {
             </Container>
 
             <div className="h-24 lg:hidden" />
+
+            <CreatePostModal
+                open={openCreatePost}
+                onClose={() => setOpenCreatePost(false)}
+                user={user}
+                tags={tags ?? []}
+                onSubmit={(payload) => {
+                    const fd = new FormData();
+                    fd.append("content_html", payload.content_html ?? "");
+                    fd.append(
+                        "allows_comment",
+                        payload.allows_comment ? "1" : "0",
+                    );
+                    if (payload.location)
+                        fd.append("location", payload.location);
+
+                    (payload.images ?? []).forEach((file) => {
+                        fd.append("images[]", file);
+                    });
+
+                    (payload.tag_names ?? []).forEach((t) =>
+                        fd.append("tag_names[]", t),
+                    );
+
+                    router.post("/forum/posts", fd, {
+                        forceFormData: true,
+                        preserveScroll: true,
+
+                        // optional: refresh only posts on success
+                        onSuccess: () => {
+                            router.reload({
+                                only: ["posts"],
+                                preserveScroll: true,
+                            });
+                        },
+                    });
+                }}
+            />
         </div>
     );
 }
@@ -233,7 +319,6 @@ function formatRelativeTime(iso) {
 
     const diffSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
     if (diffSeconds < 0) return "baru saja";
-
     if (diffSeconds < 60) return "baru saja";
 
     const minutes = Math.floor(diffSeconds / 60);
@@ -257,9 +342,16 @@ function formatRelativeTime(iso) {
 
 function compactNumber(n) {
     const num = Number(n ?? 0);
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
-    return `${num}`;
+    if (!Number.isFinite(num)) return "0";
+
+    const format = (value, suffix) => {
+        const s = value.toFixed(1);
+        return `${s.endsWith(".0") ? s.slice(0, -2) : s}${suffix}`;
+    };
+
+    if (num >= 1_000_000) return format(num / 1_000_000, "M");
+    if (num >= 1_000) return format(num / 1_000, "k");
+    return String(num);
 }
 
 function PostCardSkeleton() {

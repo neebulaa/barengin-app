@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Post extends Model
 {
+    protected $fillable = [
+        'user_id',
+        'content',
+        'allows_comment',
+        'location',
+        'like',
+    ];
+
     public function images(): HasMany
     {
         return $this->hasMany(PostImage::class);
@@ -25,5 +33,10 @@ class Post extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(PostComment::class);
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(PostLike::class);
     }
 }

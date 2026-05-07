@@ -15,11 +15,11 @@ class Trip extends Model
     }
 
     public function detail_trips(){
-        return $this->hasMany(DetailTrip::class);
+        return $this->hasMany(TripActivity::class);
     }
 
     public function facilities(){
-        return $this->hasMany(Facilitiy::class);
+        return $this->belongsToMany(Facilitiy::class, 'trip_facilities');
     }
 
     public function guide_rating_trips(){

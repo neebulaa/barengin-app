@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\TripsController;
+use App\Http\Controllers\PostController;
 
 Route::get('/', function () {
     return inertia('Home/Index');
@@ -55,6 +56,25 @@ Route::middleware('auth')->group(function () {
 
     // Logout 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Forum
+    Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+    Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
+        ->whereNumber('id')
+        ->name('forum.show');
+
+    Route::post('/forum/posts', [PostController::class, 'store'])->name('forum.posts.store');
+    
+    Route::post('/forum/posts/{post}/comments', [ForumController::class, 'storeComment'])
+        ->name('forum.posts.comments.store');
+    Route::post('/forum/comments/{comment}/replies', [ForumController::class, 'storeReply'])
+        ->name('forum.comments.replies.store');
+
+    Route::post('/forum/posts/{post}/like', [ForumController::class, 'togglePostLike'])
+        ->name('forum.posts.like.toggle');
+
+    Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike'])
+        ->name('forum.comments.like.toggle');
 });
 
 

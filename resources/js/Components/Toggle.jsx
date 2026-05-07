@@ -24,16 +24,16 @@ export default function Toggle({
 
     // Track + knob sizes
     const trackClass = isSm ? "w-9 h-5" : "w-11 h-6";
-    const knobClass = isSm ? "w-4 h-4" : "w-5 h-5";
+    const knobClass = isSm ? "w-3 h-3" : "w-4 h-4";
 
     // Knob positions (symmetric)
     // md track w-11 (44px), knob w-5 (20px), left padding ~2px => right translate ~20px => translate-x-5
     // sm track w-9 (36px), knob w-4 (16px), left padding ~2px => right translate ~16px => translate-x-4
     const knobTranslate = checked
         ? isSm
-            ? "translate-x-4"
-            : "translate-x-5"
-        : "translate-x-0";
+            ? "translate-x-4.5"
+            : "translate-x-5.5"
+        : "translate-x-0.5";
 
     return (
         <div className={className}>
