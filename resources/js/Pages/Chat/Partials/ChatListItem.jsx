@@ -1,23 +1,28 @@
 import React from "react";
+import Avatar from "./Avatar";
+
+function cn(...a) {
+    return a.filter(Boolean).join(" ");
+}
 
 export default function ChatListItem({
-    isActive,
+    active,
     avatar,
     title,
     subtitle,
     time,
     unread,
+    badgeLabel,
     onClick,
-    badgeLabel
-}){
-    return(
+}) {
+    return (
         <button
             type="button"
             onClick={onClick}
-            className={
-                "w-full rounded-2xl px-4 py-3 text-left transition" +
-                (isActive ? "bg-primary-50" : "hover:bg-neutral-100")
-            }
+            className={cn(
+                "w-full rounded-2xl px-4 py-3 text-left transition",
+                active ? "bg-primary-50" : "hover:bg-neutral-100",
+            )}
         >
             <div className="flex items-center gap-3">
                 <Avatar src={avatar} alt={title} />
@@ -32,8 +37,17 @@ export default function ChatListItem({
                             </div>
                         </div>
 
-                        <div className="shrink-0 text-xs text-neutral-500">
-                            {time}
+                        <div className="shrink-0 flex flex-col items-end gap-2">
+                            <span className="text-xs text-neutral-500">
+                                {time}
+                            </span>
+                            {unread ? (
+                                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-700 px-1 text-[11px] font-semibold text-white">
+                                    {unread}
+                                </span>
+                            ) : (
+                                <div className="h-5" /> 
+                            )}
                         </div>
                     </div>
 
@@ -46,11 +60,7 @@ export default function ChatListItem({
                             <span />
                         )}
 
-                        {unread ? (
-                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-700 px-1 text-[11px] font-semibold text-white">
-                                {unread}
-                            </span>
-                        ) : null}
+                        
                     </div>
                 </div>
             </div>
