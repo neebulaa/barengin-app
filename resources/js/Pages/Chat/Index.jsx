@@ -123,7 +123,6 @@ export default function ChatIndex() {
             });
     }, [chats, q, filter]);
 
-    // dummy messages
     const messages = [
         {
             id: 1,
@@ -167,6 +166,20 @@ export default function ChatIndex() {
     const goBackToList = () => {
         setMobileView("list");
     };
+
+    useEffect(() => {
+        if (!activeConversation?.id) return;
+
+        const channel = window.Echo?.private(`conversation.${activeConversation.id}`);
+
+        channel?.listen(".message.sent", (payload) => {
+            setLocalMessages((prev) => [...(prev ?? []), payload]);
+        });
+
+        return () => {
+            window.Echo?.leave(`private-conversation.${activeConversation.id}`);
+        };
+    }, [activeConversation?.id]);
 
     return (
         <>

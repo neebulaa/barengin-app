@@ -83,6 +83,8 @@ Route::get('/trip-bareng', function () {
 })->name('trip-bareng');
 
 Route::get('/chat',[ChatController::class, 'index'])->name('chat');
+Route::get('/chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
+Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
 
 Route::get('/chat/exp', function(){
     return inertia('Chat/Index2');
