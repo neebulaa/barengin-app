@@ -1,72 +1,91 @@
+import { useState } from "react";
 import TripCard from "@/Components/TripCard";
+import Container from "@/Components/Container";
+import TripSearchForm from "@/Components/TripSearchForm";
+import Pagination from "@/Components/Pagination";
+
+import MainLayout from "@/Layouts/MainLayout";
 
 export default function Index({ trips }) {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* HERO */}
-      <section className="relative h-[420px] bg-cover bg-center" style={{ backgroundImage: "url('/assets/trips/hero.jpg')" }}>
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="relative z-10 max-w-6xl mx-auto px-4 h-full flex flex-col justify-center text-white">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3">Ikuti Trip terbaik di Dunia</h1>
-          <p className="text-lg opacity-90">
-            Ambil jeda dari stres kehidupan sehari-hari, rencanakan perjalanan, dan jelajahi destinasi favoritmu.
-          </p>
+    const [activeTab, setActiveTab] = useState("all");
+    const [page, setPage] = useState(1);
 
-          {/* Search Box */}
-          <div className="mt-8 bg-white rounded-2xl shadow-lg p-4 flex flex-col md:flex-row gap-3">
-            <input className="flex-1 border rounded-xl px-4 py-3 text-gray-700" placeholder="Tujuan" />
-            <input type="date" className="flex-1 border rounded-xl px-4 py-3 text-gray-700" />
-            <input type="date" className="flex-1 border rounded-xl px-4 py-3 text-gray-700" />
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
-              Cari
-            </button>
-          </div>
+    return (
+        <div className="min-h-screen bg-neutral-50 pb-16 md:pb-24">
+            {/* --- Hero Section --- */}
+            <header
+                className="relative pt-28 pb-32 md:pt-40 md:pb-44 bg-cover bg-center bg-no-repeat"
+                style={{
+                    backgroundImage:
+                        "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.6)), url('/assets/trip-bareng/hero-bg.png')",
+                }}
+            >
+                <Container className="relative z-10 text-center text-white px-4">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight">
+                        Eksplor Tempat di Sekitar Anda
+                    </h1>
+                    <p className="text-sm sm:text-base md:text-lg mb-0 max-w-2xl mx-auto font-normal text-neutral-200 leading-relaxed">
+                        Ambil jeda dari stres kehidupan sehari-hari, rencanakan
+                        perjalanan, dan jelajahi destinasi favoritmu bersama-sama.
+                    </p>
+                </Container>
+            </header>
+
+            {/* --- Search Form Section --- */}
+            {/* z-10 dan relative penting agar form tidak tenggelam di belakang background hero */}
+            <section className="relative z-10 -mt-16 md:-mt-20 px-4 sm:px-0">
+                <Container>
+                    <TripSearchForm
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                    />
+                </Container>
+            </section>
+
+            {/* --- List Section --- */}
+            <Container className="mt-12 md:mt-16">
+                
+                {/* Header & Filters */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">
+                        Cari Trip Terbaikmu
+                    </h2>
+                    
+                    {/* Filter dibikin full-width di HP, auto di desktop */}
+                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                        <select className="w-full sm:w-auto bg-white border border-neutral-300 text-neutral-700 text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all cursor-pointer shadow-sm">
+                            <option value="">Urutkan Berdasarkan</option>
+                            <option value="rating">Rating Tertinggi</option>
+                            <option value="price_asc">Harga Termurah</option>
+                            <option value="price_desc">Harga Termahal</option>
+                        </select>
+                        <select className="w-full sm:w-auto bg-white border border-neutral-300 text-neutral-700 text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all cursor-pointer shadow-sm">
+                            <option value="">Filter Kategori</option>
+                            <option value="popular">Paling Populer</option>
+                            <option value="new">Trip Terbaru</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Grid Trip Cards (Responsif: 1 kolom HP, 2 kolom Tablet, 3 kolom Desktop) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    {trips.map((trip) => (
+                        <TripCard key={trip.id} trip={trip} />
+                    ))}
+                </div>
+
+                {/* --- Pagination --- */}
+                <div className="mt-12 md:mt-16 border-t border-neutral-200 pt-8">
+                    <Pagination
+                        currentPage={page}
+                        totalPages={20}
+                        onPageChange={(newPage) => setPage(newPage)}
+                    />
+                </div>
+                
+            </Container>
         </div>
-      </section>
-
-      {/* LIST */}
-      <section className="max-w-6xl mx-auto px-4 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Cari Trip Terbaikmu</h2>
-          <div className="flex gap-3">
-            <select className="border rounded-lg px-3 py-2 text-sm">
-              <option>Sort By</option>
-              <option>Rating Tertinggi</option>
-              <option>Harga Termurah</option>
-            </select>
-            <select className="border rounded-lg px-3 py-2 text-sm">
-              <option>Filter By</option>
-              <option>Paling Populer</option>
-              <option>Baru</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {trips.map((trip) => (
-            <TripCard key={trip.id} trip={trip} />
-          ))}
-        </div>
-
-        {/* Pagination dummy */}
-        <div className="flex justify-center gap-2 mt-10 text-sm">
-          <button className="px-3 py-1 rounded border">Prev</button>
-          <button className="px-3 py-1 rounded border bg-blue-50">1</button>
-          <button className="px-3 py-1 rounded border">2</button>
-          <button className="px-3 py-1 rounded border">3</button>
-          <button className="px-3 py-1 rounded border">Next</button>
-        </div>
-      </section>
-
-      {/* Footer Section */}
-      <section className="py-10 bg-white text-center">
-        <img src="/assets/logo.svg" alt="barengin" className="mx-auto h-10 mb-4" />
-        <h3 className="font-semibold text-lg">Eksplor Indonesia bersama</h3>
-        <p className="text-sm text-gray-500 max-w-xl mx-auto mt-2">
-          Mudik dan traveling bukan lagi soal perjalanan sendirian. Temukan teman searah,
-          berbagi cerita, dan buat setiap kilometer terasa lebih seru bareng-bareng!
-        </p>
-      </section>
-    </div>
-  );
+    );
 }
+
+Index.layout = (page) => <MainLayout>{page}</MainLayout>;

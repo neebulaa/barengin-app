@@ -78,9 +78,7 @@ Route::middleware('auth')->group(function () {
 });
 
 
-Route::get('/trip-bareng', function () {
-    return inertia('TripBareng/Index');
-})->name('trip-bareng');
+Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 
 Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
 Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
@@ -89,4 +87,5 @@ Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
 
 
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
+Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
 
