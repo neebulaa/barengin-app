@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\TripsController;
 
 Route::get('/', function () {
     return inertia('Home/Index');
@@ -65,3 +66,7 @@ Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
 Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
     ->whereNumber('id')
     ->name('forum.show');
+
+
+Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
+
