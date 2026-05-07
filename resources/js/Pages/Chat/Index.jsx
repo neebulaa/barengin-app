@@ -4,6 +4,8 @@ import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
 import Button from "@/Components/Button";
 
+import ChatListItems from "./Partials/ChatListItem"
+
 import {
     BiMessageSquareAdd,
     BiSearch,
@@ -150,9 +152,8 @@ function Bubble({ mine, text, time, withTicks, avatar }) {
 export default function ChatPersonalIndex() {
     const [tab, setTab] = useState("personal");
     const [q, setQ] = useState("");
-    const [filter, setFilter] = useState("all"); // all | unread
+    const [filter, setFilter] = useState("all");
 
-    // dummy data (replace dari props inertia nanti)
     const personalChats = [
         {
             id: "u1",
@@ -287,7 +288,6 @@ export default function ChatPersonalIndex() {
 
     const submit = (e) => {
         e.preventDefault();
-        // TODO: kirim ke backend pakai Inertia router.post
         setMessage("");
     };
 
@@ -347,11 +347,11 @@ export default function ChatPersonalIndex() {
                                     className={cn(
                                         "rounded-full px-4 py-2 text-sm font-medium transition",
                                         filter === "unread"
-                                            ? "bg-neutral-200 text-neutral-700"
+                                            ? "bg-primary-100 text-primary-700"
                                             : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200",
                                     )}
                                 >
-                                    Unread 2
+                                    Unread
                                 </button>
                             </div>
 
@@ -366,7 +366,7 @@ export default function ChatPersonalIndex() {
 
                         <div className="mt-6 space-y-2">
                             {filteredChats.map((c) => (
-                                <ChatListItem
+                                <ChatListItems
                                     key={c.id}
                                     active={c.id === activeId}
                                     avatar={c.avatar}
