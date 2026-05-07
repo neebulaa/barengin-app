@@ -209,6 +209,7 @@ export default function CreatePostModal({
     const editorRef = useRef(null);
     const tagInputRef = useRef(null);
     const tagBoxRef = useRef(null);
+    const [suggestionStyle, setSuggestionStyle] = useState({});
 
     const canPost = useMemo(() => {
         const text = getPlainTextFromHtml(contentHtml);
@@ -290,6 +291,37 @@ export default function CreatePostModal({
         return () =>
             document.removeEventListener("mousedown", handleClickOutside);
     }, [tagBoxOpen]);
+
+    // Keep suggestion box positioned near the tag input (follows scroll/resize)
+    useEffect(() => {
+        if (!tagBoxOpen) return;
+
+        const update = () => {
+            const input = tagInputRef.current;
+            if (!input) return;
+            const rect = input.getBoundingClientRect();
+
+            setSuggestionStyle({
+                position: "fixed",
+                left: `${rect.left - 8}px`,
+                top: `${rect.bottom + 8}px`,
+                width: `${rect.width}px`,
+                zIndex: 99999,
+            });
+        };
+
+        // initial
+        update();
+
+        // update on scroll/resize (capture to catch scrolling containers)
+        window.addEventListener("resize", update);
+        window.addEventListener("scroll", update, true);
+
+        return () => {
+            window.removeEventListener("resize", update);
+            window.removeEventListener("scroll", update, true);
+        };
+    }, [tagBoxOpen, tagQuery]);
 
     const exec = (cmd) => {
         editorRef.current?.focus();
@@ -557,7 +589,7 @@ export default function CreatePostModal({
 
                                             {/* Suggestions (always on top) */}
                                             {tagBoxOpen ? (
-                                                <div className="absolute left-0 bottom-full mb-2 w-full max-w-max rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden z-[99999]">
+                                                <div style={suggestionStyle} className="max-w-xs top-full rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden max-h-40 z-[99999]">
                                                     <div className="max-h-40 overflow-y-auto">
                                                         {filteredTagSuggestions.map(
                                                             (t) => (
@@ -596,7 +628,7 @@ export default function CreatePostModal({
                                                                         tagQuery,
                                                                     )
                                                                 }
-                                                                className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-sm font-medium text-primary-700 border-t border-neutral-100"
+                                                                className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-xs font-medium text-primary-700 border-t border-neutral-100"
                                                             >
                                                                 Create tag “#
                                                                 {normalizeTagName(
