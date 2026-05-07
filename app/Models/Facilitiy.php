@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Facilitiy extends Model
 {
-    protected $fillable = ['trip_id','name'];
+    protected $fillable = ['name', 'slug'];
 
     public function trip(){
-        return $this->belongsTo(Trip::class);
+        return $this->belongsToMany(Trip::class, 'trip_facilities');
     }
 }

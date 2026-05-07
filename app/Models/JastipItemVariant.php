@@ -14,7 +14,7 @@ class JastipItemVariant extends Model
         return $this->belongsTo(JastipItem::class);
     }
 
-    public function jastip_orders(){
-        return $this->hasMany(JastipOrder::class);
+    public function jastip_order_items(){
+        return $this->hasMany(JastipOrderItem::class);
     }
 }
