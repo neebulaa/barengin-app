@@ -79,7 +79,7 @@ class ChatController extends Controller
         $conversations = $this->sidebarConversations($user);
 
         $conversation->load([
-            'participants:id,name,profile_image',
+            'participants:id,full_name,profile_image',
             'trip:id,title',
             'pergi_bareng:id,title',
         ]);
@@ -87,7 +87,7 @@ class ChatController extends Controller
         $title = $conversation->is_group ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group') : optional($conversation->participants->firstWhere('id', '!=', $user->id))->name;
 
         $messages = $conversation->messages()
-            ->with('sender:id,name,profile_image')
+            ->with('sender:id,full_name,profile_image')
             ->orderBy('created_at')
             ->get()
             ->map(fn ($m) => [
@@ -98,7 +98,7 @@ class ChatController extends Controller
                 'created_at' => $m->created_at?->toISOString(),
                 'sender' => [
                     'id' => $m->sender?->id,
-                    'name' => $m->sender?->name,
+                    'name' => $m->sender?->full_name,
                     'avatar' => $m->sender?->public_profile_image ?? asset('assets/default-profile.png'),
                 ],
             ]);
@@ -111,7 +111,7 @@ class ChatController extends Controller
                 'title' => $title ?? 'Chat',
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
-                    'name' => $p->name,
+                    'name' => $p->full_name,
                     'avatar' => $p->public_profile_image ?? asset('assets/default-profile.png'),
                 ])->values(),
             ],
@@ -148,13 +148,13 @@ class ChatController extends Controller
     private function sidebarConversations($user)
     {
         return $user->conversations()
-            ->with(['participants:id,name,profile_image', 
+            ->with(['participants:id,full_name,profile_image', 
                 'trip:id,title', 
                 'pergi_bareng:id,title'
             ])
             ->get()
             ->map(function ($c) use ($user) {
-                $lastMessage = $c->messages()->latest()->with('sender:id,name')->first();
+                $lastMessage = $c->messages()->latest()->with('sender:id,full_name')->first();
 
                 $title = $c->is_group
                     ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')

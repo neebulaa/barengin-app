@@ -20,7 +20,7 @@ class MessageSent implements ShouldBroadcast
 
     public function __construct(Message $message)
     {
-        $this->message = $message->load('sender:id,name,profile_image');
+        $this->message = $message->load('sender:id,full_name,profile_image');
     }
 
     public function broadcastOn(): array
@@ -43,7 +43,7 @@ class MessageSent implements ShouldBroadcast
             'created_at' => $this->message->created_at?->toISOString(),
             'sender' => [
                 'id' => $this->message->sender?->id,
-                'name' => $this->message->sender?->name,
+                'name' => $this->message->sender?->full_name,
                 'avatar' => $this->message->sender?->public_profile_image ?? asset('assets/default-profile.png'),
             ],
         ];

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
 import Button from "@/Components/Button";
