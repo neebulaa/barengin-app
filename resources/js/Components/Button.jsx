@@ -5,7 +5,7 @@ export default function Button({
     href = "",
     type = "primary", // primary | danger | success | warning | neutral
     variant = "solid", // solid | outline | soft | ghost
-    size = "md", // sm | md
+    size = "md", // xs | sm | md 
     rounded = true, // keep your old API
     className = "",
     onClick = () => {},
@@ -13,7 +13,7 @@ export default function Button({
     ...props
 }) {
     const sizeClass =
-        size === "sm" ? "px-5 py-2.5 text-sm" : "px-7 py-3 text-sm";
+        size === "xs" ? "px-3.5 py-1.5 text-xs" : size === "sm" ? "px-5 py-2.5 text-sm" : "px-7 py-3 text-sm";
 
     const roundedClass = rounded ? "rounded-full" : "";
 

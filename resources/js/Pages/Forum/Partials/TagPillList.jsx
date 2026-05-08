@@ -8,6 +8,7 @@ export default function TagPillList({
     // NEW
     initialCount = 10,
     step = 10,
+    fontSize="xs",
 }) {
     const [visibleCount, setVisibleCount] = useState(initialCount);
 
@@ -25,7 +26,7 @@ export default function TagPillList({
         <div className="flex flex-wrap gap-3">
 
             {visibleTags.map((t) => (
-                <TagPill key={t} tag={t} onClick={() => onTagClick?.(t)} />
+                <TagPill key={t} tag={t} onClick={() => onTagClick?.(t)} fontSize={fontSize} cursor="pointer" />
             ))}
 
             {/* View more / Collapse */}
@@ -43,8 +44,8 @@ export default function TagPillList({
                     }}
                     className={[
                         "inline-flex items-center gap-2",
-                        "rounded-lg border border-neutral-200 bg-white px-3 py-2",
-                        "text-sm font-semibold text-neutral-700",
+                        "rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5",
+                        `text-${fontSize} font-semibold text-neutral-700`,
                         "hover:bg-neutral-50 transition",
                         "whitespace-nowrap",
                     ].join(" ")}

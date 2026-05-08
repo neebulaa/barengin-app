@@ -14,7 +14,7 @@ export default function MainLayout({ children }) {
         url.startsWith("/reset-password") ||
         ["/login", "/register", "/onboarding", "/forgot-password"].includes(url);
 
-    const hideFooter = url.startsWith("/forum") || url.startsWith("/post");
+    const hideFooter = url.startsWith("/forum") || url.startsWith("/post") || url.startsWith("/trip-bareng/") || url.startsWith("/jastip/");
 
     return (
         <>

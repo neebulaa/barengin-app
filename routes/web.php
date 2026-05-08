@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
 
 Route::get('/', function () {
@@ -77,10 +78,19 @@ Route::middleware('auth')->group(function () {
 });
 
 
-Route::get('/trip-bareng', function () {
-    return inertia('TripBareng/Index');
-})->name('trip-bareng');
+Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 
 Route::get('/leaderboard', function () {
     return inertia('Leaderboard/Index');
 })->name('leaderboard');
+Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
+    ->whereNumber('id')
+    ->name('forum.show');
+
+
+Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
+Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
+Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
+Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
+Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
