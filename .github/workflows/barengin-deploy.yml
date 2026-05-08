@@ -67,4 +67,4 @@ jobs:
             "${{ secrets.PHP_BIN }}" artisan config:cache || true
             "${{ secrets.PHP_BIN }}" artisan route:cache || true
             "${{ secrets.PHP_BIN }}" artisan view:cache || true
-          EOF   
+          EOF
