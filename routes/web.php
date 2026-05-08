@@ -80,6 +80,9 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 
+Route::get('/leaderboard', function () {
+    return inertia('Leaderboard/Index');
+})->name('leaderboard');
 Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
 Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
     ->whereNumber('id')
