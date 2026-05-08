@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
-            $table->decimal('total_amount');
+            $table->decimal('total_amount', 15, 2);
             $table->enum('type', ['jastip', 'trip']);
             $table->string('payment_method');
             $table->string('va_number', 25);

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('trip_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->integer('quantity');
-            $table->decimal('total');
+            $table->decimal('total', 15, 2);
             $table->enum('order_status', ['paid','pending', 'unpaid']);
             $table->timestamps();
         });
