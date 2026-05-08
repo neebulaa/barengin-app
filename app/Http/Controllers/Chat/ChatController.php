@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Chat;
 
 use App\Events\MessageSent;
+use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;  
 use Inertia\Inertia;
 
 class ChatController extends Controller
@@ -16,52 +18,51 @@ class ChatController extends Controller
         $user = Auth::user();
 
         // ambil semua conversation milik user + last message
-        $conversations = $user->conversations()
-            ->with([
-                'participants:id,name,profile_image',
-                'trip:id,title',
-                'pergi_bareng:id,title',
-            ])
-            ->withMax('messages', 'created_at')
-            ->get()
-            ->map(function ($c) use ($user) {
-                $lastMessage = $c->messages()
-                    ->latest()
-                    ->with('sender:id,name,profile_image')
-                    ->first();
+        $conversations = $this->sidebarConversations($user);
+            
+        // ->with([
+            //     'participants:id,name,profile_image',
+            //     'trip:id,title',
+            //     'pergi_bareng:id,title',
+            // ])
+            // ->withMax('messages', 'created_at')
+            // ->get()
+            // ->map(function ($c) use ($user) {
+            //     $lastMessage = $c->messages()
+            //         ->latest()
+            //         ->with('sender:id,name,profile_image')
+            //         ->first();
 
-                $title = $c->is_group
-                    ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')
-                    : optional($c->participants->firstWhere('id', '!=', $user->id))->name;
+            //     $title = $c->is_group
+            //         ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')
+            //         : optional($c->participants->firstWhere('id', '!=', $user->id))->name;
 
-                return [
-                    'id' => $c->id,
-                    'is_group' => (bool) $c->is_group,
-                    'title' => $title ?? 'Chat',
-                    'participants' => $c->participants->map(fn ($p) => [
-                        'id' => $p->id,
-                        'name' => $p->name,
-                        'avatar' => $p->public_profile_image ?? asset('assets/default-profile.png'),
-                    ]),
-                    'last_message' => $lastMessage ? [
-                        'id' => $lastMessage->id,
-                        'text' => $lastMessage->message_text,
-                        'created_at' => $lastMessage->created_at?->toISOString(),
-                        'sender' => [
-                            'id' => $lastMessage->sender?->id,
-                            'name' => $lastMessage->sender?->name,
-                        ]
-                    ] : null,
-                    'last_message_at' => optional($lastMessage?->created_at)->toISOString(),
-                ];
-            })
-            ->sortByDesc(fn ($c) => $c['last_message_at'])
-            ->values();
+            //     return [
+            //         'id' => $c->id,
+            //         'is_group' => (bool) $c->is_group,
+            //         'title' => $title ?? 'Chat',
+            //         'participants' => $c->participants->map(fn ($p) => [
+            //             'id' => $p->id,
+            //             'name' => $p->name,
+            //             'avatar' => $p->public_profile_image ?? asset('assets/default-profile.png'),
+            //         ]),
+            //         'last_message' => $lastMessage ? [
+            //             'id' => $lastMessage->id,
+            //             'text' => $lastMessage->message_text,
+            //             'created_at' => $lastMessage->created_at?->toISOString(),
+            //             'sender' => [
+            //                 'id' => $lastMessage->sender?->id,
+            //                 'name' => $lastMessage->sender?->name,
+            //             ]
+            //         ] : null,
+            //         'last_message_at' => optional($lastMessage?->created_at)->toISOString(),
+            //     ];
+            // })
+            // ->sortByDesc(fn ($c) => $c['last_message_at'])
+            // ->values();
 
         return Inertia::render('Chat/Index', [
             'conversations' => $conversations,
-            'activeConversation' => null,
-            'messages' => [],
         ]);
     }
 
@@ -72,7 +73,7 @@ class ChatController extends Controller
         abort_unless(
             $conversation->participants()->where('users.id', $user->id)->exists(),
             403,
-            'You are not a participant of this conversation.'
+            'Kamu bukan partisipan pada percakapan ini'
         );
 
         $conversations = $this->sidebarConversations($user);
@@ -82,6 +83,8 @@ class ChatController extends Controller
             'trip:id,title',
             'pergi_bareng:id,title',
         ]);
+
+        $title = $conversation->is_group ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group') : optional($conversation->participants->firstWhere('id', '!=', $user->id))->name;
 
         $messages = $conversation->messages()
             ->with('sender:id,name,profile_image')
@@ -100,19 +103,17 @@ class ChatController extends Controller
                 ],
             ]);
 
-        return Inertia::render('Chat/Index', [
+        return Inertia::render('Chat/Show', [
             'conversations' => $conversations,
-            'activeConversation' => [
+            'conversation' => [
                 'id' => $conversation->id,
                 'is_group' => (bool) $conversation->is_group,
-                'title' => $conversation->is_group
-                    ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group')
-                    : optional($conversation->participants->firstWhere('id', '!=', $user->id))->name,
+                'title' => $title ?? 'Chat',
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
                     'avatar' => $p->public_profile_image ?? asset('assets/default-profile.png'),
-                ]),
+                ])->values(),
             ],
             'messages' => $messages,
         ]);
@@ -138,18 +139,19 @@ class ChatController extends Controller
             'message_text' => $data['message_text'],
         ]);
 
-        $message->load('sender:id,name,profile_image');
-
-        // broadcast realtime ke semua participant kecuali pengirim
+        // broadcast to other participants
         broadcast(new MessageSent($message))->toOthers();
 
-        return back()->with('success', 'Message sent');
+        return back();
     }
 
     private function sidebarConversations($user)
     {
         return $user->conversations()
-            ->with(['participants:id,name,profile_image', 'trip:id,title', 'pergi_bareng:id,title'])
+            ->with(['participants:id,name,profile_image', 
+                'trip:id,title', 
+                'pergi_bareng:id,title'
+            ])
             ->get()
             ->map(function ($c) use ($user) {
                 $lastMessage = $c->messages()->latest()->with('sender:id,name')->first();
@@ -157,24 +159,23 @@ class ChatController extends Controller
                 $title = $c->is_group
                     ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')
                     : optional($c->participants->firstWhere('id', '!=', $user->id))->name;
+                
+                $avatar = $c->is_group
+                    ? asset('assets/default-profile.png')
+                    : ($c->participants->firstWhere('id', '!=', $user->id)?->public_profile_image ?? asset('assets/default-profile.png'));
 
                 return [
                     'id' => $c->id,
                     'is_group' => (bool) $c->is_group,
                     'title' => $title ?? 'Chat',
-                    'participants' => $c->participants->map(fn ($p) => [
-                        'id' => $p->id,
-                        'name' => $p->name,
-                        'avatar' => $p->public_profile_image ?? asset('assets/default-profile.png'),
-                    ]),
-                    'last_message' => $lastMessage ? [
-                        'id' => $lastMessage->id,
-                        'text' => $lastMessage->message_text,
-                    ] : null,
-                    'last_message_at' => optional($lastMessage?->created_at)->toISOString(),
+                    'avatar' => $avatar,
+                    'subtitle' => $lastMessage?->message_text ?? '',
+                    'time' => $lastMessage?->created_at?->format('H:i') ?? '',
+                    'unread' => 0,
+                    'last_message_at' => optional($lastMessage?->created_at)->timestamp ?? 0,
                 ];
             })
-            ->sortByDesc(fn ($c) => $c['last_message_at'])
+            ->sortByDesc('last_message_at')
             ->values();
     }
 }

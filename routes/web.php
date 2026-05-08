@@ -1,12 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
-use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Chat\ChatController;
+use App\Http\Controllers\Chat\ChatConversationController;
+use App\Http\Controllers\Chat\ChatReadController;
+use App\Http\Controllers\Chat\ChatUserController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\PostController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return inertia('Home/Index');
@@ -82,9 +85,13 @@ Route::get('/trip-bareng', function () {
     return inertia('TripBareng/Index');
 })->name('trip-bareng');
 
-Route::get('/chat',[ChatController::class, 'index'])->name('chat');
-Route::get('/chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
+Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
+Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
 Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
+Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
+Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
+Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
+
 
 Route::get('/chat/exp', function(){
     return inertia('Chat/Index2');
