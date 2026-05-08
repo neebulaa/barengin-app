@@ -259,6 +259,7 @@ export default function ForumIndex({ posts, tags, filters }) {
                                 <TagPillList
                                     tags={sidebarTagNames}
                                     onTagClick={onTagClick}
+                                    fontSize="sm"
                                 />
                             </div>
                         </div>

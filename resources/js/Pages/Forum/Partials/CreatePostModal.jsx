@@ -12,6 +12,7 @@ import {
 } from "react-icons/fi";
 
 import IconButton from "./IconButton";
+import TagPill from "./TagPill";
 import Toggle from "@/Components/Toggle";
 import Button from "@/Components/Button";
 
@@ -38,14 +39,14 @@ function PreviewMedia({ images, onRemove }) {
             className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white inline-flex items-center justify-center hover:bg-black/70"
             aria-label="Remove image"
         >
-            ×
+            <FiX className="w-4 h-4" />
         </button>
     );
 
     if (images.length === 1) {
         const img = images[0];
         return (
-            <div className="mt-4 relative">
+            <div className="mt-2 mb-3 relative">
                 <img
                     src={img.preview}
                     alt="preview"
@@ -57,7 +58,7 @@ function PreviewMedia({ images, onRemove }) {
     }
 
     return (
-        <div className="mt-4">
+        <div className="mt-2 mb-3">
             <div className="flex gap-3 overflow-x-auto pb-1 pr-1 snap-x snap-mandatory scrollbar-slim">
                 {images.map((img, idx) => (
                     <div
@@ -160,24 +161,8 @@ function normalizeTagName(name) {
     return String(name ?? "")
         .replace(/^#/, "")
         .replace(/\s+/g, " ")
+    .toLowerCase()
         .trim();
-}
-
-/** ---------- Tag chips UI ---------- */
-function TagChip({ name, onRemove }) {
-    return (
-        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-medium">
-            <span className="truncate max-w-[180px]">#{name}</span>
-            <button
-                type="button"
-                className="text-primary-700/70 hover:text-primary-700"
-                onClick={onRemove}
-                aria-label={`Remove tag ${name}`}
-            >
-                ×
-            </button>
-        </span>
-    );
 }
 
 export default function CreatePostModal({
@@ -209,6 +194,7 @@ export default function CreatePostModal({
     const editorRef = useRef(null);
     const tagInputRef = useRef(null);
     const tagBoxRef = useRef(null);
+    const [suggestionStyle, setSuggestionStyle] = useState({});
 
     const canPost = useMemo(() => {
         const text = getPlainTextFromHtml(contentHtml);
@@ -289,6 +275,23 @@ export default function CreatePostModal({
         document.addEventListener("mousedown", handleClickOutside);
         return () =>
             document.removeEventListener("mousedown", handleClickOutside);
+    }, [tagBoxOpen]);
+
+    // Set suggestion box to appear below input and sit on top (set once on open)
+    useEffect(() => {
+        if (!tagBoxOpen) return;
+
+        const input = tagInputRef.current;
+        if (!input) return;
+        const rect = input.getBoundingClientRect();
+
+        setSuggestionStyle({
+            position: "fixed",
+            left: `${rect.left}px`,
+            top: `${rect.bottom + 8}px`,
+            width: `${rect.width}px`,
+            zIndex: 99999,
+        });
     }, [tagBoxOpen]);
 
     const exec = (cmd) => {
@@ -438,13 +441,13 @@ export default function CreatePostModal({
                                     </div>
 
                                     {location ? (
-                                        <div className="text-xs text-neutral-500">
-                                            <FiMapPin className="inline mb-0.5 mr-1" />
+                                        <div className="text-xs text-neutral-500 my-0.5">
+                                            <FiMapPin className="inline mr-1" />
                                             {location}
                                         </div>
                                     ) : null}
 
-                                    {/* WYSIWYG editor (bold/italic only) */}   
+                                    {/* WYSIWYG editor (bold/italic only) */}
                                     <div
                                         ref={editorRef}
                                         contentEditable
@@ -453,9 +456,9 @@ export default function CreatePostModal({
                                             "w-full outline-none",
                                             "text-neutral-700",
                                             "whitespace-pre-wrap break-words",
-                                            "min-h-[44px]",
+                                            "min-h-[32px]",
                                             "max-h-30 md:max-h-32 overflow-y-auto",
-                                            "py-2 text-sm",
+                                            "py-1 text-sm",
                                         ].join(" ")}
                                         data-placeholder="Apa yang Baru?"
                                         onInput={() => {
@@ -493,16 +496,18 @@ export default function CreatePostModal({
                                     />
 
                                     {/* Tag chips + tag input (chip model) */}
-                                    <div className="mt-2">
+                                    <div className="">
                                         {chipTags.length ? (
                                             <div className="flex flex-wrap gap-2 mb-2">
                                                 {chipTags.map((t) => (
-                                                    <TagChip
+                                                    <TagPill
+                                                        cursor="default"
                                                         key={t}
-                                                        name={t}
+                                                        tag={t}
                                                         onRemove={() =>
                                                             removeChipTag(t)
                                                         }
+                                                        fontSize="xs"
                                                     />
                                                 ))}
                                             </div>
@@ -519,13 +524,45 @@ export default function CreatePostModal({
                                                     value={tagQuery}
                                                     onChange={(e) => {
                                                         setTagQuery(
-                                                            e.target.value,
+                                                            e.target.value.toLowerCase(),
                                                         );
+                                                        if (!tagBoxOpen) {
+                                                            const input =
+                                                                tagInputRef.current;
+                                                            if (input) {
+                                                                const rect =
+                                                                    input.getBoundingClientRect();
+                                                                setSuggestionStyle(
+                                                                    {
+                                                                        position:
+                                                                            "fixed",
+                                                                        left: `${rect.left}px`,
+                                                                        top: `${rect.bottom + 8}px`,
+                                                                        width: `${rect.width}px`,
+                                                                        zIndex: 99999,
+                                                                    },
+                                                                );
+                                                            }
+                                                            setTagBoxOpen(true);
+                                                        }
+                                                    }}
+                                                    onFocus={() => {
+                                                        const input =
+                                                            tagInputRef.current;
+                                                        if (input) {
+                                                            const rect =
+                                                                input.getBoundingClientRect();
+                                                            setSuggestionStyle({
+                                                                position:
+                                                                    "fixed",
+                                                                left: `${rect.left}px`,
+                                                                top: `${rect.bottom + 8}px`,
+                                                                width: `${rect.width}px`,
+                                                                zIndex: 99999,
+                                                            });
+                                                        }
                                                         setTagBoxOpen(true);
                                                     }}
-                                                    onFocus={() =>
-                                                        setTagBoxOpen(true)
-                                                    }
                                                     onKeyDown={(e) => {
                                                         if (e.key === "Enter") {
                                                             e.preventDefault();
@@ -557,7 +594,10 @@ export default function CreatePostModal({
 
                                             {/* Suggestions (always on top) */}
                                             {tagBoxOpen ? (
-                                                <div className="absolute left-0 bottom-full mb-2 w-full max-w-max rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden z-[99999]">
+                                                <div
+                                                    style={suggestionStyle}
+                                                    className=" max-w-xs rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden max-h-40 z-[99999]"
+                                                >
                                                     <div className="max-h-40 overflow-y-auto">
                                                         {filteredTagSuggestions.map(
                                                             (t) => (
@@ -596,7 +636,7 @@ export default function CreatePostModal({
                                                                         tagQuery,
                                                                     )
                                                                 }
-                                                                className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-sm font-medium text-primary-700 border-t border-neutral-100"
+                                                                className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-xs font-medium text-primary-700 border-t border-neutral-100"
                                                             >
                                                                 Create tag “#
                                                                 {normalizeTagName(
