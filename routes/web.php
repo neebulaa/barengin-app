@@ -76,9 +76,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike'])
         ->name('forum.comments.like.toggle');
 });
-
-
-Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
+   
+Route ::get('/pergi-bareng',function(){
+    return inertia('PergiBareng/Index');
+})->name('pergi-bareng');
 
 Route::get('/leaderboard', function () {
     return inertia('Leaderboard/Index');

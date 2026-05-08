@@ -7,49 +7,56 @@ export default function Pagination({
     onPageChange = () => {},
     className = "",
 }) {
+    // Logika perhitungan halaman yang dinamis dan optimal
     const getPageNumbers = () => {
-        if (totalPages <= 5) {
+        // Jika total halaman sedikit (<= 7), tampilkan semua angkanya
+        if (totalPages <= 7) {
             return Array.from({ length: totalPages }, (_, i) => i + 1);
         }
-        
-        if (currentPage <= 3) {
-            return [1, 2, 3,"...", totalPages - 1, totalPages];
+
+        // Jika user berada di halaman-halaman awal
+        if (currentPage <= 4) {
+            return [1, 2, 3, 4, 5, "...", totalPages];
         }
-        
-        if (currentPage >= totalPages - 2) {
-            return [1, 2, "...", totalPages - 2, totalPages - 1, totalPages];
+
+        // Jika user berada di halaman-halaman akhir
+        if (currentPage >= totalPages - 3) {
+            return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
         }
-        
-        return [1, "...", currentPage, "...", totalPages];
+
+        // Jika user berada di tengah-tengah
+        return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
     };
 
     const pages = getPageNumbers();
 
     return (
-        <div className={`flex items-center justify-center gap-3 ${className}`}>
+        <div className={`flex items-center justify-center gap-2 md:gap-3 mt-8 ${className}`}>
             
             {/* --- Tombol Prev --- */}
             <button
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`flex items-center gap-1.5 px-2 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     currentPage === 1
-                        ? "text-neutral-300 cursor-not-allowed" // Warna abu-abu pudar saat disabled
-                        : "text-neutral-700 hover:text-primary-700 cursor-pointer"
+                        ? "text-neutral-300 cursor-not-allowed"
+                        : "text-neutral-600 hover:text-primary-700 active:scale-95"
                 }`}
+                aria-label="Previous page"
             >
                 <FaChevronLeft className="w-3.5 h-3.5" />
-                Prev
+                <span className="hidden sm:inline">Prev</span>
             </button>
 
             {/* --- Angka Halaman --- */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5">
                 {pages.map((page, index) => {
+                    // Render titik-titik (ellipsis)
                     if (page === "...") {
                         return (
                             <span
                                 key={`ellipsis-${index}`}
-                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 text-sm font-medium"
+                                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-neutral-400 text-sm font-medium"
                             >
                                 ...
                             </span>
@@ -58,15 +65,17 @@ export default function Pagination({
 
                     const isActive = page === currentPage;
 
+                    // Render tombol angka
                     return (
                         <button
                             key={page}
                             onClick={() => onPageChange(page)}
-                            className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                            className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 ${
                                 isActive
-                                    ? "bg-primary-50 border border-primary-500 text-primary-700" // Warna Aktif (Biru)
-                                    : "bg-neutral-50 border border-transparent text-neutral-700 hover:bg-neutral-200" // Warna Tidak Aktif (Abu-abu muda)
+                                    ? "bg-primary-50 border border-primary-500 text-primary-700 shadow-sm"
+                                    : "bg-transparent border border-transparent text-neutral-600 hover:bg-neutral-100 hover:text-primary-700 active:scale-95"
                             }`}
+                            aria-current={isActive ? "page" : undefined}
                         >
                             {page}
                         </button>
@@ -78,16 +87,17 @@ export default function Pagination({
             <button
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className={`flex items-center gap-1.5 px-2 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     currentPage === totalPages
                         ? "text-neutral-300 cursor-not-allowed"
-                        : "text-neutral-700 hover:text-primary-700 cursor-pointer"
+                        : "text-neutral-600 hover:text-primary-700 active:scale-95"
                 }`}
+                aria-label="Next page"
             >
-                Next
+                <span className="hidden sm:inline">Next</span>
                 <FaChevronRight className="w-3.5 h-3.5" />
             </button>
-            
+
         </div>
     );
 }
