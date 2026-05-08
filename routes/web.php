@@ -81,3 +81,6 @@ Route::get('/trip-bareng', function () {
     return inertia('TripBareng/Index');
 })->name('trip-bareng');
 
+Route::get('/leaderboard', function () {
+    return inertia('Leaderboard/Index');
+})->name('leaderboard');
