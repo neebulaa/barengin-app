@@ -34,8 +34,4 @@ class PergiBareng extends Model
         return $this->hasOne(Conversation::class);
     }
 
-    public function pergi_bareng_ratings(){
-        return $this->hasMany(PergiBarengRating::class);
-    }
-    
 }
