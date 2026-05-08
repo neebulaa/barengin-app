@@ -22,7 +22,7 @@ class Conversation extends Model
         return $this->hasMany(Message::class);
     }
 
-    public function conversation_participants(){
-        return $this->hasMany(ConversationParticipant::class);
+    public function participants(){
+        return $this->belongsToMany(User::class, 'conversation_participants');
     }
 }

@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Trip extends Model
 {
+    use HasFactory;
     protected $fillable = ['name', 'description', 'people_amount', 'start_date', 'end_date', 'rating', 'price'];
     protected function casts(){
         return[
@@ -15,11 +17,11 @@ class Trip extends Model
     }
 
     public function detail_trips(){
-        return $this->hasMany(DetailTrip::class);
+        return $this->hasMany(TripActivity::class);
     }
 
     public function facilities(){
-        return $this->hasMany(Facilitiy::class);
+        return $this->belongsToMany(Facilitiy::class, 'trip_facilities');
     }
 
     public function guide_rating_trips(){

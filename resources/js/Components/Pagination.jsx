@@ -1,72 +1,103 @@
 import React from "react";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
-export default function Pagination({ 
-    currentPage = 1, 
-    totalPages = 10, 
-    onPageChange = () => {} 
+export default function Pagination({
+    currentPage = 1,
+    totalPages = 10,
+    onPageChange = () => {},
+    className = "",
 }) {
-    const getVisiblePages = () => {
-        const pages = [];
-        
-        // Always show first page
-        pages.push(1);
-        
-        // Show pages around current
-        const start = Math.max(2, currentPage - 1);
-        const end = Math.min(totalPages - 1, currentPage + 1);
-        
-        if (start > 2) pages.push("...");
-        
-        for (let i = start; i <= end; i++) {
-            pages.push(i);
+    // Logika perhitungan halaman yang dinamis dan optimal
+    const getPageNumbers = () => {
+        // Jika total halaman sedikit (<= 7), tampilkan semua angkanya
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
         }
-        
-        if (end < totalPages - 1) pages.push("...");
-        
-        // Always show last page if more than 1
-        if (totalPages > 1) pages.push(totalPages);
-        
-        return pages;
+
+        // Jika user berada di halaman-halaman awal
+        if (currentPage <= 4) {
+            return [1, 2, 3, 4, 5, "...", totalPages];
+        }
+
+        // Jika user berada di halaman-halaman akhir
+        if (currentPage >= totalPages - 3) {
+            return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        }
+
+        // Jika user berada di tengah-tengah
+        return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
     };
 
-    const pages = getVisiblePages();
+    const pages = getPageNumbers();
 
     return (
-        <div className="flex items-center justify-center gap-2 mt-12">
+        <div className={`flex items-center justify-center gap-2 md:gap-3 mt-8 ${className}`}>
+            
+            {/* --- Tombol Prev --- */}
             <button
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm text-neutral-500 hover:text-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                    currentPage === 1
+                        ? "text-neutral-300 cursor-not-allowed"
+                        : "text-neutral-600 hover:text-primary-700 active:scale-95"
+                }`}
+                aria-label="Previous page"
             >
-                &lt; Prev
+                <FaChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Prev</span>
             </button>
 
-            {pages.map((page, idx) => (
-                <React.Fragment key={idx}>
-                    {page === "..." ? (
-                        <span className="px-2 text-neutral-400">...</span>
-                    ) : (
+            {/* --- Angka Halaman --- */}
+            <div className="flex items-center gap-1 sm:gap-1.5">
+                {pages.map((page, index) => {
+                    // Render titik-titik (ellipsis)
+                    if (page === "...") {
+                        return (
+                            <span
+                                key={`ellipsis-${index}`}
+                                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-neutral-400 text-sm font-medium"
+                            >
+                                ...
+                            </span>
+                        );
+                    }
+
+                    const isActive = page === currentPage;
+
+                    // Render tombol angka
+                    return (
                         <button
+                            key={page}
                             onClick={() => onPageChange(page)}
-                            className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                                page === currentPage
-                                    ? "bg-primary-700 text-white"
-                                    : "text-neutral-600 hover:bg-neutral-100 hover:text-primary-700"
+                            className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 ${
+                                isActive
+                                    ? "bg-primary-50 border border-primary-500 text-primary-700 shadow-sm"
+                                    : "bg-transparent border border-transparent text-neutral-600 hover:bg-neutral-100 hover:text-primary-700 active:scale-95"
                             }`}
+                            aria-current={isActive ? "page" : undefined}
                         >
                             {page}
                         </button>
-                    )}
-                </React.Fragment>
-            ))}
+                    );
+                })}
+            </div>
 
+            {/* --- Tombol Next --- */}
             <button
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm text-neutral-500 hover:text-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                    currentPage === totalPages
+                        ? "text-neutral-300 cursor-not-allowed"
+                        : "text-neutral-600 hover:text-primary-700 active:scale-95"
+                }`}
+                aria-label="Next page"
             >
-                Next &gt;
+                <span className="hidden sm:inline">Next</span>
+                <FaChevronRight className="w-3.5 h-3.5" />
             </button>
+
         </div>
     );
 }

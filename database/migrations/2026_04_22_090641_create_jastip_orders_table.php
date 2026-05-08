@@ -14,10 +14,6 @@ return new class extends Migration
         Schema::create('jastip_orders', function (Blueprint $table) {
             $table->id();
             $table->foreignUuid('transaction_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('jastip_item_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('jastip_item_variant_id')->constrained();
-            $table->integer('quantity');
-            $table->decimal('total', 15,2);
             $table->boolean('use_shipping')->default(false);
             $table->text('shipping_address');
             $table->enum('order_status', ['paid','pending' ,'unpaid']);

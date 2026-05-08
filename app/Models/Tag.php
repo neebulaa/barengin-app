@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Tag extends Model
 {
     protected $fillable =[
-        'tag_name'
+        'tag_name',
+        'tag_key',
     ];
 
     public function posts()

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PergiBareng extends Model
 {
-    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'origin_city', 'destination_city', 'departure_loc', 'destination_loc'];
+    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name'];
 
     protected function casts(){
         return [
@@ -26,8 +26,8 @@ class PergiBareng extends Model
         return $this->hasMany(FinancingEstimate::class);
     }
 
-    public function appointment_images(){
-        return $this->hasMany(AppointmentImage::class);
+    public function pergi_bareng_requests(){
+        return $this->hasMany(PergiBarengRequest::class);
     }
 
     public function conversations(){

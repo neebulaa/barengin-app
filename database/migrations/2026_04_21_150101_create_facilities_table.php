@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('facilities', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('trip_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->string('name');
+            $table->string('slug')->unique();
             $table->timestamps();
         });
     }

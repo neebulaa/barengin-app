@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('jastip_item_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->string('var_name');
             $table->string('var_value');
-            $table->decimal('additioanl_price', 15, 2)->nullable();
+            $table->decimal('additional_price', 15, 2)->nullable();
             $table->timestamps();
         });
     }

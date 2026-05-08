@@ -14,7 +14,7 @@ export default function MainLayout({ children }) {
         url.startsWith("/reset-password") ||
         ["/login", "/register", "/onboarding", "/forgot-password"].includes(url);
 
-    const hideFooter = url.startsWith("/forum") || url.startsWith("/post");
+    const hideFooter = url.startsWith("/forum") || url.startsWith("/post") || url.startsWith("/trip-bareng/") || url.startsWith("/jastip/");
 
     return (
         <>
@@ -39,7 +39,7 @@ export default function MainLayout({ children }) {
                 <link rel="icon" href="/assets/barengin_logows.png" />
             </Head>
 
-            <div className="w-full sticky top-0 z-[1000000]">
+            <div className="w-full sticky top-0 z-[1000]">
                 {!hideLayout &&
                     (user ? <NavbarAuth user={user} /> : <NavbarGuest />)}
             </div>
