@@ -70,5 +70,8 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/trip-bareng', function () {
     return inertia('TripBareng/Index');
-})->name('trip-bareng');
-
+    })->name('trip-bareng');
+            
+Route ::get('/pergi-bareng',function(){
+    return inertia('PergiBareng/Index');
+})->name('pergi-bareng');
