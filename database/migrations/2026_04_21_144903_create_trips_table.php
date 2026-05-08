@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('guider_id')->constrained('users')->onDelete('cascade');
             $table->string('name');
             $table->text('description');
             $table->integer('people_amount');
@@ -20,6 +21,7 @@ return new class extends Migration
             $table->date('end_date');
             $table->decimal('rating', 3, 2)->nullable();
             $table->decimal('price', 15,2);
+            $table->string('image')->nullable();
             $table->timestamps();
         });
     }

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             PostSeeder::class,
             PostTagSeeder::class,
             ChatSeeder::class,
+            TripSeeder::class,
         ]);
     }
 }
