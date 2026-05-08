@@ -10,7 +10,7 @@ export default function TagPill({ tag, onClick, fontSize="sm", onRemove, cursor 
                 "inline-flex items-center gap-2",
                 "rounded-lg bg-neutral-100 px-2.5 py-1.5",
                 `text-${fontSize} font-medium text-neutral-800`,
-                "hover:bg-neutral-200 transition",
+                `${onRemove ? '' : 'hover:bg-neutral-200 transition'}`,
                 "whitespace-nowrap",
                 cursor == 'pointer' && "cursor-pointer",
             ].join(" ")}
