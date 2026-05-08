@@ -393,6 +393,8 @@ export default function Detail({ trip }) {
 
                         <div className="flex items-center gap-3">
                             <Button
+                                isButtonLink
+                                href={`/trip-bareng/${trip.id}/checkout`} 
                                 type="primary"
                                 size="md"
                                 className="px-6 md:px-8 font-semibold gap-2 shadow-sm rounded-xl"

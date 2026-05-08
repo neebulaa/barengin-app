@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Trip;
 use Illuminate\Http\Request;
 
 class TripsController extends Controller
@@ -109,8 +110,12 @@ class TripsController extends Controller
                 'liked' => false,
             ],
         ];
+
+        $all_trips = Trip::all();
+        
         return inertia('TripBareng/Index', [
             'trips' => $trips,
+            'all_trips' => $all_trips,
         ]);
     }
 
@@ -223,6 +228,57 @@ class TripsController extends Controller
 
         return Inertia('TripBareng/Detail', [
             'trip' => $trip,
+        ]);
+    }
+
+    public function checkout($id)
+    {
+        // Mock data trip
+        $trip_check_out = [
+            'id' => $id,
+            'title' => 'Trip Gunung Bromo',
+            'price' => 3800000,
+            'joined_count' => 15,
+            'capacity' => 20,
+            'remaining_quota' => 4,
+            'image' => '/assets/trips/bromo.jpg', // akan ada fallback jika image ga ada
+        ];
+
+        return Inertia('TripBareng/Checkout', [
+            'trip' => $trip_check_out,
+        ]);
+    }
+
+    public function payment($id)
+    {
+        // Mock data pembayaran
+        $paymentData = [
+            'trip_id' => $id,
+            'total_amount' => 199000,
+            'due_date' => '14 April 2026, 22:08',
+            'bank_name' => 'BCA Virtual Account',
+            'va_number' => '123 456 789 123',
+        ];
+
+        return Inertia('TripBareng/WaitingPayment', [
+            'paymentData' => $paymentData,
+        ]);
+    }
+
+    public function success($id)
+    {
+        // Mock data transaksi berhasil
+        $order = [
+            'transaction_id' => 'OTRIP-000001',
+            'trip_title' => 'Trip Gunung Bromo',
+            'date_range' => '12 Okt - 17 Okt',
+            'quantity' => 1,
+            'image' => '/assets/trips/bromo.jpg',
+            'friends_waiting' => 7,
+        ];
+
+        return Inertia('TripBareng/Success', [
+            'order' => $order,
         ]);
     }
     

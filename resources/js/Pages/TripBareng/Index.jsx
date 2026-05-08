@@ -6,7 +6,7 @@ import Pagination from "@/Components/Pagination";
 
 import MainLayout from "@/Layouts/MainLayout";
 
-export default function Index({ trips }) {
+export default function Index({ trips, all_trips }) {
     const [activeTab, setActiveTab] = useState("all");
     const [page, setPage] = useState(1);
 
