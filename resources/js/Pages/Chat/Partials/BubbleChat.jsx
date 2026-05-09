@@ -5,7 +5,7 @@ function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
-export default function Bubble({ mine, text, time, withTicks, avatar }) {
+export default function Bubble({ mine, text, time, readText, avatar }) {
     return (
         <div className={cn("flex w-full", mine ? "justify-end" : "justify-start")}>
             <div className="flex max-w-[560px] items-end gap-3">
@@ -23,10 +23,10 @@ export default function Bubble({ mine, text, time, withTicks, avatar }) {
                         {text}
                     </div>
 
-                    <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-neutral-500">
+                    <div className="mt-2 flex items-center justify-end gap-2 text-[11px] text-neutral-500">
                         <span>{time}</span>
-                        {mine && withTicks ? (
-                            <span className="text-primary-700">✓✓</span>
+                        {mine && readText ? (
+                            <span className="text-primary-700">{readText}</span>
                         ) : null}
                     </div>
                 </div>

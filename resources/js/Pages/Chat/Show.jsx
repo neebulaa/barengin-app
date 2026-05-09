@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { use, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
@@ -96,6 +96,28 @@ export default function ChatShow({
         });
     }, [conversation?.id]);
 
+    useEffect(() => {
+        if (!window.Echo) return;
+
+        const channel = window.Echo.join("online");
+
+        channel.here((users) => {
+            console.log("online users", users);
+        });
+
+        channel.joining((user) => {
+            console.log("joining", user);
+        });
+
+        channel.leaving((user) => {
+            console.log("leaving", user);
+        });
+
+        return () => {
+            window.Echo.leave("online");
+        };
+    }, []);
+
     const [text, setText] = useState("");
     const sendingRef = useRef(false);
 
@@ -133,7 +155,6 @@ export default function ChatShow({
                 },
                 onError: () => {
                     sendingRef.current = false;
-                    // rollback optimistic bila perlu
                     setLocalMessages((prev) =>
                         (prev ?? []).filter((m) => m.id !== optimistic.id),
                     );
@@ -142,6 +163,34 @@ export default function ChatShow({
             },
         );
     };
+
+    const peerLastReadAt = conversation?.peer_last_read_at;
+    {(localMessages ?? []).map((m) => {
+        const isMine = Number(m.sender_id) === Number(authUser?.id);
+        const isRead =
+            isMine &&
+            peerLastReadAt &&
+            m.created_at &&
+            new Date(peerLastReadAt).getTime() >= new Date(m.created_at).getTime();
+
+        return (
+            <Bubble
+                key={m.id}
+                mine={isMine}
+                text={m.text}
+                time={
+                    m.created_at
+                        ? new Date(m.created_at).toLocaleTimeString("id-ID", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        })
+                        : ""
+                }
+                readText={isRead ? "dibaca" : ""}
+                avatar={m.sender?.avatar}
+            />
+        );
+    })}
 
     return (
         <>

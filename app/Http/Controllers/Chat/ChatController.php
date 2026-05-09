@@ -10,56 +10,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;  
 use Inertia\Inertia;
+use Illuminate\Support\Carbon;
 
 class ChatController extends Controller
 {
     public function index()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
-
-        // ambil semua conversation milik user + last message
+        $user->foceFill(['last_seen_at' => now()])->save();
         $conversations = $this->sidebarConversations($user);
-            
-        // ->with([
-            //     'participants:id,name,profile_image',
-            //     'trip:id,title',
-            //     'pergi_bareng:id,title',
-            // ])
-            // ->withMax('messages', 'created_at')
-            // ->get()
-            // ->map(function ($c) use ($user) {
-            //     $lastMessage = $c->messages()
-            //         ->latest()
-            //         ->with('sender:id,name,profile_image')
-            //         ->first();
-
-            //     $title = $c->is_group
-            //         ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')
-            //         : optional($c->participants->firstWhere('id', '!=', $user->id))->name;
-
-            //     return [
-            //         'id' => $c->id,
-            //         'is_group' => (bool) $c->is_group,
-            //         'title' => $title ?? 'Chat',
-            //         'participants' => $c->participants->map(fn ($p) => [
-            //             'id' => $p->id,
-            //             'name' => $p->name,
-            //             'avatar' => $p->public_profile_image ?? asset('assets/default-profile.png'),
-            //         ]),
-            //         'last_message' => $lastMessage ? [
-            //             'id' => $lastMessage->id,
-            //             'text' => $lastMessage->message_text,
-            //             'created_at' => $lastMessage->created_at?->toISOString(),
-            //             'sender' => [
-            //                 'id' => $lastMessage->sender?->id,
-            //                 'name' => $lastMessage->sender?->name,
-            //             ]
-            //         ] : null,
-            //         'last_message_at' => optional($lastMessage?->created_at)->toISOString(),
-            //     ];
-            // })
-            // ->sortByDesc(fn ($c) => $c['last_message_at'])
-            // ->values();
 
         return Inertia::render('Chat/Index', [
             'conversations' => $conversations,
@@ -83,6 +43,11 @@ class ChatController extends Controller
             'trip:id,title',
             'pergi_bareng:id,title',
         ]);
+
+        $peer = $conversation->participants->firstWhere('id', '!=', $user->id);
+        $peerLastReadAt = $peer?->pivot?->last_read_at
+            ? Carbon::parse($peer->pivot->last_read_at)->toISOString()
+            : null;
 
         $title = $conversation->is_group ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group') : optional($conversation->participants->firstWhere('id', '!=', $user->id))->full_name;
 
@@ -109,10 +74,14 @@ class ChatController extends Controller
                 'id' => $conversation->id,
                 'is_group' => (bool) $conversation->is_group,
                 'title' => $title ?? 'Chat',
+                'peer_last_read_at' => $peerLastReadAt,
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->full_name,
                     'avatar' => $p->public_profile_image ?? asset('assets/default-profile.png'),
+                    'last_seen_at' => $p->last_seen_at
+                        ? Carbon::parse($p->last_seen_at)->toISOString()
+                        : null,
                 ])->values(),
             ],
             'messages' => $messages,
