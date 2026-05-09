@@ -41,6 +41,11 @@ export default function ChatShow({
 
     const headerTitle = getConversationTitle(conversation);
     const headerAvatar = getConversationAvatar(conversation);
+    const peer = getConversationPeer(conversation);
+    const lastSeenAt = peer?.last_seen_at;
+    const isOnline =
+        lastSeenAt &&
+        Date.now() - new Date(lastSeenAt).getTime() < 2 * 60 * 1000;
 
     const [tab, setTab] = useState("personal");
 
@@ -259,10 +264,10 @@ export default function ChatShow({
                                             <span
                                                 className={cn(
                                                     "h-2.5 w-2.5 rounded-full",
-                                                    conversation?.is_online ? "bg-success-700" : "bg-neutral-500",
+                                                    conversation?.isOnline ? "bg-success-700" : "bg-neutral-500",
                                                 )}
                                             />
-                                            {conversation?.is_online ? "Online" : "Offline"}
+                                            {conversation?.isOnline ? "Online" : "Offline"}
                                         </span>
                                     )}
                                 </div>

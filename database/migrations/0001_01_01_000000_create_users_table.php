@@ -28,7 +28,7 @@ return new class extends Migration
             $table->boolean('is_verified')->default(false);
             $table->string('google_id')->nullable()->unique();
             $table->boolean('onboarding_completed')->default(false);
-            $table->dateTime('last_seen_at');
+            $table->dateTime('last_seen_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
 
