@@ -208,20 +208,14 @@ export default function ChatIndex({conversations = []}) {
 
                             <button
                                 type="button"
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
-                                aria-label="New Chat"
-                            >
-                                <button
-                                type="button"
                                 onClick={() => setOpenNewChat(true)}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
                                 aria-label="New Chat"
-                                >
+                            >
                                 <BiMessageSquareAdd className="text-3xl" />
-                                </button>
-
-                                <NewChatModal open={openNewChat} onClose={() => setOpenNewChat(false)} />
                             </button>
+
+                            <NewChatModal open={openNewChat} onClose={() => setOpenNewChat(false)} />
                         </div>
 
                         <div className="mt-6">
@@ -279,17 +273,16 @@ export default function ChatIndex({conversations = []}) {
 
                         <div className="mt-6 space-y-2">
                             {filtered.map((c) => (
-                                <Link key={c.id} href={`/chat/${c.id}`}>
-                                    <ChatListItem
-                                        active={false}
-                                        avatar={c.avatar}
-                                        title={c.title}
-                                        subtitle={c.subtitle}
-                                        time={c.time}
-                                        unread={c.unread}
-                                        onClick={() => {}}
-                                    />
-                                </Link>
+                                <ChatListItem
+                                    key={c.id}
+                                    href={`/chat/${c.id}`}
+                                    active={false}
+                                    avatar={c.avatar}
+                                    title={c.title}
+                                    subtitle={c.subtitle}
+                                    time={c.time}
+                                    unread={c.unread}
+                                />
                             ))}
                         </div>
                     </aside>

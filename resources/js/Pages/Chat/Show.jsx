@@ -3,6 +3,7 @@ import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
 import Button from "@/Components/Button";
+import NavbarAuth from "@/Components/NavbarAuth";
 import { Link, router, usePage } from "@inertiajs/react";
 
 import Segment from "./Partials/Segment";
@@ -26,7 +27,22 @@ export default function ChatShow({
 }) {
     const authUser = usePage().props?.auth?.user;
 
+    const getConversationPeer = (c) =>
+        c?.participants?.find(
+            (p) => Number(p.id) !== Number(authUser?.id),
+        );
+
+    const getConversationTitle = (c) =>
+        c?.title ?? getConversationPeer(c)?.name ?? "Chat";
+
+    const getConversationAvatar = (c) =>
+        c?.avatar ?? getConversationPeer(c)?.avatar;
+
+    const headerTitle = getConversationTitle(conversation);
+    const headerAvatar = getConversationAvatar(conversation);
+
     const [tab, setTab] = useState("personal");
+
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
 
@@ -91,7 +107,7 @@ export default function ChatShow({
             created_at: new Date().toISOString(),
             sender: {
                 id: authUser?.id,
-                name: authUser?.name,
+                name: authUser?.full_name,
                 avatar: authUser?.public_profile_image,
             },
             optimistic: true,
@@ -122,6 +138,7 @@ export default function ChatShow({
 
     return (
         <>
+            <NavbarAuth />
             <Container className="max-w-[1400px]">
                 <div className="min-h-[calc(100vh-96px)] border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
                     {/* LEFT SIDEBAR (hidden on mobile) */}
@@ -195,17 +212,16 @@ export default function ChatShow({
 
                         <div className="mt-6 space-y-2">
                             {filtered.map((c) => (
-                                <Link key={c.id} href={`/chat/${c.id}`}>
-                                    <ChatListItem
-                                        active={Number(c.id) === Number(conversation?.id)}
-                                        avatar={c.avatar}
-                                        title={c.title}
-                                        subtitle={c.subtitle}
-                                        time={c.time}
-                                        unread={c.unread}
-                                        onClick={() => {}}
-                                    />
-                                </Link>
+                                <ChatListItem
+                                    key={c.id}
+                                    href={`/chat/${c.id}`}
+                                    active={Number(c.id) === Number(conversation?.id)}
+                                    avatar={getConversationAvatar(c)}
+                                    title={getConversationTitle(c)}
+                                    subtitle={c.subtitle}
+                                    time={c.time}
+                                    unread={c.unread}
+                                />
                             ))}
                         </div>
                     </aside>
@@ -224,13 +240,13 @@ export default function ChatShow({
                             </Link>
 
                             <Avatar
-                                src={conversation?.participants?.[0]?.avatar}
-                                alt={conversation?.title ?? "Chat"}
+                                src={headerAvatar}
+                                alt={headerTitle}
                             />
 
                             <div className="min-w-0">
                                 <div className="truncate text-lg font-semibold text-neutral-700">
-                                    {conversation?.title ?? "Chat"}
+                                    {headerTitle}
                                 </div>
                                 <div className="text-sm text-neutral-500">
                                     {conversation?.is_group
