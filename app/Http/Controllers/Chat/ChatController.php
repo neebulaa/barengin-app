@@ -84,7 +84,7 @@ class ChatController extends Controller
             'pergi_bareng:id,title',
         ]);
 
-        $title = $conversation->is_group ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group') : optional($conversation->participants->firstWhere('id', '!=', $user->id))->name;
+        $title = $conversation->is_group ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group') : optional($conversation->participants->firstWhere('id', '!=', $user->id))->full_name;
 
         $messages = $conversation->messages()
             ->with('sender:id,full_name,profile_image')
@@ -158,7 +158,7 @@ class ChatController extends Controller
 
                 $title = $c->is_group
                     ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')
-                    : optional($c->participants->firstWhere('id', '!=', $user->id))->name;
+                    : optional($c->participants->firstWhere('id', '!=', $user->id))->full_name;
                 
                 $avatar = $c->is_group
                     ? asset('assets/default-profile.png')

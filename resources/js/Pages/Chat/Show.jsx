@@ -10,6 +10,7 @@ import Segment from "./Partials/Segment";
 import ChatListItem from "./Partials/ChatListItem";
 import Bubble from "./Partials/BubbleChat";
 import Avatar from "./Partials/Avatar";
+import NewChatModal from "./Partials/NewChatModal";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
 import { FiArrowLeft, FiFilter, FiPaperclip, FiSend } from "react-icons/fi";
@@ -45,6 +46,7 @@ export default function ChatShow({
 
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
+    const [openNewChat, setOpenNewChat] = useState(false);
 
     const filtered = useMemo(() => {
         return (conversations ?? [])
@@ -150,6 +152,7 @@ export default function ChatShow({
 
                             <button
                                 type="button"
+                                onClick={() => setOpenNewChat(true)}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
                                 aria-label="New Chat"
                             >
@@ -249,9 +252,19 @@ export default function ChatShow({
                                     {headerTitle}
                                 </div>
                                 <div className="text-sm text-neutral-500">
-                                    {conversation?.is_group
-                                        ? `${conversation?.participants?.length ?? 0} Anggota`
-                                        : "Online"}
+                                    {conversation?.is_group ? (
+                                        `${conversation?.participants?.length ?? 0} Anggota`
+                                    ) : (
+                                        <span className="inline-flex items-center gap-2">
+                                            <span
+                                                className={cn(
+                                                    "h-2.5 w-2.5 rounded-full",
+                                                    conversation?.is_online ? "bg-success-700" : "bg-neutral-500",
+                                                )}
+                                            />
+                                            {conversation?.is_online ? "Online" : "Offline"}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -311,6 +324,7 @@ export default function ChatShow({
                     </section>
                 </div>
             </Container>
+            <NewChatModal open={openNewChat} onClose={() => setOpenNewChat(false)} />
         </>
     );
 }

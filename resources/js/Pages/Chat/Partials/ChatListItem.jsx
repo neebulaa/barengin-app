@@ -57,7 +57,7 @@ export default function ChatListItem({
     );
 
     const className = cn(
-        "w-full rounded-2xl px-4 py-3 text-left transition",
+        "block w-full rounded-2xl px-4 py-3 text-left transition",
         active ? "bg-primary-50" : "hover:bg-neutral-100",
     );
 
