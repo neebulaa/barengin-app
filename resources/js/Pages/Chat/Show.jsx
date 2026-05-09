@@ -1,4 +1,4 @@
-import React, { use, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
@@ -42,13 +42,8 @@ export default function ChatShow({
     const headerTitle = getConversationTitle(conversation);
     const headerAvatar = getConversationAvatar(conversation);
     const peer = getConversationPeer(conversation);
-    const lastSeenAt = peer?.last_seen_at;
-    const isOnline =
-        lastSeenAt &&
-        Date.now() - new Date(lastSeenAt).getTime() < 2 * 60 * 1000;
 
     const [tab, setTab] = useState("personal");
-
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
     const [openNewChat, setOpenNewChat] = useState(false);
@@ -66,7 +61,16 @@ export default function ChatShow({
     }, [conversations, q, filter]);
 
     const [localMessages, setLocalMessages] = useState(messages ?? []);
-    useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]); // reset saat pindah conversation
+    useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
+
+    const [peerLastReadAt, setPeerLastReadAt] = useState(
+        conversation?.peer_last_read_at ?? null,
+    );
+    useEffect(() => {
+        setPeerLastReadAt(conversation?.peer_last_read_at ?? null);
+    }, [conversation?.id]);
+
+    const [onlineIds, setOnlineIds] = useState(new Set());
 
     const bottomRef = useRef(null);
     useEffect(() => {
@@ -84,10 +88,16 @@ export default function ChatShow({
             setLocalMessages((prev) => [...(prev ?? []), payload]);
         });
 
+        channel.listen(".conversation.read", (payload) => {
+            if (payload.user_id === peer?.id) {
+                setPeerLastReadAt(payload.last_read_at);
+            }
+        });
+
         return () => {
             window.Echo.leave(`private-${channelName}`);
         };
-    }, [conversation?.id]);
+    }, [conversation?.id, peer?.id]);
 
     useEffect(() => {
         if (!conversation?.id) return;
@@ -102,21 +112,33 @@ export default function ChatShow({
         const channel = window.Echo.join("online");
 
         channel.here((users) => {
-            console.log("online users", users);
+            setOnlineIds(new Set(users.map((u) => u.id)));
         });
 
         channel.joining((user) => {
-            console.log("joining", user);
+            setOnlineIds((prev) => new Set([...prev, user.id]));
         });
 
         channel.leaving((user) => {
-            console.log("leaving", user);
+            setOnlineIds((prev) => {
+                const next = new Set(prev);
+                next.delete(user.id);
+                return next;
+            });
         });
 
         return () => {
             window.Echo.leave("online");
         };
     }, []);
+
+    const lastSeenAt = peer?.last_seen_at;
+    const isOnlineByLastSeen =
+        lastSeenAt &&
+        Date.now() - new Date(lastSeenAt).getTime() < 2 * 60 * 1000;
+
+    const isPeerOnline = peer?.id ? onlineIds.has(peer.id) : false;
+    const showOnline = isPeerOnline || isOnlineByLastSeen;
 
     const [text, setText] = useState("");
     const sendingRef = useRef(false);
@@ -164,40 +186,11 @@ export default function ChatShow({
         );
     };
 
-    const peerLastReadAt = conversation?.peer_last_read_at;
-    {(localMessages ?? []).map((m) => {
-        const isMine = Number(m.sender_id) === Number(authUser?.id);
-        const isRead =
-            isMine &&
-            peerLastReadAt &&
-            m.created_at &&
-            new Date(peerLastReadAt).getTime() >= new Date(m.created_at).getTime();
-
-        return (
-            <Bubble
-                key={m.id}
-                mine={isMine}
-                text={m.text}
-                time={
-                    m.created_at
-                        ? new Date(m.created_at).toLocaleTimeString("id-ID", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                        })
-                        : ""
-                }
-                readText={isRead ? "dibaca" : ""}
-                avatar={m.sender?.avatar}
-            />
-        );
-    })}
-
     return (
         <>
             <NavbarAuth />
             <Container className="max-w-[1400px]">
                 <div className="min-h-[calc(100vh-96px)] border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
-                    {/* LEFT SIDEBAR (hidden on mobile) */}
                     <aside className="hidden border-r border-neutral-200 bg-white px-8 py-8 md:block">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-neutral-700">
@@ -283,11 +276,8 @@ export default function ChatShow({
                         </div>
                     </aside>
 
-                    {/* RIGHT CHAT PANEL */}
                     <section className="relative bg-white">
-                        {/* Header */}
                         <div className="flex items-center gap-3 border-b border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
-                            {/* Back only on mobile */}
                             <Link
                                 href="/chat"
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-neutral-100 md:hidden"
@@ -296,10 +286,7 @@ export default function ChatShow({
                                 <FiArrowLeft className="h-5 w-5 text-neutral-700" />
                             </Link>
 
-                            <Avatar
-                                src={headerAvatar}
-                                alt={headerTitle}
-                            />
+                            <Avatar src={headerAvatar} alt={headerTitle} />
 
                             <div className="min-w-0">
                                 <div className="truncate text-lg font-semibold text-neutral-700">
@@ -313,41 +300,48 @@ export default function ChatShow({
                                             <span
                                                 className={cn(
                                                     "h-2.5 w-2.5 rounded-full",
-                                                    conversation?.isOnline ? "bg-success-700" : "bg-neutral-500",
+                                                    showOnline ? "bg-success-700" : "bg-neutral-500",
                                                 )}
                                             />
-                                            {conversation?.isOnline ? "Online" : "Offline"}
+                                            {showOnline ? "Online" : "Offline"}
                                         </span>
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Body */}
                         <div className="h-[calc(100vh-96px-84px-96px)] overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
                             <div className="space-y-8">
-                                {(localMessages ?? []).map((m) => (
-                                    <Bubble
-                                        key={m.id}
-                                        mine={Number(m.sender_id) === Number(authUser?.id)}
-                                        text={m.text}
-                                        time={
-                                            m.created_at
-                                                ? new Date(m.created_at).toLocaleTimeString("id-ID", {
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                  })
-                                                : ""
-                                        }
-                                        withTicks={Number(m.sender_id) === Number(authUser?.id)}
-                                        avatar={m.sender?.avatar}
-                                    />
-                                ))}
+                                {(localMessages ?? []).map((m) => {
+                                    const isMine = Number(m.sender_id) === Number(authUser?.id);
+                                    const isRead =
+                                        isMine &&
+                                        peerLastReadAt &&
+                                        m.created_at &&
+                                        new Date(peerLastReadAt).getTime() >= new Date(m.created_at).getTime();
+
+                                    return (
+                                        <Bubble
+                                            key={m.id}
+                                            mine={isMine}
+                                            text={m.text}
+                                            time={
+                                                m.created_at
+                                                    ? new Date(m.created_at).toLocaleTimeString("id-ID", {
+                                                          hour: "2-digit",
+                                                          minute: "2-digit",
+                                                      })
+                                                    : ""
+                                            }
+                                            readText={isRead ? "dibaca" : ""}
+                                            avatar={m.sender?.avatar}
+                                        />
+                                    );
+                                })}
                                 <div ref={bottomRef} />
                             </div>
                         </div>
 
-                        {/* Composer */}
                         <div className="border-t border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
                             <form onSubmit={submit} className="flex items-center gap-4">
                                 <div className="relative flex-1">

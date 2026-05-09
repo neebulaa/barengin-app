@@ -8,7 +8,6 @@ use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;  
 use Inertia\Inertia;
 use Illuminate\Support\Carbon;
 
@@ -18,7 +17,8 @@ class ChatController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $user->foceFill(['last_seen_at' => now()])->save();
+        $user->forceFill(['last_seen_at' => now()])->save();
+
         $conversations = $this->sidebarConversations($user);
 
         return Inertia::render('Chat/Index', [
@@ -28,7 +28,9 @@ class ChatController extends Controller
 
     public function show(Conversation $conversation)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
+        $user->forceFill(['last_seen_at' => now()])->save();
 
         abort_unless(
             $conversation->participants()->where('users.id', $user->id)->exists(),
@@ -49,7 +51,9 @@ class ChatController extends Controller
             ? Carbon::parse($peer->pivot->last_read_at)->toISOString()
             : null;
 
-        $title = $conversation->is_group ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group') : optional($conversation->participants->firstWhere('id', '!=', $user->id))->full_name;
+        $title = $conversation->is_group
+            ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group')
+            : optional($conversation->participants->firstWhere('id', '!=', $user->id))->full_name;
 
         $messages = $conversation->messages()
             ->with('sender:id,full_name,profile_image')
@@ -90,7 +94,9 @@ class ChatController extends Controller
 
     public function storeMessage(Request $request, Conversation $conversation)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
+        $user->forceFill(['last_seen_at' => now()])->save();
 
         abort_unless(
             $conversation->participants()->where('users.id', $user->id)->exists(),
@@ -108,7 +114,6 @@ class ChatController extends Controller
             'message_text' => $data['message_text'],
         ]);
 
-        // broadcast to other participants
         broadcast(new MessageSent($message))->toOthers();
 
         return back();
@@ -117,8 +122,9 @@ class ChatController extends Controller
     private function sidebarConversations($user)
     {
         return $user->conversations()
-            ->with(['participants:id,full_name,profile_image', 
-                'trip:id,title', 
+            ->with([
+                'participants:id,full_name,profile_image',
+                'trip:id,title',
                 'pergi_bareng:id,title'
             ])
             ->get()
@@ -128,7 +134,7 @@ class ChatController extends Controller
                 $title = $c->is_group
                     ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')
                     : optional($c->participants->firstWhere('id', '!=', $user->id))->full_name;
-                
+
                 $avatar = $c->is_group
                     ? asset('assets/default-profile.png')
                     : ($c->participants->firstWhere('id', '!=', $user->id)?->public_profile_image ?? asset('assets/default-profile.png'));
