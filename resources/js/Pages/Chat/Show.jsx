@@ -351,14 +351,6 @@ export default function ChatShow({
                                     Belum Dibaca
                                 </button>
                             </div>
-
-                            <button
-                                type="button"
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-neutral-700 hover:bg-neutral-100"
-                                aria-label="Filter"
-                            >
-                                <FiFilter className="h-5 w-5" />
-                            </button>
                         </div>
 
                         <div className="mt-6 space-y-2">
