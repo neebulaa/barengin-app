@@ -26,6 +26,10 @@ export default function ChatIndex({conversations = []}) {
     const filtered = useMemo(() => {
         return (conversations ?? [])
             .filter((c) => {
+                if (tab === "groups") return !!c.is_group;
+                return !c.is_group;
+            })
+            .filter((c) => {
                 if (!q) return true;
                 return (c.title ?? "").toLowerCase().includes(q.toLowerCase());
             })
@@ -33,7 +37,7 @@ export default function ChatIndex({conversations = []}) {
                 if (filter === "unread") return Number(c.unread ?? 0) > 0;
                 return true;
             });
-    }, [conversations, q, filter]);
+    }, [conversations, q, filter, tab]);
 
     const formatTime = (iso) =>
         iso
@@ -111,6 +115,14 @@ export default function ChatIndex({conversations = []}) {
                         </div>
 
                         <div className="mt-6 space-y-2">
+                            {filtered.length === 0 ? (
+                                <div className="py-10 text-center text-sm text-neutral-500">
+                                    {tab === "groups"
+                                        ? "Belum ada group chat."
+                                        : "Belum ada chat personal."}
+                                </div>
+                            ) : null}
+
                             {filtered.map((c) => (
                                 <ChatListItem
                                     key={c.id}
@@ -129,10 +141,10 @@ export default function ChatIndex({conversations = []}) {
                     <section className="hidden items-center justify-center bg-white md:flex">
                         <div className="text-center">
                             <div className="text-lg font-semibold text-neutral-700">
-                                Pilih chat untuk mulai
+                                Belum ada chat yang dibuka
                             </div>
                             <div className="mt-2 text-sm text-neutral-500">
-                                Di mobile, klik salah satu chat dari list.
+                                Pilih percakapan untuk mulai mengobrol.
                             </div>
                         </div>
                     </section>

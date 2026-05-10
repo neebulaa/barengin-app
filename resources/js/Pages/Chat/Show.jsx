@@ -52,16 +52,20 @@ export default function ChatShow({
     useEffect(() => setSidebarConversations(conversations ?? []), [conversations]);
 
     const filtered = useMemo(() => {
-        return (sidebarConversations ?? [])
-            .filter((c) => {
-                if (!q) return true;
-                return (c.title ?? "").toLowerCase().includes(q.toLowerCase());
-            })
-            .filter((c) => {
-                if (filter === "unread") return Number(c.unread ?? 0) > 0;
-                return true;
-            });
-    }, [sidebarConversations, q, filter]);
+    return (sidebarConversations ?? [])
+        .filter((c) => {
+            if (tab === "groups") return !!c.is_group;
+            return !c.is_group;
+        })
+        .filter((c) => {
+            if (!q) return true;
+            return (c.title ?? "").toLowerCase().includes(q.toLowerCase());
+        })
+        .filter((c) => {
+            if (filter === "unread") return Number(c.unread ?? 0) > 0;
+            return true;
+        });
+}, [sidebarConversations, q, filter, tab]);
 
     const [localMessages, setLocalMessages] = useState(messages ?? []);
     useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
