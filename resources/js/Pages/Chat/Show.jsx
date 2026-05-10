@@ -77,6 +77,15 @@ export default function ChatShow({
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [localMessages?.length]);
 
+    const markAsRead = async () => {
+        if (!conversation?.id) return;
+        try {
+            await axios.post(`/chat/${conversation.id}/read`);
+        } catch (err) {
+            console.error("markAsRead failed", err);
+        }
+    };
+
     useEffect(() => {
         if (!conversation?.id) return;
         if (!window.Echo) return;
@@ -86,6 +95,11 @@ export default function ChatShow({
 
         channel.listen(".message.sent", (payload) => {
             setLocalMessages((prev) => [...(prev ?? []), payload]);
+
+            // Jika pesan datang dari lawan, langsung mark read agar "dibaca" realtime
+            if (payload?.sender_id !== authUser?.id) {
+                markAsRead();
+            }
         });
 
         channel.listen(".conversation.read", (payload) => {
@@ -97,13 +111,16 @@ export default function ChatShow({
         return () => {
             window.Echo.leave(`private-${channelName}`);
         };
-    }, [conversation?.id, peer?.id]);
+    }, [conversation?.id, peer?.id, authUser?.id]);
 
     useEffect(() => {
-        if (!conversation?.id) return;
-        axios.post(`/chat/${conversation.id}/read`).catch((err) => {
-            console.error("markAsRead failed", err);
-        });
+        markAsRead();
+    }, [conversation?.id]);
+
+    useEffect(() => {
+        const onFocus = () => markAsRead();
+        window.addEventListener("focus", onFocus);
+        return () => window.removeEventListener("focus", onFocus);
     }, [conversation?.id]);
 
     useEffect(() => {
