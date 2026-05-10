@@ -209,12 +209,23 @@ class ChatController extends Controller
                         ->where('sender_id', '!=', $user->id)
                         ->count();
 
+                $subtitle = $lastMessage?->message_text;
+                if (!$subtitle && $lastMessage?->attachment_type){
+                    if (str_starts_with($lastMessage->attachment_type, 'image/')) {
+                        $subtitle = 'Foto';
+                    } elseif ($lastMessage->attachment_type === 'application/pdf') {
+                        $subtitle = 'PDF';
+                    }else{
+                        $subtitle = 'Lampiran';
+                    }
+                }
+
                 return [
                     'id' => $c->id,
                     'is_group' => (bool) $c->is_group,
                     'title' => $title ?? 'Chat',
                     'avatar' => $avatar,
-                    'subtitle' => $lastMessage?->message_text ?? '',
+                    'subtitle' => $subtitle ?? '',
                     'last_message_at' => $lastMessage?->created_at?->toISOString(),
                     'unread' => $unread,
                 ];

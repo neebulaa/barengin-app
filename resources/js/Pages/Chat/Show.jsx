@@ -104,6 +104,16 @@ export default function ChatShow({
         }
     };
 
+    const getSubtitleFromPayload = (payload) => {
+        if (payload.text) return payload.text;
+
+        if (payload.attachment_type?.startsWith("image/")) return "Foto";
+        if (payload.attachment_type === "application/pdf") return "PDF";
+        if (payload.attachment_url) return "Lampiran";
+
+        return "";
+    };
+
     useEffect(() => {
         if (!conversation?.id) return;
         if (!window.Echo) return;
@@ -152,7 +162,7 @@ export default function ChatShow({
 
                         return {
                             ...item,
-                            subtitle: payload.text ?? item.subtitle,
+                            subtitle: getSubtitleFromPayload(payload),
                             last_message_at: payload.created_at ?? item.last_message_at,
                             unread: shouldInc
                                 ? Number(item.unread ?? 0) + 1
