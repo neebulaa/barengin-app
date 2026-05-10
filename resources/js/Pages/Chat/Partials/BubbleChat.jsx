@@ -23,7 +23,7 @@ export default function Bubble({
 
     return (
         <div className={cn("flex w-full", mine ? "justify-end" : "justify-start")}>
-            <div className="flex max-w-[560px] items-end gap-3">
+            <div className="flex max-w-[560px] items-end gap-3 break-words">
                 {!mine ? (
                     <Avatar src={avatar} alt="avatar" className="h-9 w-9" />
                 ) : null}
@@ -35,7 +35,7 @@ export default function Bubble({
                     )}
                 >
                     {text ? (
-                        <div className="whitespace-pre-line text-sm text-neutral-700">
+                        <div className="whitespace-pre-line text-sm text-neutral-700 break-words break-all">
                             {text}
                         </div>
                     ) : null}
