@@ -75,7 +75,7 @@ export default function ForumSideNav({ onCreatePost }) {
                     <NavIconLink
                         icon={<FiSearch />}
                         href="#"
-                        label="Search"
+                        label="Find People"
                         active={activeKey === "search"}
                     />
                     <NavIconButton
@@ -105,7 +105,7 @@ export default function ForumSideNav({ onCreatePost }) {
                     <NavIconLink
                         icon={<FiSearch />}
                         href="#"
-                        label="Search"
+                        label="Find People"
                         active={activeKey === "search"}
                     />
                     <NavIconButton
