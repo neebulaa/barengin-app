@@ -52,7 +52,7 @@ class ChatController extends Controller
             : null;
 
         $title = $conversation->is_group
-            ? ($conversation->trip?->title ?? $conversation->pergi_bareng?->title ?? 'Group')
+            ? ($conversation->trip?->name ?? $conversation->pergi_bareng?->name ?? 'Group')
             : optional($conversation->participants->firstWhere('id', '!=', $user->id))->full_name;
 
         $messages = $conversation->messages()
@@ -190,7 +190,7 @@ class ChatController extends Controller
                 $lastMessage = $c->messages()->latest()->with('sender:id,full_name')->first();
 
                 $title = $c->is_group
-                    ? ($c->trip?->title ?? $c->pergi_bareng?->title ?? 'Group')
+                    ? ($c->trip?->name ?? $c->pergi_bareng?->name ?? 'Group')
                     : optional($c->participants->firstWhere('id', '!=', $user->id))->full_name;
 
                 $avatar = $c->is_group
