@@ -5,16 +5,15 @@ function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
-export default function Bubble({ 
-    mine, 
-    text, 
-    time, 
-    readText, 
-    avatar, 
-    attachmentUrl, 
-    attachmentType, 
-    attachmentName, 
-
+export default function Bubble({
+    mine,
+    text,
+    time,
+    readText,
+    avatar,
+    attachmentUrl,
+    attachmentType,
+    attachmentName,
 }) {
     const isImage =
         attachmentType &&

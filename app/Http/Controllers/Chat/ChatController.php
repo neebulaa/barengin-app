@@ -39,6 +39,7 @@ class ChatController extends Controller
         );
 
         $conversations = $this->sidebarConversations($user);
+
         $conversation->load([
             'participants:id,full_name,profile_image',
             'trip:id,title',
@@ -110,12 +111,13 @@ class ChatController extends Controller
         );
 
         $data = $request->validate([
-            'message_text' => ['required', 'string', 'max:5000'],
+            'message_text' => ['nullable', 'string', 'max:5000'],
             'attachment' => [
                 'nullable',
                 'file',
-                function ($attribute, $value, $fail){
-                    if(!$value) return;
+                function ($attribute, $value, $fail) {
+                    if (! $value) return;
+
                     $mime = $value->getMimeType();
                     $size = $value->getSize();
 
@@ -163,7 +165,11 @@ class ChatController extends Controller
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $user->id,
-            'message_text' => $data['message_text'],
+            'message_text' => $text,
+            'attachment_path' => $attachmentPath,
+            'attachment_type' => $attachmentType,
+            'attachment_name' => $attachmentName,
+            'attachment_size' => $attachmentSize,
         ]);
 
         broadcast(new MessageSent($message))->toOthers();
