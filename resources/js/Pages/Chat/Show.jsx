@@ -48,8 +48,11 @@ export default function ChatShow({
     const [filter, setFilter] = useState("all");
     const [openNewChat, setOpenNewChat] = useState(false);
 
+    const [sidebarConversations, setSidebarConversations] = useState(conversations ?? []);
+    useEffect(() => setSidebarConversations(conversations ?? []), [conversations]);
+
     const filtered = useMemo(() => {
-        return (conversations ?? [])
+        return (sidebarConversations ?? [])
             .filter((c) => {
                 if (!q) return true;
                 return (c.title ?? "").toLowerCase().includes(q.toLowerCase());
@@ -58,7 +61,7 @@ export default function ChatShow({
                 if (filter === "unread") return Number(c.unread ?? 0) > 0;
                 return true;
             });
-    }, [conversations, q, filter]);
+    }, [sidebarConversations, q, filter]);
 
     const [localMessages, setLocalMessages] = useState(messages ?? []);
     useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
@@ -77,10 +80,25 @@ export default function ChatShow({
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [localMessages?.length]);
 
+    const formatTime = (iso) =>
+        iso
+            ? new Date(iso).toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+              })
+            : "";
+
     const markAsRead = async () => {
         if (!conversation?.id) return;
         try {
             await axios.post(`/chat/${conversation.id}/read`);
+            setSidebarConversations((prev) =>
+                prev.map((c) =>
+                    Number(c.id) === Number(conversation?.id)
+                        ? { ...c, unread: 0 }
+                        : c,
+                ),
+            );
         } catch (err) {
             console.error("markAsRead failed", err);
         }
@@ -96,7 +114,6 @@ export default function ChatShow({
         channel.listen(".message.sent", (payload) => {
             setLocalMessages((prev) => [...(prev ?? []), payload]);
 
-            // Jika pesan datang dari lawan, langsung mark read agar "dibaca" realtime
             if (payload?.sender_id !== authUser?.id) {
                 markAsRead();
             }
@@ -112,6 +129,52 @@ export default function ChatShow({
             window.Echo.leave(`private-${channelName}`);
         };
     }, [conversation?.id, peer?.id, authUser?.id]);
+
+    useEffect(() => {
+        if (!window.Echo) return;
+        const ids = (conversations ?? []).map((c) => c.id);
+
+        ids.forEach((id) => {
+            const channelName = `conversation.${id}`;
+            const channel = window.Echo.private(channelName);
+
+            channel.listen(".message.sent", (payload) => {
+                setSidebarConversations((prev) => {
+                    const next = prev.map((item) => {
+                        if (Number(item.id) !== Number(payload.conversation_id)) {
+                            return item;
+                        }
+
+                        const isCurrent =
+                            Number(payload.conversation_id) === Number(conversation?.id);
+                        const shouldInc =
+                            payload.sender_id !== authUser?.id && !isCurrent;
+
+                        return {
+                            ...item,
+                            subtitle: payload.text ?? item.subtitle,
+                            last_message_at: payload.created_at ?? item.last_message_at,
+                            unread: shouldInc
+                                ? Number(item.unread ?? 0) + 1
+                                : isCurrent
+                                  ? 0
+                                  : item.unread ?? 0,
+                        };
+                    });
+
+                    return [...next].sort(
+                        (a, b) =>
+                            new Date(b.last_message_at ?? 0) -
+                            new Date(a.last_message_at ?? 0),
+                    );
+                });
+            });
+        });
+
+        return () => {
+            ids.forEach((id) => window.Echo.leave(`private-conversation.${id}`));
+        };
+    }, [conversations?.length, conversation?.id, authUser?.id]);
 
     useEffect(() => {
         markAsRead();
@@ -183,6 +246,23 @@ export default function ChatShow({
 
         setLocalMessages((prev) => [...(prev ?? []), optimistic]);
         setText("");
+
+        setSidebarConversations((prev) =>
+            [...prev.map((c) =>
+                Number(c.id) === Number(conversation?.id)
+                    ? {
+                        ...c,
+                        subtitle: optimistic.text,
+                        last_message_at: optimistic.created_at,
+                        unread: 0,
+                    }
+                    : c,
+            )].sort(
+                (a, b) =>
+                    new Date(b.last_message_at ?? 0) -
+                    new Date(a.last_message_at ?? 0),
+            ),
+        );
 
         router.post(
             `/chat/${conversation.id}/messages`,
@@ -286,7 +366,7 @@ export default function ChatShow({
                                     avatar={getConversationAvatar(c)}
                                     title={getConversationTitle(c)}
                                     subtitle={c.subtitle}
-                                    time={c.time}
+                                    time={formatTime(c.last_message_at)}
                                     unread={c.unread}
                                 />
                             ))}
@@ -342,14 +422,7 @@ export default function ChatShow({
                                             key={m.id}
                                             mine={isMine}
                                             text={m.text}
-                                            time={
-                                                m.created_at
-                                                    ? new Date(m.created_at).toLocaleTimeString("id-ID", {
-                                                          hour: "2-digit",
-                                                          minute: "2-digit",
-                                                      })
-                                                    : ""
-                                            }
+                                            time={formatTime(m.created_at)}
                                             readText={isRead ? "dibaca" : ""}
                                             avatar={m.sender?.avatar}
                                         />

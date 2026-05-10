@@ -139,18 +139,29 @@ class ChatController extends Controller
                     ? asset('assets/default-profile.png')
                     : ($c->participants->firstWhere('id', '!=', $user->id)?->public_profile_image ?? asset('assets/default-profile.png'));
 
+                $me = $c->participants->firstWhere('id', $user->id);
+                $lastReadAt = $me?->pivot?->last_read_at;
+
+                $unread = $lastReadAt
+                    ? $c->messages()
+                        ->where('sender_id', '!=', $user->id)
+                        ->where('created_at', '>', $lastReadAt)
+                        ->count()
+                    : $c->messages()
+                        ->where('sender_id', '!=', $user->id)
+                        ->count();
+
                 return [
                     'id' => $c->id,
                     'is_group' => (bool) $c->is_group,
                     'title' => $title ?? 'Chat',
                     'avatar' => $avatar,
                     'subtitle' => $lastMessage?->message_text ?? '',
-                    'time' => $lastMessage?->created_at?->format('H:i') ?? '',
-                    'unread' => 0,
-                    'last_message_at' => optional($lastMessage?->created_at)->timestamp ?? 0,
+                    'last_message_at' => $lastMessage?->created_at?->toISOString(),
+                    'unread' => $unread,
                 ];
             })
-            ->sortByDesc('last_message_at')
+            ->sortByDesc(fn ($c) => $c['last_message_at'] ?? 0)
             ->values();
     }
 }
