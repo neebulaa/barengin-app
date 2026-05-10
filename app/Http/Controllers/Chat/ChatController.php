@@ -39,7 +39,6 @@ class ChatController extends Controller
         );
 
         $conversations = $this->sidebarConversations($user);
-
         $conversation->load([
             'participants:id,full_name,profile_image',
             'trip:id,title',
@@ -65,6 +64,12 @@ class ChatController extends Controller
                 'sender_id' => $m->sender_id,
                 'text' => $m->message_text,
                 'created_at' => $m->created_at?->toISOString(),
+                'attachment_url' => $m->attachment_path
+                    ? asset('storage/'.$m->attachment_path)
+                    : null,
+                'attachment_type' => $m->attachment_type,
+                'attachment_name' => $m->attachment_name,
+                'attachment_size' => $m->attachment_size,
                 'sender' => [
                     'id' => $m->sender?->id,
                     'name' => $m->sender?->full_name,
@@ -106,7 +111,54 @@ class ChatController extends Controller
 
         $data = $request->validate([
             'message_text' => ['required', 'string', 'max:5000'],
+            'attachment' => [
+                'nullable',
+                'file',
+                function ($attribute, $value, $fail){
+                    if(!$value) return;
+                    $mime = $value->getMimeType();
+                    $size = $value->getSize();
+
+                    $imageMimes = ['image/jpeg', 'image/png', 'image/webp'];
+                    $pdfMime = 'application/pdf';
+
+                    if (in_array($mime, $imageMimes, true)) {
+                        if ($size > 3 * 1024 * 1024) {
+                            $fail('Gambar maksimal 3MB.');
+                        }
+                        return;
+                    }
+
+                    if ($mime === $pdfMime) {
+                        if ($size > 5 * 1024 * 1024) {
+                            $fail('PDF maksimal 5MB.');
+                        }
+                        return;
+                    }
+
+                    $fail('File harus berupa jpg, jpeg, png, webp, atau pdf.');
+                },
+            ],
         ]);
+
+        $text = $data['message_text'] ?? '';
+        $file = $request->file('attachment');
+
+        if (! $text && ! $file) {
+            return back()->withErrors(['message_text' => 'Pesan kosong.']);
+        }
+
+        $attachmentPath = null;
+        $attachmentType = null;
+        $attachmentName = null;
+        $attachmentSize = null;
+
+        if ($file) {
+            $attachmentPath = $file->store('chat-attachments', 'public');
+            $attachmentType = $file->getMimeType();
+            $attachmentName = $file->getClientOriginalName();
+            $attachmentSize = $file->getSize();
+        }
 
         $message = Message::create([
             'conversation_id' => $conversation->id,

@@ -47,6 +47,7 @@ export default function ChatShow({
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
     const [openNewChat, setOpenNewChat] = useState(false);
+    const [attachment, setAttachment] = useState(null);
 
     const [sidebarConversations, setSidebarConversations] = useState(conversations ?? []);
     useEffect(() => setSidebarConversations(conversations ?? []), [conversations]);
@@ -225,7 +226,7 @@ export default function ChatShow({
 
     const submit = (e) => {
         e.preventDefault();
-        if (!text.trim()) return;
+        if (!text.trim() && !attachment) return;
         if (sendingRef.current) return;
 
         sendingRef.current = true;
@@ -236,6 +237,9 @@ export default function ChatShow({
             sender_id: authUser?.id,
             text,
             created_at: new Date().toISOString(),
+            attachment_url: attachment ? URL.createObjectURL(attachment) : null,
+            attachment_type: attachment?.type ?? null,
+            attachment_name: attachment?.name ?? null,
             sender: {
                 id: authUser?.id,
                 name: authUser?.full_name,
@@ -246,6 +250,11 @@ export default function ChatShow({
 
         setLocalMessages((prev) => [...(prev ?? []), optimistic]);
         setText("");
+        setAttachment(null);
+
+        const formData = new FormData();
+        if (text) formData.append("message_text", text);
+        if (attachment) formData.append("attachment", attachment);
 
         setSidebarConversations((prev) =>
             [...prev.map((c) =>
@@ -265,19 +274,19 @@ export default function ChatShow({
         );
 
         router.post(
-            `/chat/${conversation.id}/messages`,
-            { message_text: optimistic.text },
+            `/chat/${conversation.id}/messages`, formData,
             {
                 preserveScroll: true,
+                forceFormData: true,
                 onFinish: () => {
                     sendingRef.current = false;
                 },
                 onError: () => {
                     sendingRef.current = false;
-                    setLocalMessages((prev) =>
-                        (prev ?? []).filter((m) => m.id !== optimistic.id),
-                    );
-                    setText(optimistic.text);
+                    // setLocalMessages((prev) =>
+                    //     (prev ?? []).filter((m) => m.id !== optimistic.id),
+                    // );
+                    // setText(optimistic.text);
                 },
             },
         );
@@ -425,6 +434,9 @@ export default function ChatShow({
                                             time={formatTime(m.created_at)}
                                             readText={isRead ? "dibaca" : ""}
                                             avatar={m.sender?.avatar}
+                                            attachmentUrl={m.attachment_url}
+                                            attachmentType={m.attachment_type}
+                                            attachmentName={m.attachment_name}
                                         />
                                     );
                                 })}
@@ -435,9 +447,22 @@ export default function ChatShow({
                         <div className="border-t border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
                             <form onSubmit={submit} className="flex items-center gap-4">
                                 <div className="relative flex-1">
-                                    <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">
+                                    {/* <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">
                                         <FiPaperclip className="h-5 w-5" />
-                                    </div>
+                                    </div> */}
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                                        className="hidden"
+                                        id="chat-attachment"
+                                        onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
+                                    />
+                                    <label
+                                        htmlFor="chat-attachment"
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500"
+                                    >
+                                        <FiPaperclip className="h-5 w-5" />
+                                    </label>
 
                                     <input
                                         value={text}
