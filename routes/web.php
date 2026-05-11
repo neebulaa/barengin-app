@@ -13,6 +13,9 @@ use App\Http\Controllers\ForumFollowController;
 use App\Http\Controllers\ForumPeopleController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\PergiBarengController;
+
+
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -95,6 +98,15 @@ Route::middleware('auth')->group(function () {
 Route ::get('/pergi-bareng',function(){
     return inertia('PergiBareng/Index');
 })->name('pergi-bareng');
+
+// Group Route untuk Pergi Bareng
+Route::prefix('pergi-bareng')->group(function () {
+    Route::get('/', [PergiBarengController::class, 'index'])->name('pergi-bareng.index');
+    Route::get('/{id}', [PergiBarengController::class, 'show'])->name('pergi-bareng.show');
+    Route::get('/{id}/join', [PergiBarengController::class, 'join'])->name('pergi-bareng.join');
+    Route::post('/{id}/join', [PergiBarengController::class, 'store'])->name('pergi-bareng.store');
+    Route::get('/{id}/success', [PergiBarengController::class, 'success'])->name('pergi-bareng.success');
+});
 
 
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
