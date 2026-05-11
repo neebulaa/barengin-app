@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
 import { FiArrowLeft, FiSearch } from "react-icons/fi";
 import Button from "@/Components/Button";
+import useLockBodyScroll from "@/Hooks/useLockBodyScroll";
 
 /**
  * mode:
@@ -15,6 +16,8 @@ export default function UserListModal({
     mode = "people",
     username, // required for followers/following
 }) {
+    useLockBodyScroll(open);
+    
     const auth = usePage().props.auth;
 
     const [q, setQ] = useState("");
