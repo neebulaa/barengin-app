@@ -25,7 +25,7 @@ class ForumController extends Controller
         return asset('storage/posts/' . $imgName);
     }
 
-        public function index(Request $request)
+    public function index(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
         $tag = trim((string) $request->query('tag', ''));
@@ -34,7 +34,7 @@ class ForumController extends Controller
 
         $postsQuery = Post::query()
             ->with([
-                'user:id,full_name,profile_image',
+                'user:id,full_name,profile_image,username',
                 'images:id,post_id,img_name',
                 'tags:id,tag_name',
             ])
@@ -96,6 +96,7 @@ class ForumController extends Controller
                         'id' => $post->user?->id,
                         'name' => $post->user?->full_name,
                         'avatar' => $post->user?->public_profile_image,
+                        'username' => $post->user?->username,
                     ],
 
                     'tags' => $post->tags->map(fn ($t) => [
@@ -122,7 +123,7 @@ class ForumController extends Controller
 
         $post = Post::query()
             ->with([
-                'user:id,full_name,profile_image',
+                'user:id,full_name,profile_image,username',
                 'images:id,post_id,img_name',
                 'tags:id,tag_name',
             ])
@@ -136,7 +137,7 @@ class ForumController extends Controller
             ->whereNull('parent_id')
             ->withCount(['likes as likes_count'])
             ->with([
-                'user:id,full_name,profile_image',
+                'user:id,full_name,profile_image,username',
                 'replies' => function ($q) {
                     // replies should be oldest -> newest (bottom is newest)
                     $q->orderBy('created_at', 'asc')
@@ -198,6 +199,7 @@ class ForumController extends Controller
                     'id' => $post->user?->id,
                     'name' => $post->user?->full_name,
                     'avatar' => $post->user?->public_profile_image,
+                    'username' => $post->user?->username,
                 ],
 
                 'tags' => $post->tags->map(fn ($t) => [
@@ -225,6 +227,7 @@ class ForumController extends Controller
                     'id' => $c->user?->id,
                     'name' => $c->user?->full_name,
                     'avatar' => $c->user?->public_profile_image,
+                    'username' => $c->user?->username,
                 ],
 
                 'replies' => $c->replies->map(fn ($r) => [
@@ -239,6 +242,7 @@ class ForumController extends Controller
                         'id' => $r->user?->id,
                         'name' => $r->user?->full_name,
                         'avatar' => $r->user?->public_profile_image,
+                        'username' => $r->user?->username,
                     ],
                 ])->values(),
             ])->values(),

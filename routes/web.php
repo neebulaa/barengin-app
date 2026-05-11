@@ -8,8 +8,14 @@ use App\Http\Controllers\Chat\ChatConversationController;
 use App\Http\Controllers\Chat\ChatReadController;
 use App\Http\Controllers\Chat\ChatUserController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\ForumProfileController;
+use App\Http\Controllers\ForumFollowController;
+use App\Http\Controllers\ForumPeopleController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\PergiBarengController;
+
+
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -79,11 +85,28 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike'])
         ->name('forum.comments.like.toggle');
+
+    Route::get('/forum/profile', [ForumProfileController::class, 'me'])->name('forum.profile.me');
+    Route::get('/forum/users/{username}', [ForumProfileController::class, 'show'])->name('forum.profile.show');
+    Route::post('/forum/users/{username}/follow', [ForumFollowController::class, 'toggle'])->name('forum.profile.follow');
+
+    Route::get('/forum/people', [ForumPeopleController::class, 'people']);
+    Route::get('/forum/users/{username}/followers', [ForumPeopleController::class, 'followers']);
+    Route::get('/forum/users/{username}/following', [ForumPeopleController::class, 'following']);
 });
-   
+
 Route ::get('/pergi-bareng',function(){
     return inertia('PergiBareng/Index');
 })->name('pergi-bareng');
+
+// Group Route untuk Pergi Bareng
+Route::prefix('pergi-bareng')->group(function () {
+    Route::get('/', [PergiBarengController::class, 'index'])->name('pergi-bareng.index');
+    Route::get('/{id}', [PergiBarengController::class, 'show'])->name('pergi-bareng.show');
+    Route::get('/{id}/join', [PergiBarengController::class, 'join'])->name('pergi-bareng.join');
+    Route::post('/{id}/join', [PergiBarengController::class, 'store'])->name('pergi-bareng.store');
+    Route::get('/{id}/success', [PergiBarengController::class, 'success'])->name('pergi-bareng.success');
+});
 
 
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');

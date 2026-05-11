@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class PergiBarengRating extends Model
 {
+
+    protected $table = 'perbar_rating'; 
+    
     protected $fillable = [
         'user_id', 'pergi_bareng_id', 'amount_rating', 'comment'
     ];

@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { router, usePage } from "@inertiajs/react";
 import Container from "@/Components/Container";
-import MainLayout from "@/Layouts/MainLayout";
 
-import ForumSideNav from "./Partials/ForumSideNav";
+import ForumLayout from "@/Layouts/ForumLayout";
 import ForumBackLink from "./Partials/ForumBackLink";
 import PostCard from "./Partials/PostCard";
 import ResponseSortBar from "./Partials/ResponseSortBar";
@@ -17,12 +16,10 @@ export default function PostShow() {
     const [localComments, setLocalComments] = useState(comments ?? []);
     const tempIdRef = useRef(0);
 
-    // keep localPost synced when page changes (sort change reloads, etc.)
     useEffect(() => {
         setLocalPost(post);
     }, [post]);
 
-    // ONLY reset comments on explicit sort change
     const lastSortRef = useRef(sort);
     useEffect(() => {
         if (lastSortRef.current !== sort) {
@@ -42,7 +39,10 @@ export default function PostShow() {
             likes: compactNumber(localPost.likes_count ?? 0),
             likedByMe: Boolean(localPost.liked_by_me),
 
+            allowsComment: Boolean(localPost.allows_comment),
             comments: compactNumber(responseCount ?? 0),
+            location: localPost.location ?? "",
+
             tags: (localPost.tags ?? []).map((t) => t.tag_name),
             images: (localPost.images ?? []).map((img) => img.url),
         };
@@ -75,7 +75,6 @@ export default function PostShow() {
         }));
     }, [localComments]);
 
-    // ---- optimistic like handlers ----
     const togglePostLike = () => {
         if (!auth?.user) return;
 
@@ -98,7 +97,6 @@ export default function PostShow() {
             {
                 preserveScroll: true,
                 onError: () => setLocalPost(prev),
-                // no reload needed; optimistic is enough
             },
         );
     };
@@ -128,7 +126,6 @@ export default function PostShow() {
             {
                 preserveScroll: true,
                 onError: () => {
-                    // rollback by reloading just comments (simple and safe)
                     router.reload({ only: ["comments"], preserveScroll: true });
                 },
             },
@@ -167,7 +164,6 @@ export default function PostShow() {
         );
     };
 
-    // ---- your existing optimistic comment + reply creation (unchanged counts structure) ----
     const submitNewComment = (text) => {
         if (!auth?.user) return;
 
@@ -208,26 +204,7 @@ export default function PostShow() {
                         only: ["comments", "responseCount", "post"],
                         preserveScroll: true,
                         onSuccess: (page) => {
-                            const serverComments = page.props.comments ?? [];
-                            const real = findMatchingServerComment({
-                                serverComments,
-                                userId: auth.user.id,
-                                commentText: text,
-                            });
-
-                            setLocalComments((prev) => {
-                                const arr = [...(prev ?? [])];
-                                const idx = arr.findIndex(
-                                    (c) => c.id === tempId,
-                                );
-                                if (idx === -1) return arr;
-                                arr[idx] = real
-                                    ? real
-                                    : { ...arr[idx], __optimistic: false };
-                                return arr;
-                            });
-
-                            // keep post likes/comments count in sync if needed
+                            setLocalComments(page.props.comments ?? []);
                             setLocalPost(page.props.post ?? localPost);
                         },
                     });
@@ -294,24 +271,7 @@ export default function PostShow() {
                         only: ["comments", "responseCount"],
                         preserveScroll: true,
                         onSuccess: (page) => {
-                            const serverComments = page.props.comments ?? [];
-                            const serverParent = serverComments.find(
-                                (c) => String(c.id) === String(commentId),
-                            );
-                            if (!serverParent) return;
-
-                            setLocalComments((prev) =>
-                                (prev ?? []).map((c) => {
-                                    if (String(c.id) !== String(commentId))
-                                        return c;
-                                    return {
-                                        ...c,
-                                        replies: sortRepliesOldestFirst(
-                                            serverParent.replies ?? [],
-                                        ),
-                                    };
-                                }),
-                            );
+                            setLocalComments(page.props.comments ?? []);
                         },
                     });
                 },
@@ -320,68 +280,57 @@ export default function PostShow() {
     };
 
     return (
-        <div className="bg-white lg:pl-28">
-            <ForumSideNav />
+        <Container className="py-10">
+            <div className="max-w-3xl">
+                <div className="mb-6">
+                    <ForumBackLink href="/forum" label="Kembali" />
+                </div>
 
-            <Container className="py-10">
-                <div className="max-w-3xl">
-                    <div className="mb-6">
-                        <ForumBackLink href="/forum" label="Kembali" />
-                    </div>
+                <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
+                    <PostCard post={postCard} onLike={togglePostLike} />
 
-                    <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-                        <PostCard post={postCard} onLike={togglePostLike} />
+                    <ResponseSortBar
+                        sort={sort ?? "popular"}
+                        onChangeSort={(nextSort) => {
+                            router.get(
+                                `/forum/posts/${post.id}`,
+                                { sort: nextSort },
+                                {
+                                    preserveScroll: true,
+                                    preserveState: true,
+                                },
+                            );
+                        }}
+                        responseCount={responseCount ?? 0}
+                    />
 
-                        <ResponseSortBar
-                            sort={sort ?? "popular"}
-                            onChangeSort={(nextSort) => {
-                                router.get(
-                                    `/forum/posts/${post.id}`,
-                                    { sort: nextSort },
-                                    {
-                                        preserveScroll: true,
-                                        preserveState: true,
-                                    },
-                                );
-                            }}
-                            responseCount={responseCount ?? 0}
-                        />
-
+                    {postCard.allowsComment ? (
                         <CommentComposer
                             placeholder="Tulis komentar..."
                             submitLabel="Kirim"
                             onSubmit={submitNewComment}
                         />
+                    ) : null}
 
-                        <div>
-                            {responses.map((r) => (
-                                <ResponseItem
-                                    key={r.id}
-                                    response={r}
-                                    onReplySubmit={submitReply}
-                                    currentUserId={auth?.user?.id}
-                                    onToggleLikeComment={toggleCommentLike}
-                                    onToggleLikeReply={toggleReplyLike}
-                                />
-                            ))}
-                        </div>
+                    <div>
+                        {responses.map((r) => (
+                            <ResponseItem
+                                key={r.id}
+                                response={r}
+                                onReplySubmit={submitReply}
+                                currentUserId={auth?.user?.id}
+                                onToggleLikeComment={toggleCommentLike}
+                                onToggleLikeReply={toggleReplyLike}
+                            />
+                        ))}
                     </div>
                 </div>
-            </Container>
-        </div>
+            </div>
+        </Container>
     );
 }
 
-PostShow.layout = (page) => <MainLayout>{page}</MainLayout>;
-
-function findMatchingServerComment({ serverComments, userId, commentText }) {
-    const matches = (serverComments ?? []).filter(
-        (c) =>
-            String(c.user?.id ?? "") === String(userId) &&
-            String(c.comment_text ?? "") === String(commentText ?? ""),
-    );
-    return matches.length ? matches[0] : null;
-}
+PostShow.layout = (page) => <ForumLayout>{page}</ForumLayout>;
 
 function sortRepliesOldestFirst(replies) {
     return [...(replies ?? [])].sort((a, b) => {

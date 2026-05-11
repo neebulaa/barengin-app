@@ -115,17 +115,19 @@ export default function ResponseItem({
                             {response.likes}
                         </button>
 
-                        <button
-                            type="button"
-                            className="inline-flex items-center gap-2 hover:text-neutral-900 transition text-sm cursor-pointer"
-                            onClick={() => setOpenReplies((v) => !v)}
-                            aria-expanded={openReplies}
-                            aria-controls={`replies-${response.id}`}
-                            disabled={replyCount === 0}
-                        >
-                            <FiMessageCircle className="text-base" />
-                            {replyCount}
-                        </button>
+                        {replyCount > 0 && (
+                            <button
+                                type="button"
+                                className="inline-flex items-center gap-2 hover:text-neutral-900 transition text-sm cursor-pointer"
+                                onClick={() => setOpenReplies((v) => !v)}
+                                aria-expanded={openReplies}
+                                aria-controls={`replies-${response.id}`}
+                                disabled={replyCount === 0}
+                            >
+                                <FiMessageCircle className="text-base" />
+                                {replyCount}
+                            </button>
+                        )}
 
                         <button
                             type="button"
