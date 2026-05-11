@@ -3,12 +3,14 @@ import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
 import Button from "@/Components/Button";
+import NavbarAuth from "@/Components/NavbarAuth";
 import { Link, router, usePage } from "@inertiajs/react";
 
 import Segment from "./Partials/Segment";
 import ChatListItem from "./Partials/ChatListItem";
 import Bubble from "./Partials/BubbleChat";
 import Avatar from "./Partials/Avatar";
+import NewChatModal from "./Partials/NewChatModal";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
 import { FiArrowLeft, FiFilter, FiPaperclip, FiSend } from "react-icons/fi";
@@ -26,29 +28,95 @@ export default function ChatShow({
 }) {
     const authUser = usePage().props?.auth?.user;
 
+    const getConversationPeer = (c) =>
+        c?.participants?.find(
+            (p) => Number(p.id) !== Number(authUser?.id),
+        );
+
+    const getConversationTitle = (c) =>
+        c?.title ?? getConversationPeer(c)?.name ?? "Chat";
+
+    const getConversationAvatar = (c) =>
+        c?.avatar ?? getConversationPeer(c)?.avatar;
+
+    const headerTitle = getConversationTitle(conversation);
+    const headerAvatar = getConversationAvatar(conversation);
+    const peer = getConversationPeer(conversation);
+
     const [tab, setTab] = useState("personal");
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
+    const [openNewChat, setOpenNewChat] = useState(false);
+
+    const [sidebarConversations, setSidebarConversations] = useState(conversations ?? []);
+    useEffect(() => setSidebarConversations(conversations ?? []), [conversations]);
 
     const filtered = useMemo(() => {
-        return (conversations ?? [])
-            .filter((c) => {
-                if (!q) return true;
-                return (c.title ?? "").toLowerCase().includes(q.toLowerCase());
-            })
-            .filter((c) => {
-                if (filter === "unread") return Number(c.unread ?? 0) > 0;
-                return true;
-            });
-    }, [conversations, q, filter]);
+    return (sidebarConversations ?? [])
+        .filter((c) => {
+            if (tab === "groups") return !!c.is_group;
+            return !c.is_group;
+        })
+        .filter((c) => {
+            if (!q) return true;
+            return (c.title ?? "").toLowerCase().includes(q.toLowerCase());
+        })
+        .filter((c) => {
+            if (filter === "unread") return Number(c.unread ?? 0) > 0;
+            return true;
+        });
+}, [sidebarConversations, q, filter, tab]);
 
     const [localMessages, setLocalMessages] = useState(messages ?? []);
-    useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]); // reset saat pindah conversation
+    useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
+
+    const [peerLastReadAt, setPeerLastReadAt] = useState(
+        conversation?.peer_last_read_at ?? null,
+    );
+    useEffect(() => {
+        setPeerLastReadAt(conversation?.peer_last_read_at ?? null);
+    }, [conversation?.id]);
+
+    const [onlineIds, setOnlineIds] = useState(new Set());
 
     const bottomRef = useRef(null);
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [localMessages?.length]);
+
+    const formatTime = (iso) =>
+        iso
+            ? new Date(iso).toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+              })
+            : "";
+
+    const markAsRead = async () => {
+        if (!conversation?.id) return;
+        try {
+            await axios.post(`/chat/${conversation.id}/read`);
+            setSidebarConversations((prev) =>
+                prev.map((c) =>
+                    Number(c.id) === Number(conversation?.id)
+                        ? { ...c, unread: 0 }
+                        : c,
+                ),
+            );
+        } catch (err) {
+            console.error("markAsRead failed", err);
+        }
+    };
+
+    const getSubtitleFromPayload = (payload) => {
+        if (payload.text) return payload.text;
+
+        if (payload.attachment_type?.startsWith("image/")) return "Foto";
+        if (payload.attachment_type === "application/pdf") return "PDF";
+        if (payload.attachment_url) return "Lampiran";
+
+        return "";
+    };
 
     useEffect(() => {
         if (!conversation?.id) return;
@@ -59,26 +127,117 @@ export default function ChatShow({
 
         channel.listen(".message.sent", (payload) => {
             setLocalMessages((prev) => [...(prev ?? []), payload]);
+
+            if (payload?.sender_id !== authUser?.id) {
+                markAsRead();
+            }
+        });
+
+        channel.listen(".conversation.read", (payload) => {
+            if (payload.user_id === peer?.id) {
+                setPeerLastReadAt(payload.last_read_at);
+            }
         });
 
         return () => {
             window.Echo.leave(`private-${channelName}`);
         };
+    }, [conversation?.id, peer?.id, authUser?.id]);
+
+    useEffect(() => {
+        if (!window.Echo) return;
+        const ids = (conversations ?? []).map((c) => c.id);
+
+        ids.forEach((id) => {
+            const channelName = `conversation.${id}`;
+            const channel = window.Echo.private(channelName);
+
+            channel.listen(".message.sent", (payload) => {
+                setSidebarConversations((prev) => {
+                    const next = prev.map((item) => {
+                        if (Number(item.id) !== Number(payload.conversation_id)) {
+                            return item;
+                        }
+
+                        const isCurrent =
+                            Number(payload.conversation_id) === Number(conversation?.id);
+                        const shouldInc =
+                            payload.sender_id !== authUser?.id && !isCurrent;
+
+                        return {
+                            ...item,
+                            subtitle: getSubtitleFromPayload(payload),
+                            last_message_at: payload.created_at ?? item.last_message_at,
+                            unread: shouldInc
+                                ? Number(item.unread ?? 0) + 1
+                                : isCurrent
+                                  ? 0
+                                  : item.unread ?? 0,
+                        };
+                    });
+
+                    return [...next].sort(
+                        (a, b) =>
+                            new Date(b.last_message_at ?? 0) -
+                            new Date(a.last_message_at ?? 0),
+                    );
+                });
+            });
+        });
+
+        return () => {
+            ids.forEach((id) => window.Echo.leave(`private-conversation.${id}`));
+        };
+    }, [conversations?.length, conversation?.id, authUser?.id]);
+
+    useEffect(() => {
+        markAsRead();
     }, [conversation?.id]);
 
     useEffect(() => {
-        if (!conversation?.id) return;
-        axios.post(`/chat/${conversation.id}/read`).catch((err) => {
-            console.error("markAsRead failed", err);
-        });
+        const onFocus = () => markAsRead();
+        window.addEventListener("focus", onFocus);
+        return () => window.removeEventListener("focus", onFocus);
     }, [conversation?.id]);
+
+    useEffect(() => {
+        if (!window.Echo) return;
+
+        const channel = window.Echo.join("online");
+
+        channel.here((users) => {
+            setOnlineIds(new Set(users.map((u) => u.id)));
+        });
+
+        channel.joining((user) => {
+            setOnlineIds((prev) => new Set([...prev, user.id]));
+        });
+
+        channel.leaving((user) => {
+            setOnlineIds((prev) => {
+                const next = new Set(prev);
+                next.delete(user.id);
+                return next;
+            });
+        });
+
+        return () => {
+            window.Echo.leave("online");
+        };
+    }, []);
+
+    const lastSeenAt = peer?.last_seen_at;
+    const isOnlineByLastSeen =
+        lastSeenAt &&
+        Date.now() - new Date(lastSeenAt).getTime() < 2 * 60 * 1000;
+
+    const isPeerOnline = peer?.id ? onlineIds.has(peer.id) : false;
+    const showOnline = isPeerOnline || isOnlineByLastSeen;
 
     const [text, setText] = useState("");
     const sendingRef = useRef(false);
 
-    const submit = (e) => {
-        e.preventDefault();
-        if (!text.trim()) return;
+    const sendMessage = (messageText, attachmentFile = null) => {
         if (sendingRef.current) return;
 
         sendingRef.current = true;
@@ -87,11 +246,14 @@ export default function ChatShow({
             id: `tmp-${Date.now()}`,
             conversation_id: conversation.id,
             sender_id: authUser?.id,
-            text,
+            text: messageText || "",
             created_at: new Date().toISOString(),
+            attachment_url: attachmentFile ? URL.createObjectURL(attachmentFile) : null,
+            attachment_type: attachmentFile?.type ?? null,
+            attachment_name: attachmentFile?.name ?? null,
             sender: {
                 id: authUser?.id,
-                name: authUser?.name,
+                name: authUser?.full_name,
                 avatar: authUser?.public_profile_image,
             },
             optimistic: true,
@@ -100,31 +262,40 @@ export default function ChatShow({
         setLocalMessages((prev) => [...(prev ?? []), optimistic]);
         setText("");
 
-        router.post(
-            `/chat/${conversation.id}/messages`,
-            { message_text: optimistic.text },
-            {
-                preserveScroll: true,
-                onFinish: () => {
-                    sendingRef.current = false;
-                },
-                onError: () => {
-                    sendingRef.current = false;
-                    // rollback optimistic bila perlu
-                    setLocalMessages((prev) =>
-                        (prev ?? []).filter((m) => m.id !== optimistic.id),
-                    );
-                    setText(optimistic.text);
-                },
+        const formData = new FormData();
+        if (messageText) formData.append("message_text", messageText);
+        if (attachmentFile) formData.append("attachment", attachmentFile);
+
+        router.post(`/chat/${conversation.id}/messages`, formData, {
+            preserveScroll: true,
+            forceFormData: true,
+            onFinish: () => {
+                sendingRef.current = false;
             },
-        );
+            onError: () => {
+                sendingRef.current = false;
+            },
+        });
+    };
+
+    const submit = (e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        sendMessage(text, null);
+    };
+
+    const handleAttach = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        sendMessage("", file);
+        e.target.value = "";
     };
 
     return (
         <>
+            <NavbarAuth />
             <Container className="max-w-[1400px]">
                 <div className="min-h-[calc(100vh-96px)] border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
-                    {/* LEFT SIDEBAR (hidden on mobile) */}
                     <aside className="hidden border-r border-neutral-200 bg-white px-8 py-8 md:block">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-neutral-700">
@@ -133,6 +304,7 @@ export default function ChatShow({
 
                             <button
                                 type="button"
+                                onClick={() => setOpenNewChat(true)}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
                                 aria-label="New Chat"
                             >
@@ -183,38 +355,26 @@ export default function ChatShow({
                                     Belum Dibaca
                                 </button>
                             </div>
-
-                            <button
-                                type="button"
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-neutral-700 hover:bg-neutral-100"
-                                aria-label="Filter"
-                            >
-                                <FiFilter className="h-5 w-5" />
-                            </button>
                         </div>
 
                         <div className="mt-6 space-y-2">
                             {filtered.map((c) => (
-                                <Link key={c.id} href={`/chat/${c.id}`}>
-                                    <ChatListItem
-                                        active={Number(c.id) === Number(conversation?.id)}
-                                        avatar={c.avatar}
-                                        title={c.title}
-                                        subtitle={c.subtitle}
-                                        time={c.time}
-                                        unread={c.unread}
-                                        onClick={() => {}}
-                                    />
-                                </Link>
+                                <ChatListItem
+                                    key={c.id}
+                                    href={`/chat/${c.id}`}
+                                    active={Number(c.id) === Number(conversation?.id)}
+                                    avatar={getConversationAvatar(c)}
+                                    title={getConversationTitle(c)}
+                                    subtitle={c.subtitle}
+                                    time={formatTime(c.last_message_at)}
+                                    unread={c.unread}
+                                />
                             ))}
                         </div>
                     </aside>
 
-                    {/* RIGHT CHAT PANEL */}
                     <section className="relative bg-white">
-                        {/* Header */}
                         <div className="flex items-center gap-3 border-b border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
-                            {/* Back only on mobile */}
                             <Link
                                 href="/chat"
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-neutral-100 md:hidden"
@@ -223,54 +383,74 @@ export default function ChatShow({
                                 <FiArrowLeft className="h-5 w-5 text-neutral-700" />
                             </Link>
 
-                            <Avatar
-                                src={conversation?.participants?.[0]?.avatar}
-                                alt={conversation?.title ?? "Chat"}
-                            />
+                            <Avatar src={headerAvatar} alt={headerTitle} />
 
                             <div className="min-w-0">
                                 <div className="truncate text-lg font-semibold text-neutral-700">
-                                    {conversation?.title ?? "Chat"}
+                                    {headerTitle}
                                 </div>
                                 <div className="text-sm text-neutral-500">
-                                    {conversation?.is_group
-                                        ? `${conversation?.participants?.length ?? 0} Anggota`
-                                        : "Online"}
+                                    {conversation?.is_group ? (
+                                        `${conversation?.participants?.length ?? 0} Anggota`
+                                    ) : (
+                                        <span className="inline-flex items-center gap-2">
+                                            <span
+                                                className={cn(
+                                                    "h-2.5 w-2.5 rounded-full",
+                                                    showOnline ? "bg-success-700" : "bg-neutral-500",
+                                                )}
+                                            />
+                                            {showOnline ? "Online" : "Offline"}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Body */}
                         <div className="h-[calc(100vh-96px-84px-96px)] overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
                             <div className="space-y-8">
-                                {(localMessages ?? []).map((m) => (
-                                    <Bubble
-                                        key={m.id}
-                                        mine={Number(m.sender_id) === Number(authUser?.id)}
-                                        text={m.text}
-                                        time={
-                                            m.created_at
-                                                ? new Date(m.created_at).toLocaleTimeString("id-ID", {
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                  })
-                                                : ""
-                                        }
-                                        withTicks={Number(m.sender_id) === Number(authUser?.id)}
-                                        avatar={m.sender?.avatar}
-                                    />
-                                ))}
+                                {(localMessages ?? []).map((m) => {
+                                    const isMine = Number(m.sender_id) === Number(authUser?.id);
+                                    const isRead =
+                                        isMine &&
+                                        peerLastReadAt &&
+                                        m.created_at &&
+                                        new Date(peerLastReadAt).getTime() >= new Date(m.created_at).getTime();
+
+                                    return (
+                                        <Bubble
+                                            key={m.id}
+                                            mine={isMine}
+                                            text={m.text}
+                                            time={formatTime(m.created_at)}
+                                            readText={isRead ? "dibaca" : ""}
+                                            avatar={m.sender?.avatar}
+                                            attachmentUrl={m.attachment_url}
+                                            attachmentType={m.attachment_type}
+                                            attachmentName={m.attachment_name}
+                                        />
+                                    );
+                                })}
                                 <div ref={bottomRef} />
                             </div>
                         </div>
 
-                        {/* Composer */}
                         <div className="border-t border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
                             <form onSubmit={submit} className="flex items-center gap-4">
                                 <div className="relative flex-1">
-                                    <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                                        className="hidden"
+                                        id="chat-attachment"
+                                        onChange={handleAttach}
+                                    />
+                                    <label
+                                        htmlFor="chat-attachment"
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500"
+                                    >
                                         <FiPaperclip className="h-5 w-5" />
-                                    </div>
+                                    </label>
 
                                     <input
                                         value={text}
@@ -295,6 +475,7 @@ export default function ChatShow({
                     </section>
                 </div>
             </Container>
+            <NewChatModal open={openNewChat} onClose={() => setOpenNewChat(false)} />
         </>
     );
 }
