@@ -23,8 +23,4 @@ class Jastip extends Model
     public function jastip_items(){
         return $this->hasMany(JastipItem::class);
     }
-
-    public function jastiper_ratings(){
-        return $this->hasMany(JastiperRating::class);
-    }
 }

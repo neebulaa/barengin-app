@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('perbar_rating', function(Blueprint $table){
+        Schema::create('user_trip_ratings', function(Blueprint $table){
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('pergi_bareng_id')->constrained();
-            $table->decimal('amount_rating', 3,2);
+            $table->foreignId('trips_id')->constrained();
+            $table->decimal('rating_amount', 3,2);
             $table->text('comment')->nullable();
             $table->timestamps();
         });
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('perbar_rating');
+        Schema::dropIfExists('guide_rating_trips');
     }
 };

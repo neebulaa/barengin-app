@@ -140,16 +140,20 @@ class User extends Authenticatable
     public function jastips(){
         return $this->hasMany(Jastip::class);
     }
-
-    public function jastiper_ratings(){
-        return $this->hasMany(JastiperRating::class);
-    }
-
-    public function pergi_bareng_ratings(){
-        return $this->hasMany(PergiBarengRating::class);
-    }
     
     public function pergi_bareng_requests(){
         return $this->hasMany(PergiBarengRequest::class);
+    }
+
+    public function user_ratings(){
+        return $this->hasMany(UserRating::class);
+    }
+
+    public function typeRating($type){
+        return $this->user_ratings()->where('type', $type)->avg('rating_amount');
+    }
+
+    public function allRating(){
+        return $this->user_ratings()->avg('rating_amount');
     }
 }
