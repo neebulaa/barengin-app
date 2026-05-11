@@ -6,195 +6,26 @@ import PergiBarengSearchForm from "@/Components/PergiBarengSearchForm";
 import PergiBarengCard from "@/Components/PergiBarengCard";
 import Select from "@/Components/Select";
 import Pagination from "@/Components/Pagination";
-import HeroSection from "@/Components/HeroSection";
+import HeroSection from "./HeroSection";
 
 export default function Index({ trips = [] }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortBy, setSortBy] = useState("newest");
 
-    // Demo data - ganti dengan data dari backend
-    const demoTrips = [
-        {
-            id: 1,
-            image: "/assets/terminal-cibubur.jpg",
-            title: "Terminal Cibubur",
-            address: "Gang. Siliwangi No 5, Jakarta Timur",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Mobil Pribadi",
-            transportIcon: "car",
-            href: "/pergi-bareng/1",
-        },
-        {
-            id: 2,
-            image: "/assets/bandara-soetta.jpg",
-            title: "Bandara Soekarno Hatta",
-            address: "Jl. Insinyur Raden Massaid No.10",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Transportasi Online",
-            transportIcon: "car",
-            href: "/pergi-bareng/2",
-        },
-        {
-            id: 3,
-            image: "/assets/stasiun-bogor.jpg",
-            title: "Stasiun Bogor",
-            address: "Jl. Muara Kumbang No.12 Kec. Tambun",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Transportasi Umum",
-            transportIcon: "train",
-            href: "/pergi-bareng/3",
-        },
-        {
-            id: 4,
-            image: "/assets/stasiun-bgk.jpg",
-            title: "Stasiun BGK",
-            address: "Jl. Merdeka Jaya No. 22",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Transportasi Umum",
-            transportIcon: "train",
-            href: "/pergi-bareng/4",
-        },
-        {
-            id: 5,
-            image: "/assets/terminal-cibubur.jpg",
-            title: "Terminal Cibubur",
-            address: "Gang. Siliwangi No 5, Jakarta Timur",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Mobil Pribadi",
-            transportIcon: "car",
-            href: "/pergi-bareng/5",
-        },
-        {
-            id: 6,
-            image: "/assets/bandara-soetta.jpg",
-            title: "Bandara Soekarno Hatta",
-            address: "Jl. Insinyur Raden Massaid No.10",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Transportasi Online",
-            transportIcon: "car",
-            href: "/pergi-bareng/6",
-        },
-        {
-            id: 7,
-            image: "/assets/stasiun-bogor.jpg",
-            title: "Stasiun Bogor",
-            address: "Jl. Muara Kumbang No.12 Kec. Tambun",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Transportasi Umum",
-            transportIcon: "train",
-            href: "/pergi-bareng/7",
-        },
-        {
-            id: 8,
-            image: "/assets/stasiun-bgk.jpg",
-            title: "Stasiun BGK",
-            address: "Jl. Merdeka Jaya No. 22",
-            date: "31 Jan 26",
-            time: "09:00",
-            capacity: "15/20 Orang",
-            remainingSeats: 5,
-            user: {
-                name: "Edwin Hendly",
-                avatar: "/assets/default-avatar.png",
-                rating: 4.9,
-                reviews: 120,
-                verified: true,
-            },
-            transportType: "Transportasi Umum",
-            transportIcon: "train",
-            href: "/pergi-bareng/8",
-        },
-    ];
-
-    const displayTrips = trips.length > 0 ? trips : demoTrips;
 
     return (
         <>
-            <Head title="Pergi Bareng - Barengin" />
+            <Head title="Pergi Bareng - Barengin" />  
 
             {/* Hero Section */}
             <HeroSection />
+                <div className="relative z-30 -mt-12 px-4 sm:px-6 lg:px-8">
+                    <Container>
+                        <PergiBarengSearchForm naked={true} />
+                    </Container>
+                </div>
 
-            {/* Search Form - Overlapping Hero */}
-            <div className="relative z-20 -mt-16 px-4">
-                <Container>
-                    <PergiBarengSearchForm naked={true} />
-                </Container>
-            </div>
-
-            {/* Main Content */}
-            <Container className="py-12">
-                {/* Header & Filters */}
+            <Container className="py-12 mt-8">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                     <h2 className="text-2xl font-bold text-neutral-900">
                         Cari Teman Bareng Anda
@@ -227,23 +58,33 @@ export default function Index({ trips = [] }) {
                         </Select>
                     </div>
                 </div>
+                {trips.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {trips.map((trip) => (
+                                <PergiBarengCard key={trip.id} data={trip} />
+                            ))}
+                        </div>
 
-                {/* Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {displayTrips.map((trip) => (
-                        <PergiBarengCard key={trip.id} data={trip} />
-                    ))}
-                </div>
-
-                {/* Pagination */}
-                <Pagination
-                    currentPage={currentPage}
-                    totalPages={10}
-                    onPageChange={setCurrentPage}
-                />
+                        <div className="mt-8">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={10}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-center py-20 bg-neutral-50 rounded-2xl border border-neutral-200">
+                        <p className="text-neutral-500 text-lg">Belum ada jadwal pergi bareng saat ini.</p>
+                    </div>
+                )}
             </Container>
         </>
     );
 }
 
 Index.layout = (page) => <MainLayout>{page}</MainLayout>;
+
+
+

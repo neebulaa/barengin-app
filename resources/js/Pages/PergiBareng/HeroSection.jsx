@@ -2,7 +2,7 @@ import React from "react";
 import Container from "@/Components/Container";
 
 export default function HeroSection({ 
-    title = "Barengan kemana Hari ini?",
+    title = "Barengin kemana Hari ini?",
     subtitle = "Perjalanan lebih hemat, seru, dan aman bersama teman-teman setujuan"
 }) {
     return (
@@ -10,7 +10,7 @@ export default function HeroSection({
             className="pt-24 pb-30 md:pt-40 md:pb-40 bg-cover bg-center"
             style={{
                 backgroundImage:
-                    "linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.4)), url('/assets/home/hero-bg.jpg')",
+                    "linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.4)), url('/assets/pergi-bareng/PergiBarengHeader.avif')",
             }}
         >
             <Container className="text-center text-white">
