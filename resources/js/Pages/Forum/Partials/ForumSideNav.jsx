@@ -53,13 +53,33 @@ function NavIconButton({ icon, onClick, active = false, label }) {
     );
 }
 
-export default function ForumSideNav({ onCreatePost }) {
+export default function ForumSideNav({
+    onCreatePost,
+    onFindPeople,
+    // optional: if you want "Find People" to stay highlighted while modal is open
+    isFindPeopleOpen = false,
+    isCreatePostOpen = false,
+}) {
     const { url } = usePage();
 
     const activeKey = useMemo(() => {
-        if (url?.includes("/forum")) return "home";
+        const u = url ?? "";
+
+        // Keep "search" highlighted while modal is open (optional but nice UX)
+        if (isFindPeopleOpen) return "search";
+        if (isCreatePostOpen) return "create";
+
+        if (u.startsWith("/forum/profile") || u.startsWith("/forum/users/")) {
+            return "profile";
+        }
+
+        // Post show pages and forum root should still be "home"
+        if (u.startsWith("/forum")) {
+            return "home";
+        }
+
         return "home";
-    }, [url]);
+    }, [url, isFindPeopleOpen, isCreatePostOpen]);
 
     return (
         <>
@@ -72,21 +92,24 @@ export default function ForumSideNav({ onCreatePost }) {
                         label="Home"
                         active={activeKey === "home"}
                     />
-                    <NavIconLink
+
+                    <NavIconButton
                         icon={<FiSearch />}
-                        href="#"
-                        label="Search"
+                        label="Find People"
                         active={activeKey === "search"}
+                        onClick={() => onFindPeople?.()}
                     />
+
                     <NavIconButton
                         icon={<FiPlus />}
                         label="Create"
                         active={activeKey === "create"}
                         onClick={() => onCreatePost?.()}
                     />
+
                     <NavIconLink
                         icon={<FiUser />}
-                        href="#"
+                        href="/forum/profile"
                         label="Profile"
                         active={activeKey === "profile"}
                     />
@@ -102,21 +125,25 @@ export default function ForumSideNav({ onCreatePost }) {
                         label="Home"
                         active={activeKey === "home"}
                     />
-                    <NavIconLink
+
+                    {/* Make this a button too so it can be "active" */}
+                    <NavIconButton
                         icon={<FiSearch />}
-                        href="#"
-                        label="Search"
+                        label="Find People"
                         active={activeKey === "search"}
+                        onClick={() => onFindPeople?.()}
                     />
+
                     <NavIconButton
                         icon={<FiPlus />}
                         label="Create"
                         active={activeKey === "create"}
                         onClick={() => onCreatePost?.()}
                     />
+
                     <NavIconLink
                         icon={<FiUser />}
-                        href="#"
+                        href="/forum/profile"
                         label="Profile"
                         active={activeKey === "profile"}
                     />

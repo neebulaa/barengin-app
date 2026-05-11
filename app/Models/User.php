@@ -95,12 +95,34 @@ class User extends Authenticatable
         return $this->belongsToMany(Conversation::class, 'conversation_participants');
     }
 
-    public function followers(){ 
-        return $this->hasMany(Follow::class);
+    public function followers()
+    {
+        return $this->hasMany(Follow::class, 'following_id');
     }
 
-    public function followings(){
-        return $this->hasMany(Follow::class);
+    public function followings()
+    {
+        return $this->hasMany(Follow::class, 'follower_id');
+    }
+
+    public function followerUsers()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'follows',
+            'following_id',
+            'follower_id'
+        );
+    }
+
+    public function followingUsers()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'follows',
+            'follower_id',
+            'following_id'
+        );
     }
 
     public function posts(){
@@ -118,16 +140,20 @@ class User extends Authenticatable
     public function jastips(){
         return $this->hasMany(Jastip::class);
     }
-
-    public function jastiper_ratings(){
-        return $this->hasMany(JastiperRating::class);
-    }
-
-    public function pergi_bareng_ratings(){
-        return $this->hasMany(PergiBarengRating::class);
-    }
     
     public function pergi_bareng_requests(){
         return $this->hasMany(PergiBarengRequest::class);
+    }
+
+    public function user_ratings(){
+        return $this->hasMany(UserRating::class);
+    }
+
+    public function typeRating($type){
+        return $this->user_ratings()->where('type', $type)->avg('rating_amount');
+    }
+
+    public function allRating(){
+        return $this->user_ratings()->avg('rating_amount');
     }
 }

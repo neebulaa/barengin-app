@@ -14,7 +14,7 @@ function PostMediaScroll({ images = [] }) {
                 <img
                     src={images[0]}
                     alt="Post media"
-                    className="w-full h-64 md:h-72 object-cover rounded-2xl"
+                    className="w-full h-54 md:h-62 object-cover rounded-2xl"
                     loading="lazy"
                 />
             </div>
@@ -32,7 +32,7 @@ function PostMediaScroll({ images = [] }) {
                         <img
                             src={src}
                             alt={`Post media ${idx + 1}`}
-                            className="h-52 w-full object-cover md:h-60"
+                            className="h-48 w-full object-cover md:h-54"
                             loading="lazy"
                         />
                     </div>
@@ -44,22 +44,23 @@ function PostMediaScroll({ images = [] }) {
 
 export default function PostCard({ post, onTagClick, onLike }) {
     const liked = Boolean(post.likedByMe);
-
     return (
         <article className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-            <div className="p-5 flex gap-4">
-                <img
-                    src={post.avatar}
-                    alt={post.author}
-                    className="h-10 w-10 rounded-full object-cover"
-                />
+            <div className="p-5 flex gap-4 items-start">
+                <Link href={`/forum/users/${post.username}`} className="shrink-0">
+                    <img
+                        src={post.avatar}
+                        alt={post.author}
+                        className="h-10 w-10 rounded-full object-cover"
+                    />
+                </Link>
 
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex flex-col">
-                            <h3 className="font-semibold text-neutral-900">
+                            <Link href={`/forum/users/${post.username}`} className="font-semibold text-neutral-900">
                                 {post.author}
-                            </h3>
+                            </Link>
                             {post.location ? (
                                 <div className="text-sm text-neutral-500">
                                     <FiMapPin className="inline mb-0.5 mr-1" />
