@@ -6,6 +6,7 @@ import PostCard from "@/Pages/Forum/Partials/PostCard";
 import Button from "@/Components/Button";
 import { FiHeart } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
+import UserListModal from "@/Pages/Forum/Partials/UserListModal";
 
 function formatRelativeTime(iso) {
     if (!iso) return "";
@@ -362,6 +363,10 @@ export default function Profile({
 }) {
     const [optimistic, setOptimistic] = useState({});
 
+    // Followers/Following modal state
+    const [openUserList, setOpenUserList] = useState(false);
+    const [userListMode, setUserListMode] = useState("followers"); // 'followers' | 'following'
+
     const profileUrl = `/forum/users/${profileUser.username}`;
 
     const shareProfile = async () => {
@@ -417,8 +422,7 @@ export default function Profile({
     };
 
     /**
-     * ✅ FIX: Optimistic uses REAL baseline from the comment payload
-     * so first click always toggles correctly.
+     * Optimistic comment-like uses baseline from payload to work on first click.
      */
     const toggleCommentLikeOptimistic = (comment, optimisticKey) => {
         const prevSnapshot = optimistic;
@@ -515,13 +519,29 @@ export default function Profile({
                         </p>
                     ) : null}
 
+                    {/* ✅ clickable counts */}
                     <div className="mt-5 flex items-center gap-4 text-sm text-neutral-600 justify-center xs:justify-start">
-                        <span>
+                        <button
+                            type="button"
+                            className="hover:text-neutral-900 transition"
+                            onClick={() => {
+                                setUserListMode("followers");
+                                setOpenUserList(true);
+                            }}
+                        >
                             {compactNumber(counts?.followers ?? 0)} followers
-                        </span>
-                        <span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className="hover:text-neutral-900 transition"
+                            onClick={() => {
+                                setUserListMode("following");
+                                setOpenUserList(true);
+                            }}
+                        >
                             {compactNumber(counts?.following ?? 0)} following
-                        </span>
+                        </button>
                     </div>
 
                     <div className="mt-6 flex flex-col md:flex-row gap-3">
@@ -678,6 +698,14 @@ export default function Profile({
                     </div>
                 </div>
             </div>
+
+            {/* Followers / Following modal */}
+            <UserListModal
+                open={openUserList}
+                onClose={() => setOpenUserList(false)}
+                mode={userListMode}
+                username={profileUser.username}
+            />
         </Container>
     );
 }

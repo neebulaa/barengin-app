@@ -4,6 +4,7 @@ import { router, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import ForumSideNav from "@/Pages/Forum/Partials/ForumSideNav";
 import CreatePostModal from "@/Pages/Forum/Partials/CreatePostModal";
+import UserListModal from "@/Pages/Forum/Partials/UserListModal";
 
 const ForumComposerContext = createContext(null);
 
@@ -35,6 +36,7 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
     const user = usePage().props.auth?.user;
 
     const [openCreatePost, setOpenCreatePost] = useState(false);
+    const [openPeople, setOpenPeople] = useState(false);
 
     const safeTags = useMemo(() => tags ?? [], [tags]);
 
@@ -71,7 +73,11 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
             <ForumComposerContext.Provider value={composer}>
                 <div className="bg-white lg:pl-28">
                     <ForumSideNav
+                        onFindPeople={() => setOpenPeople(true)}
                         onCreatePost={() => setOpenCreatePost(true)}
+                        onFindPeople={() => setOpenPeople(true)}
+                        isCreatePostOpen={openCreatePost}
+                        isFindPeopleOpen={openPeople}
                     />
 
                     {children}
@@ -86,6 +92,11 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
                         user={user}
                         tags={safeTags}
                         onSubmit={submitCreatePost}
+                    />
+
+                    <UserListModal
+                        open={openPeople}
+                        onClose={() => setOpenPeople(false)}
                     />
                 </div>
             </ForumComposerContext.Provider>
