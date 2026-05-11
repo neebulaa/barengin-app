@@ -115,7 +115,7 @@ function HeartButton({ liked, count, onClick, size = "base" }) {
                     size={14}
                 />
             )}
-            <span>{compactNumber(count ?? 0)}</span>
+            <span className="text-sm">{compactNumber(count ?? 0)}</span>
         </button>
     );
 }
@@ -124,7 +124,6 @@ function CommentCard({
     comment,
     footerLeft,
     optimistic,
-    setOptimistic,
     optimisticKey,
     onToggleLike,
     likeButtonSize = "base",
@@ -133,14 +132,11 @@ function CommentCard({
 
     const u = comment.user;
 
-    const liked = optimisticKey
-        ? (optimistic?.[optimisticKey]?.liked ?? Boolean(comment.liked_by_me))
-        : Boolean(comment.liked_by_me);
-
-    const likesCount = optimisticKey
-        ? (optimistic?.[optimisticKey]?.likes_count ??
-          Number(comment.likes_count ?? 0))
-        : Number(comment.likes_count ?? 0);
+    const liked =
+        optimistic?.[optimisticKey]?.liked ?? Boolean(comment.liked_by_me);
+    const likesCount =
+        optimistic?.[optimisticKey]?.likes_count ??
+        Number(comment.likes_count ?? 0);
 
     return (
         <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
@@ -183,39 +179,8 @@ function CommentCard({
                             liked={liked}
                             count={likesCount}
                             size={likeButtonSize}
-                            onClick={() => {
-                                if (optimisticKey) {
-                                    setOptimistic((prev) => {
-                                        const current = prev?.[
-                                            optimisticKey
-                                        ] ?? {
-                                            liked,
-                                            likes_count: likesCount,
-                                        };
-                                        const nextLiked = !current.liked;
-                                        return {
-                                            ...(prev ?? {}),
-                                            [optimisticKey]: {
-                                                liked: nextLiked,
-                                                likes_count: Math.max(
-                                                    0,
-                                                    Number(
-                                                        current.likes_count ??
-                                                            0,
-                                                    ) +
-                                                        (current.liked
-                                                            ? -1
-                                                            : 1),
-                                                ),
-                                            },
-                                        };
-                                    });
-                                }
-
-                                onToggleLike?.(comment.id);
-                            }}
+                            onClick={onToggleLike}
                         />
-
                         {footerLeft ? footerLeft : null}
                     </div>
                 </div>
@@ -260,8 +225,7 @@ function RelatedPostPlain({ post, onLikePost }) {
 function LikedCommentCard({
     item,
     optimistic,
-    setOptimistic,
-    onLikeComment,
+    onToggleLikeComment,
     onLikePost,
 }) {
     const c = item.comment;
@@ -279,9 +243,8 @@ function LikedCommentCard({
                     <CommentCard
                         comment={c}
                         optimistic={optimistic}
-                        setOptimistic={setOptimistic}
                         optimisticKey={`comment:${c.id}`}
-                        onToggleLike={onLikeComment}
+                        onToggleLike={() => onToggleLikeComment?.(c)}
                         footerLeft={
                             <Link
                                 href={`/forum/posts/${p.id}`}
@@ -302,9 +265,8 @@ function LikedCommentCard({
 function ReplyCard({
     reply,
     optimistic,
-    setOptimistic,
+    onToggleLikeParentComment,
     onLikePost,
-    onLikeParentComment,
 }) {
     const u = reply.user;
     const p = reply.post;
@@ -313,10 +275,6 @@ function ReplyCard({
     if (!p) return null;
 
     const isReplyOnComment = reply.context === "comment" && Boolean(parent);
-
-    const contextLabel = isReplyOnComment
-        ? "Replied on Comment"
-        : "Replied on Post";
 
     return (
         <article className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
@@ -340,7 +298,9 @@ function ReplyCard({
                                     {u?.name ?? "Unknown"}
                                 </div>
                                 <div className="text-sm text-neutral-500">
-                                    {contextLabel}
+                                    {isReplyOnComment
+                                        ? "Replied on Comment"
+                                        : "Replied on Post"}
                                 </div>
                             </div>
 
@@ -355,16 +315,16 @@ function ReplyCard({
                     </div>
                 </div>
 
-                {/* Reply on comment: show comment card + highlighted related post */}
                 {isReplyOnComment ? (
                     <>
                         <div className="mt-4">
                             <CommentCard
                                 comment={parent}
                                 optimistic={optimistic}
-                                setOptimistic={setOptimistic}
                                 optimisticKey={`parent:${parent.id}`}
-                                onToggleLike={onLikeParentComment}
+                                onToggleLike={() =>
+                                    onToggleLikeParentComment?.(parent)
+                                }
                                 likeButtonSize="sm"
                                 footerLeft={
                                     <Link
@@ -383,7 +343,6 @@ function ReplyCard({
                         />
                     </>
                 ) : (
-                    // Reply on post: still show the post but WITHOUT highlight
                     <RelatedPostPlain post={p} onLikePost={onLikePost} />
                 )}
             </div>
@@ -451,25 +410,41 @@ export default function Profile({
                                   ? ["likes"]
                                   : ["posts"],
                         preserveScroll: true,
-                        onFinish: () => setOptimistic({}),
                     });
                 },
             },
         );
     };
 
-    const toggleCommentLike = (commentId) => {
+    /**
+     * ✅ FIX: Optimistic uses REAL baseline from the comment payload
+     * so first click always toggles correctly.
+     */
+    const toggleCommentLikeOptimistic = (comment, optimisticKey) => {
+        const prevSnapshot = optimistic;
+
+        const baselineLiked = Boolean(comment?.liked_by_me);
+        const baselineCount = Number(comment?.likes_count ?? 0);
+
+        const current = optimistic?.[optimisticKey];
+        const currentLiked = current?.liked ?? baselineLiked;
+        const currentCount = Number(current?.likes_count ?? baselineCount);
+
+        const nextLiked = !currentLiked;
+        const nextCount = Math.max(0, currentCount + (currentLiked ? -1 : 1));
+
+        setOptimistic((p) => ({
+            ...(p ?? {}),
+            [optimisticKey]: { liked: nextLiked, likes_count: nextCount },
+        }));
+
         router.post(
-            `/forum/comments/${commentId}/like`,
+            `/forum/comments/${comment.id}/like`,
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    router.reload({
-                        only: tab === "replies" ? ["replies"] : ["likes"],
-                        preserveScroll: true,
-                        onFinish: () => setOptimistic({}),
-                    });
+                onError: () => {
+                    setOptimistic(prevSnapshot);
                 },
             },
         );
@@ -652,8 +627,12 @@ export default function Profile({
                                           key={`like_comment_${it.comment?.id ?? idx}`}
                                           item={it}
                                           optimistic={optimistic}
-                                          setOptimistic={setOptimistic}
-                                          onLikeComment={toggleCommentLike}
+                                          onToggleLikeComment={(comment) =>
+                                              toggleCommentLikeOptimistic(
+                                                  comment,
+                                                  `comment:${comment.id}`,
+                                              )
+                                          }
                                           onLikePost={togglePostLike}
                                       />
                                   );
@@ -667,9 +646,13 @@ export default function Profile({
                                       key={r.id}
                                       reply={r}
                                       optimistic={optimistic}
-                                      setOptimistic={setOptimistic}
+                                      onToggleLikeParentComment={(parent) =>
+                                          toggleCommentLikeOptimistic(
+                                              parent,
+                                              `parent:${parent.id}`,
+                                          )
+                                      }
                                       onLikePost={togglePostLike}
-                                      onLikeParentComment={toggleCommentLike}
                                   />
                               ))
                             : null}

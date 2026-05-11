@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\PostComment;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,23 @@ class ForumProfileController extends Controller
         }
 
         return asset('storage/posts/' . $imgName);
+    }
+
+    private function iso($dt): ?string
+    {
+        if (!$dt) return null;
+
+        // Eloquent/Carbon instance
+        if ($dt instanceof \DateTimeInterface) {
+            return Carbon::instance($dt)->toIso8601String();
+        }
+
+        // DB raw string
+        try {
+            return Carbon::parse($dt)->toIso8601String();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public function me(Request $request)
@@ -65,7 +83,7 @@ class ForumProfileController extends Controller
                 'content' => $post->content,
                 'allows_comment' => (bool) $post->allows_comment,
                 'location' => $post->location,
-                'created_at' => $post->created_at,
+                'created_at' => $this->iso($post->created_at),
 
                 'likes_count' => $post->likes_count ?? 0,
                 'comments_count' => $post->comments_count ?? 0,
@@ -128,10 +146,18 @@ class ForumProfileController extends Controller
             $replies = $repliesQuery->paginate(10)->withQueryString();
 
             // Collect post ids (direct post OR parent.post)
-            $postIds = $replies->getCollection()->map(function ($c) {
-                return $c->post?->id ?? $c->parent?->post?->id;
-            })->filter()->values();
+            $postIds = $replies->getCollection()
+                ->map(fn ($c) => $c->post?->id ?? $c->parent?->post?->id)
+                ->filter()
+                ->values();
 
+            // Collect parent comment ids (reply-to-comment only)
+            $parentCommentIds = $replies->getCollection()
+                ->map(fn ($c) => $c->parent?->id)
+                ->filter()
+                ->values();
+
+            // liked_by_me for posts (auth user)
             $likedByMeLookup = [];
             if ($authUser && $postIds->count()) {
                 $likedByMePostIds = DB::table('post_likes')
@@ -139,21 +165,58 @@ class ForumProfileController extends Controller
                     ->whereIn('post_id', $postIds)
                     ->pluck('post_id')
                     ->all();
+
                 $likedByMeLookup = array_fill_keys($likedByMePostIds, true);
             }
 
-            $repliesTransformed = $replies->through(function ($comment) use ($likedByMeLookup, $postToPayload) {
+            // parent comment: likes_count
+            $parentLikesCountLookup = [];
+            if ($parentCommentIds->count()) {
+                $rows = DB::table('post_comment_likes')
+                    ->select('post_comment_id', DB::raw('COUNT(*) as c'))
+                    ->whereIn('post_comment_id', $parentCommentIds)
+                    ->groupBy('post_comment_id')
+                    ->get();
+
+                foreach ($rows as $r) {
+                    $parentLikesCountLookup[$r->post_comment_id] = (int) $r->c;
+                }
+            }
+
+            // parent comment: liked_by_me for auth user
+            $parentLikedByMeLookup = [];
+            if ($authUser && $parentCommentIds->count()) {
+                $likedIds = DB::table('post_comment_likes')
+                    ->where('user_id', $authUser->id)
+                    ->whereIn('post_comment_id', $parentCommentIds)
+                    ->pluck('post_comment_id')
+                    ->all();
+
+                $parentLikedByMeLookup = array_fill_keys($likedIds, true);
+            }
+
+            $repliesTransformed = $replies->through(function ($comment) use (
+                $likedByMeLookup,
+                $postToPayload,
+                $parentLikesCountLookup,
+                $parentLikedByMeLookup
+            ) {
                 $post = $comment->post ?: ($comment->parent?->post);
                 $context = $comment->parent ? 'comment' : 'post';
 
                 $parentPayload = null;
                 if ($comment->parent) {
+                    $pid = $comment->parent->id;
+
                     $parentPayload = [
-                        'id' => $comment->parent->id,
+                        'id' => $pid,
                         'comment_text' => $comment->parent->comment_text,
-                        'created_at' => $comment->parent->created_at,
-                        'likes_count' => $comment->parent->likes_count ?? null, // optional if you have withCount elsewhere
-                        'liked_by_me' => $comment->parent->liked_by_me ?? null, // optional
+                        'created_at' => $this->iso($comment->parent->created_at),
+
+                        // ✅ always computed
+                        'likes_count' => $parentLikesCountLookup[$pid] ?? 0,
+                        'liked_by_me' => isset($parentLikedByMeLookup[$pid]),
+
                         'user' => [
                             'id' => $comment->parent->user?->id,
                             'name' => $comment->parent->user?->full_name,
@@ -166,9 +229,9 @@ class ForumProfileController extends Controller
                 return [
                     'id' => $comment->id,
                     'comment_text' => $comment->comment_text,
-                    'created_at' => $comment->created_at,
+                    'created_at' => $this->iso($comment->created_at),
 
-                    'context' => $context, // ✅ 'post' or 'comment'
+                    'context' => $context, // 'post' or 'comment'
 
                     'user' => [
                         'id' => $comment->user?->id,
@@ -178,7 +241,6 @@ class ForumProfileController extends Controller
                     ],
 
                     'parent_comment' => $parentPayload,
-
                     'post' => $post ? $postToPayload($post, $likedByMeLookup) : null,
                 ];
             });
@@ -211,8 +273,6 @@ class ForumProfileController extends Controller
         // TAB: likes (post likes + comment likes, sorted by liked_at)
         // -------------------------
         if ($tab === 'likes') {
-            // Get unified list of liked targets, ordered by liked_at
-            // We paginate manually by paginating this union.
             $postLikes = DB::table('post_likes')
                 ->where('user_id', $profileUser->id)
                 ->selectRaw("'post' as type, post_id as target_id, NULL as comment_id, created_at as liked_at");
@@ -223,7 +283,6 @@ class ForumProfileController extends Controller
 
             $union = $postLikes->unionAll($commentLikes);
 
-            // Wrap union so we can order + paginate
             $likedPage = DB::query()
                 ->fromSub($union, 'liked_items')
                 ->orderByDesc('liked_at')
@@ -246,7 +305,6 @@ class ForumProfileController extends Controller
                 ->values()
                 ->all();
 
-            // Load posts for post likes
             $postsById = Post::query()
                 ->whereIn('id', $postIds)
                 ->with([
@@ -258,7 +316,6 @@ class ForumProfileController extends Controller
                 ->get()
                 ->keyBy('id');
 
-            // Load comments (and their post) for comment likes
             $commentsById = PostComment::query()
                 ->whereIn('id', $commentIds)
                 ->with([
@@ -274,7 +331,6 @@ class ForumProfileController extends Controller
                 ->get()
                 ->keyBy('id');
 
-            // liked_by_me for embedded posts (auth user)
             $allEmbeddedPostIds = collect($postsById->keys())
                 ->merge($commentsById->map(fn ($c) => $c->post?->id)->filter())
                 ->unique()
@@ -287,10 +343,10 @@ class ForumProfileController extends Controller
                     ->whereIn('post_id', $allEmbeddedPostIds)
                     ->pluck('post_id')
                     ->all();
+
                 $likedByMeLookup = array_fill_keys($likedByMePostIds, true);
             }
 
-            // For comment cards: liked_by_me on comment (auth user)
             $likedCommentByMeLookup = [];
             if ($authUser && count($commentIds)) {
                 $likedCommentIds = DB::table('post_comment_likes')
@@ -298,10 +354,10 @@ class ForumProfileController extends Controller
                     ->whereIn('post_comment_id', $commentIds)
                     ->pluck('post_comment_id')
                     ->all();
+
                 $likedCommentByMeLookup = array_fill_keys($likedCommentIds, true);
             }
 
-            // comment likes count for displayed comments
             $commentLikesCounts = [];
             if (count($commentIds)) {
                 $counts = DB::table('post_comment_likes')
@@ -325,28 +381,30 @@ class ForumProfileController extends Controller
             ) {
                 if ($li->type === 'post') {
                     $post = $postsById->get($li->target_id);
+
                     return [
                         'type' => 'post',
-                        'liked_at' => $li->liked_at,
+                        'liked_at' => $this->iso($li->liked_at),
                         'post' => $post ? $postToPayload($post, $likedByMeLookup) : null,
                         'comment' => null,
                     ];
                 }
 
-                // comment like
                 $comment = $commentsById->get($li->comment_id);
                 $post = $comment?->post;
 
                 return [
                     'type' => 'comment',
-                    'liked_at' => $li->liked_at,
+                    'liked_at' => $this->iso($li->liked_at),
                     'post' => $post ? $postToPayload($post, $likedByMeLookup) : null,
                     'comment' => $comment ? [
                         'id' => $comment->id,
                         'comment_text' => $comment->comment_text,
-                        'created_at' => $comment->created_at,
+                        'created_at' => $this->iso($comment->created_at),
+
                         'likes_count' => $commentLikesCounts[$comment->id] ?? 0,
                         'liked_by_me' => isset($likedCommentByMeLookup[$comment->id]),
+
                         'user' => [
                             'id' => $comment->user?->id,
                             'name' => $comment->user?->full_name,
@@ -357,7 +415,6 @@ class ForumProfileController extends Controller
                 ];
             });
 
-            // Replace paginator items
             $likedPage->setCollection($likesTransformed);
 
             return Inertia::render('Forum/Profile', [
@@ -383,7 +440,7 @@ class ForumProfileController extends Controller
         }
 
         // -------------------------
-        // TAB: posts (unchanged)
+        // TAB: posts
         // -------------------------
         $postsQuery = Post::query()
             ->with([
@@ -404,6 +461,7 @@ class ForumProfileController extends Controller
                 ->whereIn('post_id', $posts->pluck('id'))
                 ->pluck('post_id')
                 ->all();
+
             $likedByMeLookup = array_fill_keys($likedByMePostIds, true);
         }
 
