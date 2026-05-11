@@ -8,6 +8,8 @@ use App\Http\Controllers\Chat\ChatConversationController;
 use App\Http\Controllers\Chat\ChatReadController;
 use App\Http\Controllers\Chat\ChatUserController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\ForumProfileController;
+use App\Http\Controllers\ForumFollowController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +81,10 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike'])
         ->name('forum.comments.like.toggle');
+
+    Route::get('/forum/profile', [ForumProfileController::class, 'me'])->name('forum.profile.me');
+    Route::get('/forum/users/{username}', [ForumProfileController::class, 'show'])->name('forum.profile.show');
+    Route::post('/forum/users/{username}/follow', [ForumFollowController::class, 'toggle'])->name('forum.profile.follow');
 });
    
 Route ::get('/pergi-bareng',function(){

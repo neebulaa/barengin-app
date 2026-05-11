@@ -86,7 +86,7 @@ export default function ForumSideNav({ onCreatePost }) {
                     />
                     <NavIconLink
                         icon={<FiUser />}
-                        href="#"
+                        href="/forum/profile"
                         label="Profile"
                         active={activeKey === "profile"}
                     />
@@ -116,7 +116,7 @@ export default function ForumSideNav({ onCreatePost }) {
                     />
                     <NavIconLink
                         icon={<FiUser />}
-                        href="#"
+                        href="/forum/profile"
                         label="Profile"
                         active={activeKey === "profile"}
                     />
