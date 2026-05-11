@@ -162,7 +162,6 @@ export default function CreatePostModal({
             editorRef.current?.focus();
             syncFormatState();
         }, 0);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     useEffect(() => {
@@ -171,7 +170,6 @@ export default function CreatePostModal({
         const onSel = () => syncFormatState();
         document.addEventListener("selectionchange", onSel);
         return () => document.removeEventListener("selectionchange", onSel);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, view]);
 
     useEffect(() => {
@@ -298,7 +296,7 @@ export default function CreatePostModal({
                 }}
             >
                 <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
-                    {/* Header */}
+                    {/* header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 shrink-0">
                         <div className="font-semibold">
                             {view === "editor" ? "New Post" : "Location"}
@@ -313,7 +311,6 @@ export default function CreatePostModal({
                         </button>
                     </div>
 
-                    {/* IMPORTANT: wrapper for the changing view must be flex-1 min-h-0 */}
                     <div className="flex-1 min-h-0">
                         {view === "editor" ? (
                             <div className="px-6 py-5 h-full overflow-y-auto">
@@ -625,7 +622,7 @@ export default function CreatePostModal({
                         )}
                     </div>
 
-                    {/* Footer */}
+                    {/* footer */}
                     {view === "editor" ? (
                         <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between shrink-0">
                             <Toggle

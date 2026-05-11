@@ -12,7 +12,7 @@ class ForumLocationController extends Controller
     private function toPlaceShapeFromLocation(Location $l): array
     {
         return [
-            'id' => $l->provider_place_id, // e.g. "osm:relation:12345"
+            'id' => $l->provider_place_id, // example is 'osm:relation:12345' yeak karena pakai nomatinim
             'name' => $l->name,
             'display_name' => $l->display_name,
             'lat' => $l->lat !== null ? (float) $l->lat : null,
@@ -63,7 +63,7 @@ class ForumLocationController extends Controller
 
             $data = $rows->map(function (Location $l) {
                 return [
-                    'id' => $l->provider_place_id, // MUST match Nominatim id format you store
+                    'id' => $l->provider_place_id,
                     'name' => $l->name,
                     'display_name' => $l->display_name,
                     'lat' => $l->lat !== null ? (float) $l->lat : null,
@@ -135,9 +135,6 @@ class ForumLocationController extends Controller
         });
 
         $ids = $normalized->pluck('id')->filter()->unique()->values()->all();
-
-        // DEBUG ONCE (optional): verify the ids look like "osm:way:123"
-        // \Log::info('nominatim ids', $ids);
 
         $counts = Location::query()
             ->whereIn('provider_place_id', $ids)

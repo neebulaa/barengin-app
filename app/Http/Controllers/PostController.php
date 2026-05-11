@@ -33,9 +33,7 @@ class PostController extends Controller
         DB::transaction(function () use ($validated, $request, $userId) {
             $contentHtml = $validated['content_html'];
 
-            // -------------------------
-            // Location upsert + count++
-            // -------------------------
+            // location handling
             $locationId = null;
 
             $placeRaw = $validated['location_place'] ?? null;
@@ -72,7 +70,7 @@ class PostController extends Controller
                     ]
                 );
 
-                // Optional refresh
+                // optional refresh
                 $location->fill([
                     'name' => $place['name'] ?? $location->name,
                     'display_name' => $place['display_name'] ?? $location->display_name,
@@ -97,7 +95,7 @@ class PostController extends Controller
                 'like' => 0,
             ]);
 
-            // ---- images
+            // images handling
             $files = $request->file('images', []);
             foreach ($files as $file) {
                 $path = $file->store('posts', 'public');
@@ -108,7 +106,7 @@ class PostController extends Controller
                 ]);
             }
 
-            // ---- tags
+            // tags handling
             $tagNames = $this->normalizeChipTags($validated['tag_names'] ?? []);
             if (!empty($tagNames)) {
                 $tagIds = [];

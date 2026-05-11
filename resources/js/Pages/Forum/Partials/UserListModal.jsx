@@ -5,16 +5,16 @@ import Button from "@/Components/Button";
 import useLockBodyScroll from "@/Hooks/useLockBodyScroll";
 
 /**
- * mode:
- * - "people" (all users)
- * - "followers"
- * - "following"
+mode:
+- people (all users)
+- followers
+- following
  */
 export default function UserListModal({
     open,
     onClose,
     mode = "people",
-    username, // required for followers/following
+    username, // required for mode followers atau following
 }) {
     useLockBodyScroll(open);
     

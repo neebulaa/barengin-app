@@ -43,7 +43,7 @@ function ForumIndexPage({ posts, tags, filters }) {
     };
 
     useEffect(() => {
-        // Reset only when search/tag feed changes; pagination updates should append.
+        // reset only when search/tag feed changes
         setItems(posts?.data ?? []);
         setNextUrl(posts?.next_page_url ?? null);
         setIsLoadingMore(false);
@@ -74,7 +74,6 @@ function ForumIndexPage({ posts, tags, filters }) {
         [tagNames],
     );
 
-    // optimistic like toggle in feed
     const toggleLikePost = (postId) => {
         if (!user) return;
 
@@ -200,7 +199,6 @@ function ForumIndexPage({ posts, tags, filters }) {
 
         observer.observe(el);
         return () => observer.disconnect();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nextUrl, isLoadingMore]);
 
     return (

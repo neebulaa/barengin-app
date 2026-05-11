@@ -99,7 +99,7 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
 
     return (
         <div className="flex flex-col h-full min-h-0">
-            {/* Header */}
+            {/* header */}
             <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-200 shrink-0">
                 <button
                     type="button"
@@ -117,7 +117,7 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
                 <div className="w-9" />
             </div>
 
-            {/* Search box */}
+            {/* search box */}
             <div className="px-6 py-4 border-b border-neutral-100 shrink-0">
                 <div className="flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2">
                     <FiSearch className="text-neutral-500" />
@@ -147,7 +147,6 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
                 ) : null}
             </div>
 
-            {/* Results (scrollable) */}
             <div className="px-6 py-5 flex-1 min-h-0 max-h-[320px] overflow-y-auto">
                 <div className="space-y-2">
                     {loading ? (
