@@ -11,6 +11,7 @@ use App\Http\Controllers\ForumController;
 use App\Http\Controllers\ForumProfileController;
 use App\Http\Controllers\ForumFollowController;
 use App\Http\Controllers\ForumPeopleController;
+use App\Http\Controllers\ForumLocationController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PergiBarengController;
@@ -93,6 +94,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/forum/people', [ForumPeopleController::class, 'people']);
     Route::get('/forum/users/{username}/followers', [ForumPeopleController::class, 'followers']);
     Route::get('/forum/users/{username}/following', [ForumPeopleController::class, 'following']);
+
+    Route::get('/forum/locations/search', [ForumLocationController::class, 'search']);
+    Route::get('/forum/locations/reverse', [ForumLocationController::class, 'reverse']);
+    Route::get('/forum/locations/popular', [ForumLocationController::class, 'popular']);
 });
 
 Route ::get('/pergi-bareng',function(){
@@ -125,11 +130,6 @@ Route::get('/chat/exp', function(){
 Route::get('/leaderboard', function () {
     return inertia('Leaderboard/Index');
 })->name('leaderboard');
-Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
-Route::get('/forum/posts/{id}', [ForumController::class, 'show'])
-    ->whereNumber('id')
-    ->name('forum.show');
-
 
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
