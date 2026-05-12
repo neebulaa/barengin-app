@@ -70,7 +70,6 @@ class TripSeeder extends Seeder
                 'people_amount' => $faker->numberBetween(15, 30),
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'rating' => $faker->randomFloat(2, 4.0, 5.0),
                 'price' => $price,
                 'image' => '/assets/trips/bromo.jpg', // Placeholder gambar
                 'created_at' => now(),
@@ -155,16 +154,6 @@ class TripSeeder extends Seeder
                     'created_at' => now(),
                 ]);
             }
-
-            // H. Guide Rating Trips
-            DB::table('guide_rating_trips')->insert([
-                'user_id' => $customerId,
-                'trips_id' => $tripId, 
-                'amount_rating' => $faker->randomFloat(2, 4.0, 5.0),
-                'comment' => $faker->sentence(6),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
         }
     }
 }
