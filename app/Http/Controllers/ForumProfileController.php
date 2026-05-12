@@ -200,7 +200,6 @@ class ForumProfileController extends Controller
                         'comment_text' => $comment->parent->comment_text,
                         'created_at' => $this->iso($comment->parent->created_at),
 
-                        // ✅ always computed
                         'likes_count' => $parentLikesCountLookup[$pid] ?? 0,
                         'liked_by_me' => isset($parentLikedByMeLookup[$pid]),
 
