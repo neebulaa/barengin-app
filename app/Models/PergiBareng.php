@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class PergiBareng extends Model
-{
+{      
+    
     protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name'];
 
     protected function casts(){
@@ -34,8 +35,4 @@ class PergiBareng extends Model
         return $this->hasOne(Conversation::class);
     }
 
-    public function pergi_bareng_ratings(){
-        return $this->hasMany(PergiBarengRating::class);
-    }
-    
 }

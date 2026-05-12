@@ -15,7 +15,7 @@ export default function PergiSearchForm({ naked = true }) {
         <div
             className={`w-full ${naked ? "bg-white rounded-2xl shadow-lg p-6" : ""}`}
         >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-14 gap-4 items-end animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-16 gap-4 items-end animate-fade-in">
                 <div className="lg:col-span-3">
                     <Input
                         label="Dari mana"
@@ -32,19 +32,19 @@ export default function PergiSearchForm({ naked = true }) {
                     />
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-3">
                     <Input
                         label="Tanggal Pergi"
                         placeholder="01/01/2026"
-                        leftIcon={<FaCalendarAlt />}
+                        type = "date"
                     />
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-3">
                     <Input
                         label="Waktu Kumpul"
                         placeholder="09:00"
-                        leftIcon={<FaClock />}
+                        type = "time"
                     />
                 </div>
 
