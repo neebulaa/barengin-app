@@ -21,7 +21,7 @@ function UserRow({ user, onClick }) {
             />
             <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-neutral-700">
-                    {user.name}
+                    {user.full_name}
                 </div>
                 {user.username ? (
                     <div className="truncate text-xs text-neutral-500">

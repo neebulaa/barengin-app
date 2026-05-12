@@ -5,10 +5,25 @@ function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
-export default function Bubble({ mine, text, time, withTicks, avatar }) {
+export default function Bubble({
+    mine,
+    text,
+    time,
+    readText,
+    avatar,
+    attachmentUrl,
+    attachmentType,
+    attachmentName,
+}) {
+    const isImage =
+        attachmentType &&
+        ["image/jpeg", "image/png", "image/webp"].includes(attachmentType);
+
+    const isPdf = attachmentType === "application/pdf";
+
     return (
         <div className={cn("flex w-full", mine ? "justify-end" : "justify-start")}>
-            <div className="flex max-w-[560px] items-end gap-3">
+            <div className="flex max-w-[560px] items-end gap-3 break-words">
                 {!mine ? (
                     <Avatar src={avatar} alt="avatar" className="h-9 w-9" />
                 ) : null}
@@ -19,14 +34,39 @@ export default function Bubble({ mine, text, time, withTicks, avatar }) {
                         mine ? "rounded-br-sm" : "rounded-bl-sm",
                     )}
                 >
-                    <div className="whitespace-pre-line text-sm text-neutral-700">
-                        {text}
-                    </div>
+                    {text ? (
+                        <div className="whitespace-pre-line text-sm text-neutral-700 break-words break-all">
+                            {text}
+                        </div>
+                    ) : null}
 
-                    <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-neutral-500">
+                    {attachmentUrl ? (
+                        <div className={cn("mt-3", text ? "" : "mt-0")}>
+                            {isImage ? (
+                                <img
+                                    src={attachmentUrl}
+                                    alt={attachmentName ?? "attachment"}
+                                    className="max-h-64 rounded-lg border border-neutral-200 object-cover"
+                                />
+                            ) : null}
+
+                            {isPdf ? (
+                                <a
+                                    href={attachmentUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm text-primary-700 hover:bg-primary-50"
+                                >
+                                    📄 {attachmentName ?? "Dokumen PDF"}
+                                </a>
+                            ) : null}
+                        </div>
+                    ) : null}
+
+                    <div className="mt-2 flex items-center justify-end gap-2 text-[11px] text-neutral-500">
                         <span>{time}</span>
-                        {mine && withTicks ? (
-                            <span className="text-primary-700">✓✓</span>
+                        {mine && readText ? (
+                            <span className="text-primary-700">{readText}</span>
                         ) : null}
                     </div>
                 </div>
