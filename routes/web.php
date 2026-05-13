@@ -139,3 +139,9 @@ Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-ba
 Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
 Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
 Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
+
+
+// test route
+Route::get('/Admin', function () {
+    return inertia('Admin/Test');
+})->name('admin'); 
