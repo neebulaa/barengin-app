@@ -123,14 +123,17 @@ Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead
 Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
 Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
 
-
+// Chat
 Route::get('/chat/exp', function(){
     return inertia('Chat/Index2');
 })->name('chat.exp');
+
+// Leaderboard
 Route::get('/leaderboard', function () {
     return inertia('Leaderboard/Index');
 })->name('leaderboard');
 
+// Trip Bareng
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
 Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
