@@ -1,23 +1,38 @@
 import { useState } from "react";
+import { Head, router } from "@inertiajs/react";
 import TripCard from "@/Components/TripCard";
 import Container from "@/Components/Container";
 import TripSearchForm from "@/Components/TripSearchForm";
 import Pagination from "@/Components/Pagination";
+import Select from "@/Components/Select"; // Import kembali komponen Select kustommu
 
 import MainLayout from "@/Layouts/MainLayout";
 
 export default function Index({ trips, all_trips }) {
     const [activeTab, setActiveTab] = useState("all");
-    const [page, setPage] = useState(1);
+    const [sortBy, setSortBy] = useState("");
+    const [filterBy, setFilterBy] = useState("");
+
+    const tripItems = trips?.data || [];
+
+    const handlePageChange = (newPage) => {
+        router.get(
+            window.location.pathname, 
+            { page: newPage },
+            { preserveState: true, preserveScroll: true }
+        );
+    };
 
     return (
         <div className="min-h-screen bg-neutral-50 pb-16 md:pb-24">
+            <Head title="Trip Bareng - Barengin" />
+
             {/* --- Hero Section --- */}
             <header
                 className="relative pt-28 pb-32 md:pt-40 md:pb-44 bg-cover bg-center bg-no-repeat"
                 style={{
                     backgroundImage:
-                        "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.6)), url('/assets/trip-bareng/hero-bg.png')",
+                        "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.6)), url('/assets/trips/hero.jpg')",
                 }}
             >
                 <Container className="relative z-10 text-center text-white px-4">
@@ -32,7 +47,6 @@ export default function Index({ trips, all_trips }) {
             </header>
 
             {/* --- Search Form Section --- */}
-            {/* z-10 dan relative penting agar form tidak tenggelam di belakang background hero */}
             <section className="relative z-10 -mt-16 md:-mt-20 px-4 sm:px-0">
                 <Container>
                     <TripSearchForm
@@ -51,37 +65,58 @@ export default function Index({ trips, all_trips }) {
                         Cari Trip Terbaikmu
                     </h2>
                     
-                    {/* Filter dibikin full-width di HP, auto di desktop */}
-                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                        <select className="w-full sm:w-auto bg-white border border-neutral-300 text-neutral-700 text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all cursor-pointer shadow-sm">
-                            <option value="">Urutkan Berdasarkan</option>
+                    {/* [PERBAIKAN]: Menggunakan komponen <Select> kustom seperti gambar */}
+                    <div className="flex items-center gap-3">
+                        <Select
+                            label=""
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="w-40"
+                            selectClassName="h-10 bg-white"
+                        >
+                            <option value="">Urutkan</option>
                             <option value="rating">Rating Tertinggi</option>
                             <option value="price_asc">Harga Termurah</option>
                             <option value="price_desc">Harga Termahal</option>
-                        </select>
-                        <select className="w-full sm:w-auto bg-white border border-neutral-300 text-neutral-700 text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all cursor-pointer shadow-sm">
-                            <option value="">Filter Kategori</option>
+                        </Select>
+
+                        <Select
+                            label=""
+                            value={filterBy}
+                            onChange={(e) => setFilterBy(e.target.value)}
+                            className="w-40"
+                            selectClassName="h-10 bg-white"
+                        >
+                            <option value="">Filter By</option>
                             <option value="popular">Paling Populer</option>
                             <option value="new">Trip Terbaru</option>
-                        </select>
+                        </Select>
                     </div>
                 </div>
 
-                {/* Grid Trip Cards (Responsif: 1 kolom HP, 2 kolom Tablet, 3 kolom Desktop) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                    {trips.map((trip) => (
-                        <TripCard key={trip.id} trip={trip} />
-                    ))}
-                </div>
+                {tripItems.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                            {tripItems.map((trip) => (
+                                <TripCard key={trip.id} trip={trip} />
+                            ))}
+                        </div>
 
-                {/* --- Pagination --- */}
-                <div className="mt-12 md:mt-16 border-t border-neutral-200 pt-8">
-                    <Pagination
-                        currentPage={page}
-                        totalPages={20}
-                        onPageChange={(newPage) => setPage(newPage)}
-                    />
-                </div>
+                        {trips.last_page > 1 && (
+                            <div className="mt-12 md:mt-16 border-t border-neutral-200 pt-8 flex justify-center">
+                                <Pagination
+                                    currentPage={trips.current_page} 
+                                    totalPages={trips.last_page}     
+                                    onPageChange={handlePageChange}  
+                                />
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-center py-20 bg-white rounded-2xl border border-neutral-200 shadow-sm">
+                        <p className="text-neutral-500 text-lg font-medium">Belum ada trip yang tersedia saat ini.</p>
+                    </div>
+                )}
                 
             </Container>
         </div>

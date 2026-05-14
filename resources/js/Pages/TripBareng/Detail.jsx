@@ -1,5 +1,5 @@
 import React from "react";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react"; // Tambahkan Link di sini
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import MainLayout from "@/Layouts/MainLayout";
@@ -12,120 +12,30 @@ import {
     FaUtensils,
     FaArrowRight,
     FaRegHeart,
-    FaFacebookF,
-    FaLinkedinIn,
-    FaYoutube,
-    FaInstagram,
+    FaChevronLeft // Tambahkan icon ChevronLeft
 } from "react-icons/fa";
 import { BsChatText } from "react-icons/bs";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 
 export default function Detail({ trip }) {
-    // Dummy fallback data disesuaikan dengan gambar referensi (8 Langkah dalam 2 Hari)
-    const currentTrip = trip || {
-        title: "Gunung Bromo",
-        location: "Jawa Timur, Indonesia",
-        duration: "4 Hari 3 Malam",
-        joined_count: 15,
-        capacity: 20,
-        date_range: "1 Januari 2026 10:00 hingga 2 Januari 2026 16:00",
-        description:
-            "Gunung Bromo merupakan gunung berapi aktif setinggi 2.329 mdpl yang mempesona dengan kawah megah berdiameter 800 meter, dikelilingi oleh hamparan Lautan Pasir atau 'Pasir Berbisik' seluas 10 kilometer persegi yang unik karena suara desiran anginnya. Kontras dengan lanskap vulkaniknya, sisi selatan kawasan ini menyuguhkan pemandangan epik berupa Padang Savana dan Bukit Teletubbies yang bergelombang hijau, menciptakan perpaduan alam yang dramatis dalam satu kawasan kaldera.",
-        price: 3800000,
-        host: {
-            name: "King's Man",
-            role: "Expert Guide",
-            badge: "50 trip",
-            label: "Pemilik",
-        },
-        itinerary: [
-            {
-                step: 1,
-                title: "Penjemputan & Perjalanan Menuju Bromo",
-                time: "1 Januari 2026, Jam 10:00 - 18:00",
-                desc: "Tim akan menjemput kamu di titik pertemuan (Bandara/Stasiun di Malang atau Surabaya). Perjalanan dilanjutkan menuju desa terakhir di kaki Gunung Bromo (Cemoro Lawang atau Wonokitri) (Kurang lebih 2 - 3 jam).",
-                images: [
-                    "https://images.unsplash.com/photo-1596825205469-80fb2228a4da?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1628189679198-4660ebcf8e51?q=80&w=600&auto=format&fit=crop",
-                ],
-            },
-            {
-                step: 2,
-                title: "Check-in & Makan Malam Lokal",
-                time: "1 Januari 2026, Jam 18:00 - 02:00",
-                desc: "Tiba di penginapan Hotel Bawangan untuk proses administrasi dan istirahat sejenak sebelum petualangan dini hari dimulai.",
-                images: [
-                    "https://images.unsplash.com/photo-1551882547-ff40c0d124ba?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=600&auto=format&fit=crop",
-                ],
-            },
-            {
-                step: 3,
-                title: "Midnight Jeep Adventure", // Diperbaiki dari typo gambar asli agar UI bagus
-                time: "2 Januari 2026, Jam 02:00 - 05:00",
-                desc: "Petualangan dimulai! Kamu akan dibangunkan tengah malam untuk memulai perjalanan menggunakan Jeep 4WD menembus kabut Bromo.",
-                images: [
-                    "https://images.unsplash.com/photo-1520641151610-c08170e3049b?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1506016766781-8153ad6c1eec?q=80&w=600&auto=format&fit=crop",
-                ],
-            },
-            {
-                step: 4,
-                title: "The Magical Sunrise (Penanjakan)",
-                time: "2 Januari 2026, Jam 05:00 - 07:00",
-                desc: "Momen paling ikonik! Menunggu matahari terbit dari salah satu titik pandang tertinggi.\n• Spot: Penanjakan 1, Bukit Kedaluh (Kingkong Hill), atau Bukit Cinta.\n• Momen: Melihat gradasi warna langit dan siluet Gunung Bromo yang legendaris.\n• Fotografi: Sesi foto dengan latar belakang Sea of Sand dan Gunung Semeru yang mengeluarkan asap.",
-                images: [
-                    "https://images.unsplash.com/photo-1605336691456-11f81d8da0d2?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1512100356356-de1b84283e18?q=80&w=600&auto=format&fit=crop",
-                ],
-            },
-            {
-                step: 5,
-                title: "Pendakian Kawah Bromo & Pura Luhur Poten",
-                time: "2 Januari 2026, Jam 07:00 - 09:00",
-                desc: "Turun dari puncak menuju Lautan Pasir. Di sini kamu akan merasakan sensasi berdiri di tengah kaldera raksasa dengan menunggangi kuda.",
-                images: [
-                    "https://images.unsplash.com/photo-1544715568-7b98d27931c8?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1517529452835-f481c4e16d43?q=80&w=600&auto=format&fit=crop",
-                ],
-            },
-            {
-                step: 6,
-                title: "Savana & Bukit Teletubbies",
-                time: "2 Januari 2026, Jam 09:00 - 10:30",
-                desc: "Beralih dari pemandangan gersang ke area hijau yang menyejukkan mata di balik kawah.",
-                images: [
-                    "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?q=80&w=600&auto=format&fit=crop",
-                ],
-            },
-            {
-                step: 7,
-                title: "Pasir Berbisik",
-                time: "2 Januari 2026, Jam 10:30 - 12:00",
-                desc: "Destinasi terakhir sebelum meninggalkan kawasan Taman Nasional, tempat di mana angin menciptakan suara unik saat menerpa butiran pasir.",
-                images: [
-                    "https://images.unsplash.com/photo-1547631317-062e7f33d59e?q=80&w=600&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?q=80&w=600&auto=format&fit=crop",
-                ],
-            },
-            {
-                step: 8,
-                title: "Check-out & Perjalanan Pulang",
-                time: "2 Januari 2026, Jam 12:00 - 16:00",
-                desc: "Kembali ke penginapan untuk membersihkan diri dan mengisi energi sebelum perjalanan berakhir.",
-                images: [], // Tidak ada gambar di step 8 pada desain
-            },
-        ],
-    };
+    const currentTrip = trip; // Asumsikan data trip sudah valid dari backend
 
     return (
         <div className="min-h-screen bg-white pb-32">
             <Head title={`Trip ${currentTrip.title} - Barengin`} />
 
             <Container className="pt-6">
+                
+                {/* --- TOMBOL KEMBALI (OPSI 1: Di luar gambar, teks biasa) --- */}
+                {/* Kalau kamu lebih suka di luar gambar, uncomment ini dan hapus tombol melayang di bawah: 
+                <div className="mb-4">
+                    <Link href="/trip-bareng" className="inline-flex items-center gap-2 text-neutral-600 hover:text-primary-700 font-medium transition">
+                        <FaChevronLeft className="text-sm" />
+                        Kembali ke Daftar Trip
+                    </Link>
+                </div>
+                */}
+
                 {/* --- HERO SECTION --- */}
                 <div className="relative h-[350px] md:h-[400px] w-full rounded-3xl overflow-hidden mb-10 shadow-sm">
                     <img
@@ -138,6 +48,16 @@ export default function Detail({ trip }) {
                         }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+
+                    {/* --- TOMBOL KEMBALI MELAYANG (OPSI 2: Paling Bagus) --- */}
+                    <Link 
+                        href="/trip-bareng" 
+                        className="absolute top-6 left-6 md:top-8 md:left-8 z-10 w-10 h-10 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/40 rounded-full flex items-center justify-center text-white transition-all shadow-sm"
+                        aria-label="Kembali"
+                    >
+                        <FaChevronLeft className="text-sm -ml-0.5" />
+                    </Link>
+                    {/* ---------------------------------------------------- */}
 
                     <div className="absolute bottom-0 left-0 w-full p-6 md:p-10 text-white">
                         <h1 className="text-4xl md:text-5xl font-bold mb-3">
@@ -373,7 +293,7 @@ export default function Detail({ trip }) {
                             Pesan perjalanan anda sekarang
                         </p>
                         <h3 className="text-lg font-bold text-neutral-900">
-                            Trip {currentTrip.title}
+                            {currentTrip.title}
                         </h3>
                     </div>
 

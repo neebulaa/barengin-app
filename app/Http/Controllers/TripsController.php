@@ -12,57 +12,87 @@ class TripsController extends Controller
 {
     public function index()
     {
-        // 1. Ambil data trip dari database beserta relasi guider (user)
-        // Gunakan DB facade atau Model (asumsi menggunakan DB agar aman jika relasi model belum di set)
-        $tripsDB = DB::table('trips')
+        $tripsPaginated = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
-            ->select('trips.*', 'users.full_name as guide_name')
-            ->get();
+            ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
+            ->orderBy('trips.created_at', 'desc')
+            ->paginate(9);
 
-        // 2. Sesuaikan formatnya dengan yang dibutuhkan oleh TripCard.jsx
-        $trips = $tripsDB->map(function ($trip) {
+        $tripsPaginated->getCollection()->transform(function ($trip) {
             $startDate = Carbon::parse($trip->start_date);
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
+            // [PERBAIKAN]: Hitung partisipan murni sesuai tabel DB (tanpa angka acak)
+            $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+            
+            // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
+            $remaining = $trip->people_amount - $joined;
+
+            $guiderRating = DB::table('user__ratings')
+                ->where('rated_user_id', $trip->host_id)
+                ->where('type', 'pergi_bareng')
+                ->avg('rating_amount');
+            
+            $guiderReviews = DB::table('user__ratings')
+                ->where('rated_user_id', $trip->host_id)
+                ->where('type', 'pergi_bareng')
+                ->count();
+
             return [
                 'id' => $trip->id,
                 'title' => $trip->name,
-                'location' => 'Eksplor Indonesia', // Default karena tidak ada di tabel trips
+                'location' => 'Indonesia', 
                 'date' => $startDate->format('d M y') . ' - ' . $endDate->format('d M y') . ' (' . $duration . ')',
-                'capacity' => '0/' . $trip->people_amount . ' orang',
-                'rating' => (float) $trip->rating,
-                'reviews' => rand(10, 150), // Angka ulasan dummy
+                'capacity' => $joined . '/' . $trip->people_amount . ' orang',
+                'remaining_seats' => $remaining > 0 ? $remaining : 0, 
+                'rating' => (float) $trip->rating, 
+                'reviews' => rand(10, 150), // Ini review trip (bukan guide), bisa biarkan random dulu kalau belum ada tabelnya
                 'price' => (float) $trip->price,
                 'guide' => $trip->guide_name,
+                'guide_avatar' => $trip->profile_image ?? '/assets/default-avatar.png',
+                'guide_rating' => $guiderRating ? number_format($guiderRating, 1) : '0',
+                'guide_reviews' => $guiderReviews,
                 'guide_badge' => 'Expert Guide',
-                'image' => $trip->image,
+                'image' => $trip->image ?? '/assets/trips/bromo.jpg',
                 'liked' => false,
             ];
         });
 
+        $all_trips = Trip::all();
+
         return Inertia::render('TripBareng/Index', [
-            'trips' => $trips,
+            'trips' => $tripsPaginated, 
+            'all_trips' => $all_trips,
         ]);
     }
 
     public function show($id)
     {
-        // 1. Ambil data spesifik
+        // 1. Ambil data spesifik trip
         $trip = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
-            ->select('trips.*', 'users.full_name as guide_name', 'users.profile_image')
+            ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
             ->where('trips.id', $id)
             ->first();
 
-        if (!$trip) {
-            abort(404);
-        }
+        if (!$trip) abort(404);
 
-        // 2. Ambil activities (itinerary)
-        $activitiesDB = DB::table('trip_activities')->where('trip_id', $id)->orderBy('activity_order')->get();
+        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
+        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+
+        // 2. Ambil Rata-Rata Rating Guide
+        $guiderRating = DB::table('user__ratings')
+            ->where('rated_user_id', $trip->host_id)
+            ->where('type', 'pergi_bareng')
+            ->avg('rating_amount');
+            
+        $ratingText = $guiderRating ? number_format($guiderRating, 1) : 'Baru';
+
+        // 3. Ambil activities (itinerary)
+        $activitiesDB = DB::table('trip_activities')->where('trip_id', $id)->orderBy('activity_order', 'asc')->get();
+        
         $itinerary = $activitiesDB->map(function ($act) {
-            // Ambil gambar untuk aktivitas ini
             $images = DB::table('image_activities')
                 ->where('trip_activity_id', $act->id)
                 ->pluck('activity_img_name')
@@ -72,13 +102,22 @@ class TripsController extends Controller
             $end = Carbon::parse($act->activity_end_datetime);
 
             return [
-                'day' => $act->activity_order,
+                'step' => (int) $act->activity_order,
                 'title' => $act->activity_name,
                 'time' => $start->format('d F Y, \J\a\m H:i') . ' - ' . $end->format('H:i'),
                 'desc' => $act->activity_description,
-                'images' => count($images) > 0 ? $images : ['/assets/trips/bromo.jpg'] // fallback image
+                'images' => count($images) > 0 ? $images : [
+                    "https://images.unsplash.com/photo-1596825205469-80fb2228a4da?q=80&w=600&auto=format&fit=crop"
+                ]
             ];
         });
+
+        // 4. Ambil fasilitas (Included)
+        $included = DB::table('trip_facilities')
+            ->join('facilities', 'trip_facilities.facility_id', '=', 'facilities.id')
+            ->where('trip_facilities.trip_id', $id)
+            ->pluck('facilities.name')
+            ->toArray();
 
         $startDate = Carbon::parse($trip->start_date);
         $endDate = Carbon::parse($trip->end_date);
@@ -89,17 +128,18 @@ class TripsController extends Controller
             'location' => 'Indonesia',
             'duration' => $startDate->diffInDays($endDate) . ' Hari',
             'date_range' => $startDate->format('d F Y') . ' hingga ' . $endDate->format('d F Y'),
-            'joined_count' => rand(1, 10), // Asumsi dummy
+            'joined_count' => $joined, // <--- Sekarang pakai $joined asli dari DB
             'capacity' => $trip->people_amount,
             'price' => (float) $trip->price,
-            'description' => $trip->description,
+            'description' => $trip->description, 
             'host' => [
                 'name' => $trip->guide_name,
                 'role' => 'Pemilik',
-                'badge' => 'Expert Guide',
+                'badge' => 'Expert Guide - ★ ' . $ratingText, 
                 'avatar' => $trip->profile_image ?? '/assets/default-avatar.png'
             ],
-            'itinerary' => $itinerary
+            'itinerary' => $itinerary,
+            'included' => $included 
         ];
 
         return Inertia::render('TripBareng/Detail', [
@@ -112,20 +152,21 @@ class TripsController extends Controller
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
-        $joined = rand(5, 10);
+        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
+        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
 
-        $tripData = [
+        $trip_check_out = [
             'id' => $trip->id,
             'title' => $trip->name,
             'price' => (float) $trip->price,
-            'joined_count' => $joined,
+            'joined_count' => $joined, // <--- Pakai data asli
             'capacity' => $trip->people_amount,
-            'remaining_quota' => $trip->people_amount - $joined,
+            'remaining_quota' => $trip->people_amount - $joined, // <--- Hitungan sisa kursi akurat
             'image' => $trip->image ?? '/assets/trips/bromo.jpg',
         ];
 
         return Inertia::render('TripBareng/Checkout', [
-            'trip' => $tripData,
+            'trip' => $trip_check_out,
         ]);
     }
 
@@ -136,7 +177,7 @@ class TripsController extends Controller
 
         $paymentData = [
             'trip_id' => $id,
-            'total_amount' => (float) $trip->price + 10000, // + fee asuransi & layanan
+            'total_amount' => (float) $trip->price + 10000, 
             'due_date' => Carbon::now()->addHours(24)->format('d F Y, H:i'),
             'bank_name' => 'BCA Virtual Account',
             'va_number' => '123 456 789 123',
@@ -169,6 +210,177 @@ class TripsController extends Controller
         ]);
     }
 }
+
+
+// namespace App\Http\Controllers;
+
+// use App\Models\Trip;
+// use Illuminate\Http\Request;
+// use Inertia\Inertia;
+// use Carbon\Carbon;
+// use Illuminate\Support\Facades\DB;
+
+// class TripsController extends Controller
+// {
+//     public function index()
+//     {
+//         // 1. Ambil data trip dari database beserta relasi guider (user)
+//         // Gunakan DB facade atau Model (asumsi menggunakan DB agar aman jika relasi model belum di set)
+//         $tripsDB = DB::table('trips')
+//             ->join('users', 'trips.guider_id', '=', 'users.id')
+//             ->select('trips.*', 'users.full_name as guide_name')
+//             ->get();
+
+//         // 2. Sesuaikan formatnya dengan yang dibutuhkan oleh TripCard.jsx
+//         $trips = $tripsDB->map(function ($trip) {
+//             $startDate = Carbon::parse($trip->start_date);
+//             $endDate = Carbon::parse($trip->end_date);
+//             $duration = $startDate->diffInDays($endDate) . ' Days';
+
+//             return [
+//                 'id' => $trip->id,
+//                 'title' => $trip->name,
+//                 'location' => 'Eksplor Indonesia', // Default karena tidak ada di tabel trips
+//                 'date' => $startDate->format('d M y') . ' - ' . $endDate->format('d M y') . ' (' . $duration . ')',
+//                 'capacity' => '0/' . $trip->people_amount . ' orang',
+//                 'rating' => (float) $trip->rating,
+//                 'reviews' => rand(10, 150), // Angka ulasan dummy
+//                 'price' => (float) $trip->price,
+//                 'guide' => $trip->guide_name,
+//                 'guide_badge' => 'Expert Guide',
+//                 'image' => $trip->image,
+//                 'liked' => false,
+//             ];
+//         });
+
+//         return Inertia::render('TripBareng/Index', [
+//             'trips' => $trips,
+//         ]);
+//     }
+
+//     public function show($id)
+//     {
+//         // 1. Ambil data spesifik
+//         $trip = DB::table('trips')
+//             ->join('users', 'trips.guider_id', '=', 'users.id')
+//             ->select('trips.*', 'users.full_name as guide_name', 'users.profile_image')
+//             ->where('trips.id', $id)
+//             ->first();
+
+//         if (!$trip) {
+//             abort(404);
+//         }
+
+//         // 2. Ambil activities (itinerary)
+//         $activitiesDB = DB::table('trip_activities')->where('trip_id', $id)->orderBy('activity_order')->get();
+//         $itinerary = $activitiesDB->map(function ($act) {
+//             // Ambil gambar untuk aktivitas ini
+//             $images = DB::table('image_activities')
+//                 ->where('trip_activity_id', $act->id)
+//                 ->pluck('activity_img_name')
+//                 ->toArray();
+
+//             $start = Carbon::parse($act->activity_start_datetime);
+//             $end = Carbon::parse($act->activity_end_datetime);
+
+//             return [
+//                 'day' => $act->activity_order,
+//                 'title' => $act->activity_name,
+//                 'time' => $start->format('d F Y, \J\a\m H:i') . ' - ' . $end->format('H:i'),
+//                 'desc' => $act->activity_description,
+//                 'images' => count($images) > 0 ? $images : ['/assets/trips/bromo.jpg'] // fallback image
+//             ];
+//         });
+
+//         $startDate = Carbon::parse($trip->start_date);
+//         $endDate = Carbon::parse($trip->end_date);
+        
+//         $tripData = [
+//             'id' => $trip->id,
+//             'title' => $trip->name,
+//             'location' => 'Indonesia',
+//             'duration' => $startDate->diffInDays($endDate) . ' Hari',
+//             'date_range' => $startDate->format('d F Y') . ' hingga ' . $endDate->format('d F Y'),
+//             'joined_count' => rand(1, 10), // Asumsi dummy
+//             'capacity' => $trip->people_amount,
+//             'price' => (float) $trip->price,
+//             'description' => $trip->description,
+//             'host' => [
+//                 'name' => $trip->guide_name,
+//                 'role' => 'Pemilik',
+//                 'badge' => 'Expert Guide',
+//                 'avatar' => $trip->profile_image ?? '/assets/default-avatar.png'
+//             ],
+//             'itinerary' => $itinerary
+//         ];
+
+//         return Inertia::render('TripBareng/Detail', [
+//             'trip' => $tripData,
+//         ]);
+//     }
+
+//     public function checkout($id)
+//     {
+//         $trip = DB::table('trips')->where('id', $id)->first();
+//         if (!$trip) abort(404);
+
+//         $joined = rand(5, 10);
+
+//         $tripData = [
+//             'id' => $trip->id,
+//             'title' => $trip->name,
+//             'price' => (float) $trip->price,
+//             'joined_count' => $joined,
+//             'capacity' => $trip->people_amount,
+//             'remaining_quota' => $trip->people_amount - $joined,
+//             'image' => $trip->image ?? '/assets/trips/bromo.jpg',
+//         ];
+
+//         return Inertia::render('TripBareng/Checkout', [
+//             'trip' => $tripData,
+//         ]);
+//     }
+
+//     public function payment($id)
+//     {
+//         $trip = DB::table('trips')->where('id', $id)->first();
+//         if (!$trip) abort(404);
+
+//         $paymentData = [
+//             'trip_id' => $id,
+//             'total_amount' => (float) $trip->price + 10000, // + fee asuransi & layanan
+//             'due_date' => Carbon::now()->addHours(24)->format('d F Y, H:i'),
+//             'bank_name' => 'BCA Virtual Account',
+//             'va_number' => '123 456 789 123',
+//         ];
+
+//         return Inertia::render('TripBareng/WaitingPayment', [
+//             'paymentData' => $paymentData,
+//         ]);
+//     }
+
+//     public function success($id)
+//     {
+//         $trip = DB::table('trips')->where('id', $id)->first();
+//         if (!$trip) abort(404);
+
+//         $startDate = Carbon::parse($trip->start_date);
+//         $endDate = Carbon::parse($trip->end_date);
+
+//         $order = [
+//             'transaction_id' => 'OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT),
+//             'trip_title' => $trip->name,
+//             'date_range' => $startDate->format('d M') . ' - ' . $endDate->format('d M Y'),
+//             'quantity' => 1,
+//             'image' => $trip->image ?? '/assets/trips/bromo.jpg',
+//             'friends_waiting' => rand(3, 15),
+//         ];
+
+//         return Inertia::render('TripBareng/Success', [
+//             'order' => $order,
+//         ]);
+//     }
+// } -->
 
 // <!-- namespace App\Http\Controllers;
 
