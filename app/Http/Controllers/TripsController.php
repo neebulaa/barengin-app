@@ -15,10 +15,34 @@ class TripsController extends Controller
 {
     private const SERVICE_FEE = 5000;
     private const INSURANCE_FEE = 5000;
+    private const TRANSACTION_TYPE_TRIP = 'trip';
 
     private function confirmedOrderStatuses(): array
     {
         return ['paid', 'confirmed'];
+    }
+
+    private function paymentMethodLabel(?string $paymentMethod): string
+    {
+        return match ($paymentMethod) {
+            'bca_va' => 'BCA Virtual Account',
+            'qris' => 'QRIS',
+            'gopay' => 'GoPay',
+            'dana' => 'Dana',
+            'ovo' => 'OVO',
+            'mastercard' => 'Mastercard',
+            default => $paymentMethod ? strtoupper($paymentMethod) : 'BCA Virtual Account',
+        };
+    }
+
+    private function generateUniqueVANumber(): string
+    {
+        do {
+            $vaNumber = str_pad((string) random_int(1, 999999999999), 12, '0', STR_PAD_LEFT);
+            $exists = DB::table('transactions')->where('va_number', $vaNumber)->exists();
+        } while ($exists);
+
+        return $vaNumber;
     }
 
     private function getJoinedCountForTrip(int $tripId): int
@@ -53,7 +77,7 @@ class TripsController extends Controller
     {
         $mapUserToAvatar = function ($fullName, $profileImage) {
             $fullName = trim((string) ($fullName ?? ''));
-            $firstName = $fullName !== '' ? explode(' ', $fullName)[0] : 'Peserta';
+            $firstName = $fullName !== '' ? explode(' ', $fullName, 2)[0] : 'Peserta';
 
             return [
                 'first_name' => $firstName,
@@ -376,9 +400,9 @@ class TripsController extends Controller
                 'id' => $transactionId,
                 'user_id' => Auth::id(),
                 'total_amount' => $total,
-                'type' => 'trip',
+                'type' => self::TRANSACTION_TYPE_TRIP,
                 'payment_method' => $validated['paymentMethod'],
-                'va_number' => str_pad((string) random_int(1, 999999999999), 12, '0', STR_PAD_LEFT),
+                'va_number' => $this->generateUniqueVANumber(),
                 'expired_at' => now()->addHours(24),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -459,12 +483,16 @@ class TripsController extends Controller
                 ->sum('amount');
         }
 
+        $totalAmount = $order
+            ? (float) ($order->total_amount ?? $order->total)
+            : ((float) $trip->price + self::SERVICE_FEE + self::INSURANCE_FEE);
+
         $paymentData = [
             'trip_id' => $id,
             'order_id' => $order->id ?? null,
-            'total_amount' => $order ? (float) ($order->total_amount ?? $order->total) : ((float) $trip->price + self::SERVICE_FEE + self::INSURANCE_FEE),
+            'total_amount' => $totalAmount,
             'due_date' => $order && $order->expired_at ? Carbon::parse($order->expired_at)->format('d F Y, H:i') : Carbon::now()->addHours(24)->format('d F Y, H:i'),
-            'bank_name' => $order && $order->payment_method ? strtoupper($order->payment_method) : 'BCA Virtual Account',
+            'bank_name' => $this->paymentMethodLabel($order->payment_method ?? null),
             'va_number' => $order->va_number ?? '123 456 789 123',
             'fees_total' => $feesTotal,
         ];

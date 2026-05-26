@@ -8,7 +8,13 @@ import MainLayout from "@/Layouts/MainLayout";
 import { FaChevronLeft, FaUserFriends, FaMinus, FaPlus } from "react-icons/fa";
 import { MdOutlineShoppingBag } from "react-icons/md";
 import { IoMdInformationCircleOutline } from "react-icons/io";
-import { BsCheckCircleFill } from "react-icons/bs";
+
+const createEmptyParticipant = () => ({
+    name: "",
+    passport: "",
+    phone: "",
+    nik: "",
+});
 
 export default function Checkout({ trip }) {
     const initialQuantity = trip.remaining_quota > 0 ? 1 : 0;
@@ -27,12 +33,10 @@ export default function Checkout({ trip }) {
             if (prev.length < quantity) {
                 return [
                     ...prev,
-                    ...Array.from({ length: quantity - prev.length }, () => ({
-                        name: "",
-                        passport: "",
-                        phone: "",
-                        nik: "",
-                    })),
+                    ...Array.from(
+                        { length: quantity - prev.length },
+                        createEmptyParticipant,
+                    ),
                 ];
             }
             return prev.slice(0, quantity);
@@ -61,7 +65,7 @@ export default function Checkout({ trip }) {
 
     const handleSubmit = () => {
         if (quantity < 1) {
-            setFormError("Kuota trip sudah habis.");
+            setFormError("Pilih minimal 1 peserta.");
             return;
         }
 
