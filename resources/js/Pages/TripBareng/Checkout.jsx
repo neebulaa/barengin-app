@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
@@ -8,11 +8,21 @@ import MainLayout from "@/Layouts/MainLayout";
 import { FaChevronLeft, FaUserFriends, FaMinus, FaPlus } from "react-icons/fa";
 import { MdOutlineShoppingBag } from "react-icons/md";
 import { IoMdInformationCircleOutline } from "react-icons/io";
-import { BsCheckCircleFill } from "react-icons/bs";
+
+const createEmptyParticipant = () => ({
+    name: "",
+    passport: "",
+    phone: "",
+    nik: "",
+});
 
 export default function Checkout({ trip }) {
-    const [quantity, setQuantity] = useState(2);
+    const initialQuantity = trip.remaining_quota > 0 ? 1 : 0;
+    const [quantity, setQuantity] = useState(initialQuantity);
     const [paymentMethod, setPaymentMethod] = useState("bca_va");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formError, setFormError] = useState("");
+    const { errors } = usePage().props;
 
     // Dynamic participants form state
     const [participants, setParticipants] = useState([]);
@@ -23,12 +33,10 @@ export default function Checkout({ trip }) {
             if (prev.length < quantity) {
                 return [
                     ...prev,
-                    ...Array(quantity - prev.length).fill({
-                        name: "",
-                        passport: "",
-                        phone: "",
-                        nik: "",
-                    }),
+                    ...Array.from(
+                        { length: quantity - prev.length },
+                        createEmptyParticipant,
+                    ),
                 ];
             }
             return prev.slice(0, quantity);
@@ -43,9 +51,40 @@ export default function Checkout({ trip }) {
 
     // Calculations
     const subtotal = trip.price * quantity;
-    const serviceFee = 5000;
-    const insuranceFee = 5000;
+    const serviceFee = trip.service_fee ?? 5000;
+    const insuranceFee = trip.insurance_fee ?? 5000;
     const total = subtotal + serviceFee + insuranceFee;
+
+    const handleParticipantChange = (index, field, value) => {
+        setParticipants((prev) =>
+            prev.map((item, idx) =>
+                idx === index ? { ...item, [field]: value } : item,
+            ),
+        );
+    };
+
+    const handleSubmit = () => {
+        if (quantity < 1) {
+            setFormError("Pilih minimal 1 peserta.");
+            return;
+        }
+
+        setFormError("");
+        setIsSubmitting(true);
+
+        router.post(
+            `/trip-bareng/${trip.id}/checkout`,
+            {
+                quantity,
+                paymentMethod,
+                participants,
+            },
+            {
+                onError: () => setIsSubmitting(false),
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
+    };
 
     // Mock Payment Methods
     const paymentMethods = [
@@ -218,16 +257,40 @@ export default function Checkout({ trip }) {
                                     <Input
                                         label="Nama Lengkap"
                                         placeholder="Masukkan nama lengkap anda sesuai ktp"
+                                        value={p.name}
+                                        onChange={(e) =>
+                                            handleParticipantChange(
+                                                idx,
+                                                "name",
+                                                e.target.value,
+                                            )
+                                        }
                                     />
                                     <Input
                                         label="No. Paspor (optional)"
                                         placeholder="Nomor paspor resmi anda"
+                                        value={p.passport}
+                                        onChange={(e) =>
+                                            handleParticipantChange(
+                                                idx,
+                                                "passport",
+                                                e.target.value,
+                                            )
+                                        }
                                     />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <Input
                                             label="Nomor Telepon"
                                             placeholder="No Telpon"
+                                            value={p.phone}
+                                            onChange={(e) =>
+                                                handleParticipantChange(
+                                                    idx,
+                                                    "phone",
+                                                    e.target.value,
+                                                )
+                                            }
                                             leftAddon={
                                                 <span className="text-neutral-700 font-medium">
                                                     +62
@@ -237,6 +300,14 @@ export default function Checkout({ trip }) {
                                         <Input
                                             label="NIK (Optional)"
                                             placeholder="NIK"
+                                            value={p.nik}
+                                            onChange={(e) =>
+                                                handleParticipantChange(
+                                                    idx,
+                                                    "nik",
+                                                    e.target.value,
+                                                )
+                                            }
                                         />
                                     </div>
                                 </div>
@@ -298,7 +369,10 @@ export default function Checkout({ trip }) {
 
                             <div className="space-y-4 text-sm text-neutral-600 border-b border-neutral-100 pb-6 mb-6">
                                 <div className="flex justify-between items-center">
-                                    <span>Subtotal</span>
+                                    <span>
+                                        Subtotal ({quantity} x Rp{" "}
+                                        {trip.price.toLocaleString("id-ID")})
+                                    </span>
                                     <span className="font-semibold text-neutral-900">
                                         Rp {subtotal.toLocaleString("id-ID")}
                                     </span>
@@ -336,14 +410,20 @@ export default function Checkout({ trip }) {
                                 </p>
                             </div>
 
+                            {(errors?.quantity || errors?.participants || formError) && (
+                                <p className="mb-4 text-sm text-red-500">
+                                    {formError || errors?.quantity || errors?.participants}
+                                </p>
+                            )}
+
                             <Button
-                                isButtonLink
-                                href={`/trip-bareng/${trip.id}/payment`}
+                                onClick={handleSubmit}
                                 type="primary"
                                 size="md"
+                                disabled={isSubmitting || quantity < 1}
                                 className="w-full font-bold"
                             >
-                                Bayar Sekarang
+                                {isSubmitting ? "Memproses..." : "Bayar Sekarang"}
                             </Button>
                         </div>
                     </div>

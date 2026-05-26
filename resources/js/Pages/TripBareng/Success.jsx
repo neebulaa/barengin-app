@@ -21,7 +21,7 @@ export default function Success({ order }) {
 
                 {/* 2. Judul */}
                 <h1 className="text-3xl font-bold text-neutral-900 mb-2 text-center">Pembayaran Berhasil</h1>
-                <p className="text-lg text-neutral-600 mb-10 text-center">Yeay, Pembayaran Kamu berhasil</p>
+                <p className="text-lg text-neutral-600 mb-10 text-center">{order.slot_message}</p>
 
                 {/* 3. Kartu Transaksi */}
                 <div className="w-full max-w-[500px] relative mb-8">
@@ -59,11 +59,12 @@ export default function Success({ order }) {
                         </div>
                     </div>
 
-                    {/* 4. Floating Badge (7 Teman Baru Menunggu) */}
-                    <div className="absolute -bottom-5 right-2 md:-right-8 bg-[#6ED78D] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-green-200 z-10 font-semibold text-sm">
-                        <FaUserFriends className="text-lg" />
-                        {order.friends_waiting} Teman Baru Menunggu
-                    </div>
+                    {order.friends_waiting > 0 && (
+                        <div className="absolute -bottom-5 right-2 md:-right-8 bg-[#6ED78D] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-green-200 z-10 font-semibold text-sm">
+                            <FaUserFriends className="text-lg" />
+                            {order.friends_waiting} Teman Baru Menunggu
+                        </div>
+                    )}
                 </div>
 
                 {/* 5. Tombol Aksi */}
