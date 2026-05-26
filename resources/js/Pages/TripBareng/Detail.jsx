@@ -19,6 +19,8 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 
 export default function Detail({ trip }) {
     const currentTrip = trip; // Asumsikan data trip sudah valid dari backend
+    const participantAvatars = currentTrip.participant_avatars || [];
+    const participantCount = currentTrip.participant_count || participantAvatars.length;
 
     return (
         <div className="min-h-screen bg-white pb-32">
@@ -70,31 +72,29 @@ export default function Detail({ trip }) {
                             <span>{currentTrip.duration}</span>
                         </div>
 
-                        {/* Avatar Group & Confirmed Count */}
-                        <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
-                            <div className="flex -space-x-3">
-                                {[1, 2, 3].map((i) => (
-                                    <img
-                                        key={i}
-                                        src={`https://i.pravatar.cc/100?img=${i + 10}`}
-                                        className="w-8 h-8 rounded-full border-2 border-transparent object-cover"
-                                        alt="User"
-                                    />
-                                ))}
-                                <div className="w-8 h-8 rounded-full border-2 border-transparent bg-blue-100 text-primary-700 flex items-center justify-center text-xs font-bold z-10">
-                                    +6
+                        {participantCount > 0 && (
+                            <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
+                                <div className="flex -space-x-3">
+                                    {participantAvatars.map((participant, idx) => (
+                                        <img
+                                            key={`${participant.first_name}-${idx}`}
+                                            src={participant.profile_image}
+                                            className="w-8 h-8 rounded-full border-2 border-transparent object-cover"
+                                            alt={participant.first_name}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="text-xs leading-tight">
+                                    <p className="font-semibold text-white">
+                                        {participantCount} teman sedang menunggu di grup
+                                    </p>
+                                    <p className="text-white/80 font-medium">
+                                        {currentTrip.joined_count}/
+                                        {currentTrip.capacity} telah bergabung
+                                    </p>
                                 </div>
                             </div>
-                            <div className="text-xs leading-tight">
-                                <p className="font-semibold text-white">
-                                    Wisatawan Terkonfirmasi
-                                </p>
-                                <p className="text-white/80 font-medium">
-                                    {currentTrip.joined_count}/
-                                    {currentTrip.capacity} telah bergabung
-                                </p>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 

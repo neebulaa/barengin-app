@@ -6,10 +6,164 @@ use App\Models\Trip;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class TripsController extends Controller
 {
+    private const SERVICE_FEE = 5000;
+    private const INSURANCE_FEE = 5000;
+
+    private function confirmedOrderStatuses(): array
+    {
+        return ['paid', 'confirmed'];
+    }
+
+    private function getJoinedCountForTrip(int $tripId): int
+    {
+        $joinedByOrders = (int) DB::table('trip_orders')
+            ->where('trip_id', $tripId)
+            ->whereIn('order_status', $this->confirmedOrderStatuses())
+            ->sum('quantity');
+
+        if ($joinedByOrders > 0) {
+            return $joinedByOrders;
+        }
+
+        if (Schema::hasColumn('trip_participants', 'trip_order_id')) {
+            return (int) DB::table('trip_participants')
+                ->join('trip_orders', 'trip_participants.trip_order_id', '=', 'trip_orders.id')
+                ->where('trip_orders.trip_id', $tripId)
+                ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses())
+                ->count();
+        }
+
+        if (Schema::hasColumn('trip_participants', 'trip_id')) {
+            return (int) DB::table('trip_participants')
+                ->where('trip_id', $tripId)
+                ->count();
+        }
+
+        return 0;
+    }
+
+    private function getParticipantAvatars(int $tripId): array
+    {
+        $mapUserToAvatar = function ($fullName, $profileImage) {
+            $fullName = trim((string) ($fullName ?? ''));
+            $firstName = $fullName !== '' ? explode(' ', $fullName)[0] : 'Peserta';
+
+            return [
+                'first_name' => $firstName,
+                'profile_image' => $profileImage
+                    ? (str_starts_with($profileImage, 'http://') || str_starts_with($profileImage, 'https://')
+                        ? $profileImage
+                        : asset('storage/' . $profileImage))
+                    : asset('assets/default-profile.png'),
+            ];
+        };
+
+        if (!Schema::hasColumn('trip_participants', 'user_id')) {
+            $orderUsers = DB::table('trip_orders')
+                ->join('users', 'trip_orders.user_id', '=', 'users.id')
+                ->where('trip_orders.trip_id', $tripId)
+                ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses())
+                ->select('users.full_name', 'users.profile_image', 'trip_orders.quantity')
+                ->orderByDesc('trip_orders.created_at')
+                ->get();
+
+            $fallbackAvatars = [];
+            foreach ($orderUsers as $orderUser) {
+                for ($i = 0; $i < (int) $orderUser->quantity; $i++) {
+                    $fallbackAvatars[] = $mapUserToAvatar($orderUser->full_name, $orderUser->profile_image);
+                }
+            }
+
+            return $fallbackAvatars;
+        }
+
+        $participantsQuery = DB::table('trip_participants')
+            ->join('users', 'trip_participants.user_id', '=', 'users.id')
+            ->select('users.full_name', 'users.profile_image');
+
+        if (Schema::hasColumn('trip_participants', 'trip_order_id')) {
+            $participantsQuery
+                ->join('trip_orders', 'trip_participants.trip_order_id', '=', 'trip_orders.id')
+                ->where('trip_orders.trip_id', $tripId)
+                ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses());
+        } elseif (Schema::hasColumn('trip_participants', 'trip_id')) {
+            $participantsQuery->where('trip_participants.trip_id', $tripId);
+        } else {
+            return [];
+        }
+
+        $avatars = $participantsQuery
+            ->orderByDesc('trip_participants.created_at')
+            ->get()
+            ->map(fn ($participant) => $mapUserToAvatar($participant->full_name, $participant->profile_image))
+            ->values()
+            ->all();
+
+        if (!empty($avatars)) {
+            return $avatars;
+        }
+
+        $orderUsers = DB::table('trip_orders')
+            ->join('users', 'trip_orders.user_id', '=', 'users.id')
+            ->where('trip_orders.trip_id', $tripId)
+            ->whereIn('trip_orders.order_status', $this->confirmedOrderStatuses())
+            ->select('users.full_name', 'users.profile_image', 'trip_orders.quantity')
+            ->orderByDesc('trip_orders.created_at')
+            ->get();
+
+        $fallbackAvatars = [];
+        foreach ($orderUsers as $orderUser) {
+            for ($i = 0; $i < (int) $orderUser->quantity; $i++) {
+                $fallbackAvatars[] = $mapUserToAvatar($orderUser->full_name, $orderUser->profile_image);
+            }
+        }
+
+        return $fallbackAvatars;
+    }
+
+    private function getTripForOrder(int $tripId, ?int $orderId = null)
+    {
+        $orderQuery = DB::table('trip_orders')
+            ->leftJoin('transactions', 'trip_orders.transaction_id', '=', 'transactions.id')
+            ->leftJoin('trips', 'trip_orders.trip_id', '=', 'trips.id')
+            ->select(
+                'trip_orders.id',
+                'trip_orders.trip_id',
+                'trip_orders.quantity',
+                'trip_orders.total',
+                'trip_orders.transaction_id',
+                'trip_orders.order_status',
+                'transactions.payment_method',
+                'transactions.va_number',
+                'transactions.expired_at',
+                'transactions.total_amount',
+                'trips.name as trip_name',
+                'trips.start_date',
+                'trips.end_date',
+                'trips.image'
+            )
+            ->where('trip_orders.trip_id', $tripId);
+
+        if ($orderId) {
+            $orderQuery->where('trip_orders.id', $orderId);
+        }
+
+        if (Auth::check()) {
+            $orderQuery->where('trip_orders.user_id', Auth::id());
+        } elseif ($orderId) {
+            return null;
+        }
+
+        return $orderQuery->orderByDesc('trip_orders.created_at')->first();
+    }
+
     public function index()
     {
         $tripsPaginated = DB::table('trips')
@@ -23,11 +177,9 @@ class TripsController extends Controller
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
-            // [PERBAIKAN]: Hitung partisipan murni sesuai tabel DB (tanpa angka acak)
-            $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+            $joined = $this->getJoinedCountForTrip((int) $trip->id);
             
-            // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
-            $remaining = $trip->people_amount - $joined;
+            $remaining = max(0, $trip->people_amount - $joined);
 
             $guiderRating = DB::table('user__ratings')
                 ->where('rated_user_id', $trip->host_id)
@@ -44,8 +196,9 @@ class TripsController extends Controller
                 'title' => $trip->name,
                 'location' => 'Indonesia', 
                 'date' => $startDate->format('d M y') . ' - ' . $endDate->format('d M y') . ' (' . $duration . ')',
-                'capacity' => $joined . '/' . $trip->people_amount . ' orang',
-                'remaining_seats' => $remaining > 0 ? $remaining : 0, 
+                'joined_count' => $joined,
+                'capacity' => $trip->people_amount,
+                'remaining_seats' => $remaining,
                 'rating' => (float) $trip->rating, 
                 'reviews' => rand(10, 150), // Ini review trip (bukan guide), bisa biarkan random dulu kalau belum ada tabelnya
                 'price' => (float) $trip->price,
@@ -78,8 +231,8 @@ class TripsController extends Controller
 
         if (!$trip) abort(404);
 
-        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+        $joined = $this->getJoinedCountForTrip((int) $trip->id);
+        $participantAvatars = $this->getParticipantAvatars((int) $trip->id);
 
         // 2. Ambil Rata-Rata Rating Guide
         $guiderRating = DB::table('user__ratings')
@@ -128,7 +281,9 @@ class TripsController extends Controller
             'location' => 'Indonesia',
             'duration' => $startDate->diffInDays($endDate) . ' Hari',
             'date_range' => $startDate->format('d F Y') . ' hingga ' . $endDate->format('d F Y'),
-            'joined_count' => $joined, // <--- Sekarang pakai $joined asli dari DB
+            'joined_count' => $joined,
+            'participant_count' => $joined,
+            'participant_avatars' => $participantAvatars,
             'capacity' => $trip->people_amount,
             'price' => (float) $trip->price,
             'description' => $trip->description, 
@@ -152,16 +307,18 @@ class TripsController extends Controller
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
-        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+        $joined = $this->getJoinedCountForTrip((int) $trip->id);
+        $remainingQuota = max(0, $trip->people_amount - $joined);
 
         $trip_check_out = [
             'id' => $trip->id,
             'title' => $trip->name,
             'price' => (float) $trip->price,
-            'joined_count' => $joined, // <--- Pakai data asli
+            'joined_count' => $joined,
             'capacity' => $trip->people_amount,
-            'remaining_quota' => $trip->people_amount - $joined, // <--- Hitungan sisa kursi akurat
+            'remaining_quota' => $remainingQuota,
+            'service_fee' => self::SERVICE_FEE,
+            'insurance_fee' => self::INSURANCE_FEE,
             'image' => $trip->image ?? '/assets/trips/bromo.jpg',
         ];
 
@@ -170,17 +327,146 @@ class TripsController extends Controller
         ]);
     }
 
-    public function payment($id)
+    public function store(Request $request, $id)
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $trip = DB::table('trips')->where('id', $id)->first();
+        if (!$trip) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1'],
+            'paymentMethod' => ['required', 'string', 'max:100'],
+            'participants' => ['required', 'array', 'min:1'],
+            'participants.*.name' => ['required', 'string', 'max:255'],
+            'participants.*.passport' => ['nullable', 'string', 'max:20'],
+            'participants.*.phone' => ['required', 'string', 'max:20'],
+            'participants.*.nik' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $quantity = (int) $validated['quantity'];
+        $participants = $validated['participants'];
+
+        if (count($participants) !== $quantity) {
+            return back()->withErrors([
+                'participants' => 'Jumlah data partisipan harus sama dengan quantity yang dipilih.',
+            ]);
+        }
+
+        $joinedCount = $this->getJoinedCountForTrip((int) $trip->id);
+        $remainingQuota = max(0, $trip->people_amount - $joinedCount);
+
+        if ($quantity > $remainingQuota) {
+            return back()->withErrors([
+                'quantity' => 'Slot tersisa tidak mencukupi untuk quantity yang dipilih.',
+            ]);
+        }
+
+        $subtotal = (float) $trip->price * $quantity;
+        $total = $subtotal + self::SERVICE_FEE + self::INSURANCE_FEE;
+
+        $orderId = DB::transaction(function () use ($trip, $quantity, $total, $validated, $participants) {
+            $transactionId = (string) Str::uuid();
+
+            DB::table('transactions')->insert([
+                'id' => $transactionId,
+                'user_id' => Auth::id(),
+                'total_amount' => $total,
+                'type' => 'trip',
+                'payment_method' => $validated['paymentMethod'],
+                'va_number' => str_pad((string) random_int(1, 999999999999), 12, '0', STR_PAD_LEFT),
+                'expired_at' => now()->addHours(24),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $orderId = DB::table('trip_orders')->insertGetId([
+                'transaction_id' => $transactionId,
+                'trip_id' => $trip->id,
+                'user_id' => Auth::id(),
+                'quantity' => $quantity,
+                'total' => $total,
+                'order_status' => 'paid',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('trip_order_fees')->insert([
+                [
+                    'trip_order_id' => $orderId,
+                    'fee_name' => 'Biaya Layanan',
+                    'amount' => self::SERVICE_FEE,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'trip_order_id' => $orderId,
+                    'fee_name' => 'Biaya Asuransi Trip',
+                    'amount' => self::INSURANCE_FEE,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            $participantColumns = Schema::getColumnListing('trip_participants');
+
+            foreach ($participants as $participant) {
+                $insertData = [
+                    'full_name' => $participant['name'],
+                    'paspor' => $participant['passport'] ?? null,
+                    'phone_number' => $participant['phone'],
+                    'nik' => $participant['nik'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                if (in_array('trip_order_id', $participantColumns, true)) {
+                    $insertData['trip_order_id'] = $orderId;
+                }
+
+                if (in_array('trip_id', $participantColumns, true)) {
+                    $insertData['trip_id'] = $trip->id;
+                }
+
+                if (in_array('user_id', $participantColumns, true)) {
+                    $insertData['user_id'] = Auth::id();
+                }
+
+                DB::table('trip_participants')->insert($insertData);
+            }
+
+            return $orderId;
+        });
+
+        return redirect()->route('trip-bareng.payment', ['id' => $trip->id, 'order' => $orderId]);
+    }
+
+    public function payment(Request $request, $id)
     {
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
+        $order = $this->getTripForOrder((int) $id, $request->integer('order'));
+        $feesTotal = 0;
+
+        if ($order) {
+            $feesTotal = (float) DB::table('trip_order_fees')
+                ->where('trip_order_id', $order->id)
+                ->sum('amount');
+        }
+
         $paymentData = [
             'trip_id' => $id,
-            'total_amount' => (float) $trip->price + 10000, 
-            'due_date' => Carbon::now()->addHours(24)->format('d F Y, H:i'),
-            'bank_name' => 'BCA Virtual Account',
-            'va_number' => '123 456 789 123',
+            'order_id' => $order->id ?? null,
+            'total_amount' => $order ? (float) ($order->total_amount ?? $order->total) : ((float) $trip->price + self::SERVICE_FEE + self::INSURANCE_FEE),
+            'due_date' => $order && $order->expired_at ? Carbon::parse($order->expired_at)->format('d F Y, H:i') : Carbon::now()->addHours(24)->format('d F Y, H:i'),
+            'bank_name' => $order && $order->payment_method ? strtoupper($order->payment_method) : 'BCA Virtual Account',
+            'va_number' => $order->va_number ?? '123 456 789 123',
+            'fees_total' => $feesTotal,
         ];
 
         return Inertia::render('TripBareng/WaitingPayment', [
@@ -188,25 +474,33 @@ class TripsController extends Controller
         ]);
     }
 
-    public function success($id)
+    public function success(Request $request, $id)
     {
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
-        $startDate = Carbon::parse($trip->start_date);
-        $endDate = Carbon::parse($trip->end_date);
+        $order = $this->getTripForOrder((int) $id, $request->integer('order'));
+        $quantity = (int) ($order->quantity ?? 1);
+        $transactionId = $order->transaction_id ?? ('OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT));
+        $tripTitle = $order->trip_name ?? $trip->name;
+        $tripImage = $order->image ?? ($trip->image ?? '/assets/trips/bromo.jpg');
 
-        $order = [
-            'transaction_id' => 'OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT),
-            'trip_title' => $trip->name,
+        $startDate = Carbon::parse($order->start_date ?? $trip->start_date);
+        $endDate = Carbon::parse($order->end_date ?? $trip->end_date);
+        $joined = $this->getJoinedCountForTrip((int) $id);
+
+        $successData = [
+            'transaction_id' => $transactionId,
+            'trip_title' => $tripTitle,
             'date_range' => $startDate->format('d M') . ' - ' . $endDate->format('d M Y'),
-            'quantity' => 1,
-            'image' => $trip->image ?? '/assets/trips/bromo.jpg',
-            'friends_waiting' => rand(3, 15),
+            'quantity' => $quantity,
+            'image' => $tripImage,
+            'friends_waiting' => max(0, $joined - $quantity),
+            'slot_message' => "Kamu berhasil memesan {$quantity} slot",
         ];
 
         return Inertia::render('TripBareng/Success', [
-            'order' => $order,
+            'order' => $successData,
         ]);
     }
 }
