@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\PergiBareng;
 use App\Models\PergiBarengParticipant;
-use App\Models\PergiBarengRating;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -19,9 +18,9 @@ class PergiBarengController extends Controller
     {
         $parsedDate = $trip->time_appointment;
 
-        // Hitung rata-rata rating trip ini dari tabel PergiBarengRating
-        $avgRating = $trip->pergi_bareng_ratings->avg('amount_rating') ?? 0;
-        $totalReviews = $trip->pergi_bareng_ratings->count();
+        // KARENA RATING MILIK USER, KITA BUAT STATIS DULU SEMENTARA
+        $avgRating = 5.0; 
+        $totalReviews = 10;
 
         return [
             'id' => $trip->id,
@@ -40,8 +39,8 @@ class PergiBarengController extends Controller
             ],
             // Data Penyelenggara / Initiator
             'organizer' => [
-                'name' => $trip->initiator->name ?? 'Bagus Arya',
-                // Cek apakah user punya profil image, jika tidak pakai default
+                // PERBAIKAN: Gunakan full_name
+                'name' => $trip->initiator->full_name ?? 'Bagus Arya',
                 'avatar' => $trip->initiator->profile_photo_url ?? '/assets/default-avatar.png',
                 'rating' => number_format($avgRating, 1), 
                 'reviews' => $totalReviews,
@@ -51,35 +50,35 @@ class PergiBarengController extends Controller
             'participants' => $trip->pergi_bareng_participants->map(function ($p) {
                 return [
                     'name' => $p->full_name,
-                    'age' => 20, // Belum ada field umur di DB, kita buat statis dulu
+                    'age' => 20, 
                     'rating' => 5.0, 
-                    // Mengambil avatar dari relasi User jika partisipan tersebut memiliki akun
                     'avatar' => $p->user ? ($p->user->profile_photo_url ?? '/assets/default-avatar.png') : '/assets/default-avatar.png',
-                    'verified' => $p->user_id ? true : false // Verified jika dia adalah registered user
+                    'verified' => $p->user_id ? true : false 
                 ];
             }),
         ];
     }
     
     public function index()
-    {
-        // 1. Ambil data trip dari database beserta relasinya
-        $trips = PergiBareng::with(['initiator', 'pergi_bareng_participants', 'pergi_bareng_ratings'])
-            ->latest() // Urutkan dari yang terbaru
+    {   
+        
+        // 1. Ambil data trip dari database beserta relasinya (TANPA pergi_bareng_ratings)
+        $trips = PergiBareng::with(['initiator', 'pergi_bareng_participants'])
+            ->latest() 
             ->get();
-
-        // 2. Format data agar sesuai dengan props yang diminta oleh PergiBarengCard.jsx di React
+        
+        // 2. Format data
         $formattedTrips = $trips->map(function ($trip) {
             $parsedDate = $trip->time_appointment;
             
-            // Hitung rating
-            $avgRating = $trip->pergi_bareng_ratings->avg('amount_rating') ?? 0;
-            $totalReviews = $trip->pergi_bareng_ratings->count();
+            // Rating statis sementara
+            $avgRating = 5.0;
+            $totalReviews = 10;
             
             // Hitung kursi
             $joined = $trip->pergi_bareng_participants->count();
             
-            // Logika icon transportasi (sesuaikan string 'car' atau 'train')
+            // Logika icon transportasi
             $transportIcon = 'car';
             if (str_contains(strtolower($trip->transportation), 'umum')) {
                 $transportIcon = 'train';
@@ -87,40 +86,39 @@ class PergiBarengController extends Controller
 
             return [
                 'id' => $trip->id,
-                // Jika belum ada gambar upload, gunakan dummy
                 'image' => $trip->img_name ? '/storage/' . $trip->img_name : '/assets/terminal-cibubur.jpg', 
                 'title' => $trip->name,
                 'address' => $trip->departure_loc,
-                'date' => $parsedDate->translatedFormat('d M y'), // ex: 31 Jan 26
-                'time' => $parsedDate->format('H:i'), // ex: 09:00
+                'date' => $parsedDate->translatedFormat('d M y'), 
+                'time' => $parsedDate->format('H:i'), 
                 'capacity' => $joined . '/' . $trip->people_amount . ' Orang',
                 'remainingSeats' => max(0, $trip->people_amount - $joined),
                 'user' => [
-                    'name' => $trip->initiator->name ?? 'Penyelenggara',
+                    // PERBAIKAN: Gunakan full_name
+                    'name' => $trip->initiator->full_name ?? 'Penyelenggara',
                     'avatar' => $trip->initiator->profile_photo_url ?? '/assets/default-avatar.png',
-                    'rating' => number_format($avgRating, 1),
+                    'rating' => number_format($avgRating,1),
                     'reviews' => $totalReviews,
-                    'verified' => true, // Default true untuk saat ini
+                    'verified' => true, 
                 ],
                 'transportType' => $trip->transportation,
                 'transportIcon' => $transportIcon,
                 'href' => '/pergi-bareng/' . $trip->id,
             ];
         });
-
+        
         // 3. Kirim data ke halaman Index.jsx
-        return Inertia::render('PergiBareng/Index', [
-            'trips' => $formattedTrips
+       return Inertia::render('PergiBareng/Index', [
+            // Tambahkan ->values()->toArray() di sini!
+            'trips' => $formattedTrips->values()->toArray() 
         ]);
     }
 
     public function show($id)
     {
-        // Load relasi termasuk data 'user' di dalam participants dan 'pergi_bareng_ratings'
         $trip = PergiBareng::with([
             'initiator', 
             'pergi_bareng_participants.user', 
-            'pergi_bareng_ratings'
         ])->findOrFail($id);
         
         return Inertia::render('PergiBareng/Show', [
@@ -133,7 +131,6 @@ class PergiBarengController extends Controller
         $trip = PergiBareng::with([
             'initiator', 
             'pergi_bareng_participants.user',
-            'pergi_bareng_ratings'
         ])->findOrFail($id);
         
         return Inertia::render('PergiBareng/Join', [
@@ -143,11 +140,8 @@ class PergiBarengController extends Controller
 
     public function store(Request $request, $id)
     {
-        // 1. Pastikan trip-nya ada
         $trip = PergiBareng::findOrFail($id);
 
-        // 2. Validasi inputan dari React (Pastikan nama variabel dari React cocok dengan ini)
-        // Asumsi dari React mengirim array bernama 'participants'
         $request->validate([
             'participants' => 'required|array',
             'participants.*.nama' => 'required|string', 
@@ -156,12 +150,9 @@ class PergiBarengController extends Controller
             'participants.*.nik' => 'required|string|max:16',
         ]);
 
-        // 3. Looping data peserta dan simpan ke database TANPA user_id
         foreach ($request->participants as $participant) {
             PergiBarengParticipant::create([
                 'pergi_bareng_id' => $trip->id,
-                
-                // Kiri = nama kolom di database Anda | Kanan = nama variabel dari React Anda
                 'full_name' => $participant['nama'], 
                 'paspor' => $participant['paspor'] ?? null,
                 'phone_number' => $participant['telepon'],
@@ -169,7 +160,6 @@ class PergiBarengController extends Controller
             ]);
         }
 
-        // 4. Redirect ke halaman sukses
         return redirect()->route('pergi-bareng.success', $trip->id);
     }
 
@@ -178,7 +168,6 @@ class PergiBarengController extends Controller
         $trip = PergiBareng::with([
             'initiator', 
             'pergi_bareng_participants.user',
-            'pergi_bareng_ratings'
         ])->findOrFail($id);
         
         return Inertia::render('PergiBareng/Success', [

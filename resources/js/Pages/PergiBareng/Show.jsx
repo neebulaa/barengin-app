@@ -7,41 +7,60 @@ import Button from "@/Components/Button";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
-
 import { 
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle, 
     FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar
 } from "react-icons/fa";
 
+
+
 export default function Show({ trip }) {
-    const [position, setPosition] = useState([-6.1751, 106.8272]); 
+    const [position, setPosition] = useState(null); 
 
     useEffect(() => {
-        // Kalau datanya kosong, tidak usah repot-repot mencari
-        if (!trip?.departure_loc) return; 
+        // PERBAIKAN 1: Panggil variabel yang benar (trip.details.titik_kumpul)
+        const alamat = trip?.details?.titik_kumpul;
+
+        if (!alamat) {
+            setPosition([-6.1751, 106.8272]); // Default ke Monas kalau beneran kosong
+            return; 
+        }
 
         const fetchCoordinates = async () => {
             try {
-                // Kita tambahkan kata 'Indonesia' agar pencarian OpenStreetMap lebih akurat
-                const query = encodeURIComponent(`${trip.departure_loc}, Indonesia`);
+                const query = encodeURIComponent(`${alamat}, Indonesia`);
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
                 );
                 const data = await response.json();
                 
-                // Kalau jalannya ketemu di dunia nyata, geser petanya!
                 if (data && data.length > 0) {
                     setPosition([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
                 } else {
-                    console.log("Jalan tidak ditemukan di peta asli, tetap di posisi default.");
+                    console.log("Alamat lengkap tidak ditemukan, mencari nama kotanya saja...");
+                    const addressParts = alamat.split(',');
+                    if (addressParts.length > 0) {
+                        const fallbackQuery = encodeURIComponent(addressParts[addressParts.length - 1].trim());
+                        const fallbackResponse = await fetch(
+                            `https://nominatim.openstreetmap.org/search?format=json&q=${fallbackQuery}&limit=1`
+                        );
+                        const fallbackData = await fallbackResponse.json();
+                        
+                        if (fallbackData && fallbackData.length > 0) {
+                            setPosition([parseFloat(fallbackData[0].lat), parseFloat(fallbackData[0].lon)]);
+                        } else {
+                            setPosition([-6.1751, 106.8272]); // Menyerah, kembali ke Monas
+                        }
+                    }
                 }
             } catch (error) {
                 console.error("Gagal cari koordinat:", error);
+                setPosition([-6.1751, 106.8272]);
             }
         };
 
         fetchCoordinates();
-    }, [trip?.departure_loc]);
+    }, [trip?.details?.titik_kumpul]);
     return (
         <MainLayout>
             <Head title={`Detail Perjalanan - ${trip.title}`} />
@@ -176,35 +195,42 @@ export default function Show({ trip }) {
                         <div className="sticky top-24 space-y-4">
                             <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
                                 {/* Map Placeholder */}
-                                <div className="h-40 bg-neutral-200 relative z-0">
-                                    <MapContainer 
-                                        key={`${position[0]}-${position[1]}`} 
-                                        center={position} 
-                                        zoom={15} 
-                                        scrollWheelZoom={false} 
-                                        className="w-full h-full z-0"
-                                    >
-                                        <TileLayer
-                                            attribution='© OpenStreetMap'
-                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        />
-                                        <Marker position={position}>
-                                            <Popup>
-                                                <b className="font-bold">Titik Kumpul:</b> <br /> 
-                                                {trip?.departure_loc || "Lokasi belum ditentukan"}
-                                            </Popup>
-                                        </Marker>
-                                    </MapContainer>
+                                {/* PERBAIKAN 2: Render bersyarat agar peta tidak geter */}
+                                <div className="h-48 bg-neutral-200 relative z-0 flex items-center justify-center">
+                                    {!position ? (
+                                        <span className="text-neutral-500 text-sm animate-pulse">Mencari lokasi...</span>
+                                    ) : (
+                                        <MapContainer 
+                                            center={position} 
+                                            zoom={15} 
+                                            scrollWheelZoom={false} 
+                                            className="w-full h-full z-0"
+                                        >
+                                            <TileLayer
+                                                attribution='© OpenStreetMap'
+                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            />
+                                            <Marker position={position}>
+                                                <Popup>
+                                                    <b className="font-bold">Titik Kumpul:</b> <br /> 
+                                                    {/* PERBAIKAN 3: Variabel Popup yang benar */}
+                                                    {trip?.details?.titik_kumpul || "Lokasi belum ditentukan"}
+                                                </Popup>
+                                            </Marker>
+                                        </MapContainer>
+                                    )}
 
+                                    {/* PERBAIKAN 4: Link Google Maps yang valid */}
                                     <Button 
                                         size="sm" 
                                         variant="solid" 
-                                        className="absolute bottom-3 right-3 z-[1000] bg-neutral-600 text-white shadow-md hover:bg-primary-600"
-                                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip?.departure_loc)}`, '_blank')}
+                                        className="absolute bottom-1 right-0 z-[1000] bg-primary-600 text-white shadow-md hover:bg-primary-700"
+                                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip?.details?.titik_kumpul || "Indonesia")}`, '_blank')}
                                     >
-                                        Lihat di Peta
+                                        Buka di Google Maps
                                     </Button>
                                 </div>
+
                                 <div className="p-5">
                                     <h4 className="font-bold text-sm mb-3">Estimasi Pembiayaan</h4>
                                     <div className="space-y-2 text-sm text-neutral-600 mb-4">
@@ -218,19 +244,17 @@ export default function Show({ trip }) {
                                 </div>
                             </div>
                             
-                            {/* Tombol Aksi Bawah */}
                             <div className="bg-white rounded-2xl border border-neutral-200 p-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-xs text-neutral-500">Ikut pergi bareng sekarang</p>
-                                    <p className="text-sm font-bold">{trip.title}</p>
+                                    <p className="text-sm font-bold truncate max-w-[120px]">{trip.title}</p>
                                 </div>
                                 <Button isButtonLink href={`/pergi-bareng/${trip.id}/join`} type="primary">
-                                    Ikut Sekarang &rarr;
+                                    Ikut Sekarang
                                 </Button>
                             </div>
                         </div>
                     </div>
-                    
 
                 </div>
             </Container>
