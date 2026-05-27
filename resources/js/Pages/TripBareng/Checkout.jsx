@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Head, Link, router } from "@inertiajs/react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
@@ -11,126 +10,196 @@ import { FaChevronLeft, FaUserFriends, FaMinus, FaPlus } from "react-icons/fa";
 import { MdOutlineShoppingBag } from "react-icons/md";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 
+// ✅ PERBAIKAN: Hanya satu export default, storageKey dipindah ke dalam komponen
 export default function Checkout({ trip }) {
-    const [quantity, setQuantity] = useState(1);
-    const [participants, setParticipants] = useState([]);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [snapReady, setSnapReady] = useState(false);
+    const storageKey = `trip_${trip.id}_participants`;
 
-    // =========
-    // 1) Load Midtrans Snap script
-    // =========
-    useEffect(() => {
-        const existing = document.querySelector('script[src*="midtrans.com/snap/snap.js"]');
-        if (existing) {
-            setSnapReady(true);
-            return;
+    const createEmptyParticipant = () => ({
+        name: "",
+        passport: "",
+        phone: "",
+        nik: "",
+    });
+
+    // ✅ PERBAIKAN: quantity hanya dideklarasikan sekali
+    // Prioritas: ambil dari jumlah data tersimpan di localStorage, fallback ke 1
+    const [quantity, setQuantity] = useState(() => {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return Array.isArray(parsed) ? parsed.length : 1;
         }
+        return trip.remaining_quota > 0 ? 1 : 0;
+    });
 
-        const script = document.createElement("script");
-        script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-        // GANTI dengan CLIENT KEY kamu
-        script.setAttribute("data-client-key", "Mid-client-4rh5_t-r2jDJxAyN");
+    const [paymentMethod, setPaymentMethod] = useState("bca_va");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formError, setFormError] = useState("");
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [snapToken, setSnapToken] = useState(null);
 
-        script.onload = () => setSnapReady(true);
-        script.onerror = () => setSnapReady(false);
+    // ✅ PERBAIKAN: errors hanya satu state (array untuk validasi per-partisipan)
+    const [errors, setErrors] = useState([]);
 
-        document.head.appendChild(script);
+    // ✅ PERBAIKAN: participants hanya dideklarasikan sekali
+    const [participants, setParticipants] = useState(() => {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                return Array.isArray(parsed) ? parsed : [createEmptyParticipant()];
+            } catch {
+                return [createEmptyParticipant()];
+            }
+        }
+        return [createEmptyParticipant()];
+    });
 
-        return () => {
-            // optional: kalau kamu tidak mau remove, boleh dihapus bagian ini
-            document.head.removeChild(script);
-        };
-    }, []);
+    // Simpan data partisipan ke LocalStorage setiap ada perubahan
+    useEffect(() => {
+        localStorage.setItem(storageKey, JSON.stringify(participants));
+    }, [participants, storageKey]);
 
-    // =========
-    // 2) Dynamic participants form (sesuai quantity)
-    // =========
+    // Sinkronisasi jumlah form partisipan dengan quantity
     useEffect(() => {
         setParticipants((prev) => {
             if (prev.length === quantity) return prev;
+
             if (prev.length < quantity) {
                 return [
                     ...prev,
-                    ...Array(quantity - prev.length).fill({
-                        name: "",
-                        passport: "",
-                        phone: "",
-                        nik: "",
-                    }),
+                    ...Array.from(
+                        { length: quantity - prev.length },
+                        createEmptyParticipant
+                    ),
                 ];
             }
+
             return prev.slice(0, quantity);
         });
     }, [quantity]);
 
-    const handleQuantityChange = (type) => {
-        if (isProcessing) return;
+    // Muat Script Midtrans Snap
+    useEffect(() => {
+        const script = document.createElement("script");
+        script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
+        script.setAttribute("data-client-key", "Mid-client-4rh5_t-r2jDJxAyN");
+        document.head.appendChild(script);
 
-        if (type === "minus" && quantity > 1) setQuantity((q) => q - 1);
-        if (type === "plus" && quantity < trip.remaining_quota) setQuantity((q) => q + 1);
+        return () => {
+            if (document.head.contains(script)) {
+                document.head.removeChild(script);
+            }
+        };
+    }, []);
+
+    // ✅ PERBAIKAN: handleParticipantChange hanya satu versi (dengan validasi inline)
+    const handleParticipantChange = (index, field, value) => {
+        setParticipants((prev) =>
+            prev.map((item, idx) =>
+                idx === index ? { ...item, [field]: value } : item
+            )
+        );
+
+        // Hapus pesan error saat user mulai mengetik
+        if (errors[index] && errors[index][field]) {
+            const newErrors = [...errors];
+            newErrors[index] = { ...newErrors[index], [field]: false };
+            setErrors(newErrors);
+        }
     };
 
-    // =========
-    // 3) Kalkulasi
-    // =========
-    const subtotal = useMemo(() => trip.price * quantity, [trip.price, quantity]);
-    const serviceFee = useMemo(() => 5000 * quantity, [quantity]);
-    const insuranceFee = useMemo(() => 5000 * quantity, [quantity]);
-    const total = useMemo(() => subtotal + serviceFee + insuranceFee, [subtotal, serviceFee, insuranceFee]);
+    // Tambah/Kurang kuantitas peserta
+    const handleQuantityChange = (type) => {
+        if (type === "minus" && quantity > 1) {
+            setQuantity((q) => q - 1);
+            setParticipants((prev) => prev.slice(0, quantity - 1));
+            setErrors((prev) => prev.slice(0, quantity - 1));
+        }
+        if (type === "plus" && quantity < trip.remaining_quota) {
+            setQuantity((q) => q + 1);
+            setParticipants((prev) => [...prev, createEmptyParticipant()]);
+        }
+    };
 
-    // =========
-    // 4) Pay with Midtrans Snap
-    // =========
+    // Validasi & proses pembayaran Midtrans
     const handlePayment = async () => {
-        if (!snapReady || !window.snap) {
-            alert("Midtrans Snap belum siap. Coba refresh halaman.");
+        // Validasi form
+        let newErrors = [];
+        let firstInvalidIndex = -1;
+
+        participants.forEach((p, idx) => {
+            let currentError = { name: false, phone: false };
+
+            if (p.name.trim() === "") {
+                currentError.name = true;
+                if (firstInvalidIndex === -1) firstInvalidIndex = idx;
+            }
+            if (p.phone.trim() === "") {
+                currentError.phone = true;
+                if (firstInvalidIndex === -1) firstInvalidIndex = idx;
+            }
+            newErrors[idx] = currentError;
+        });
+
+        setErrors(newErrors);
+
+        // Scroll ke form yang belum diisi
+        if (firstInvalidIndex !== -1) {
+            const element = document.getElementById(`participant-form-${firstInvalidIndex}`);
+            if (element) {
+                element.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
             return;
         }
 
-        if (quantity < 1) return;
+        // Buka kembali popup jika token sudah ada
+        if (snapToken) {
+            openMidtransPopup(snapToken);
+            return;
+        }
 
+        // Buat transaksi baru
         setIsProcessing(true);
-
         try {
-            // Minta Snap Token ke Laravel
             const response = await axios.post(`/trip-bareng/${trip.id}/payment`, {
                 quantity: quantity,
-                // (opsional) kirim participants juga kalau backend mau simpan
-                // participants: participants,
+                participants: participants,
             });
 
-            const { snap_token, transaction_id } = response.data || {};
-
-            if (!snap_token || !transaction_id) {
-                throw new Error("Response token tidak lengkap (snap_token/transaction_id kosong).");
-            }
-
-            window.snap.pay(snap_token, {
-                onSuccess: function () {
-                    // Redirect berdasar transaction_id (ini kunci agar quantity di success akurat)
-                    router.visit(`/trip-bareng/${transaction_id}/success`);
-                },
-                onPending: function () {
-                    // Pending itu normal untuk VA/QRIS/transfer
-                    // Kamu bisa arahkan ke halaman waiting kalau mau, atau cukup stop loading:
-                    setIsProcessing(false);
-                },
-                onError: function () {
-                    alert("Pembayaran gagal. Silakan coba lagi.");
-                    setIsProcessing(false);
-                },
-                onClose: function () {
-                    // User menutup popup
-                    setIsProcessing(false);
-                },
-            });
+            setSnapToken(response.data.snap_token);
+            openMidtransPopup(response.data.snap_token);
         } catch (error) {
-            console.error("Gagal mendapatkan token", error);
+            console.error("Gagal mendapatkan token:", error);
             alert("Terjadi kesalahan sistem. Coba beberapa saat lagi.");
             setIsProcessing(false);
         }
     };
+
+    const openMidtransPopup = (token) => {
+        window.snap.pay(token, {
+            onSuccess: function (result) {
+                localStorage.removeItem(storageKey);
+                router.visit(`/trip-bareng/${trip.id}/success`);
+            },
+            onPending: function (result) {
+                console.log("Menunggu pembayaran...");
+            },
+            onError: function (result) {
+                alert("Pembayaran gagal. Silakan coba lagi.");
+                setIsProcessing(false);
+            },
+            onClose: function () {
+                setIsProcessing(false);
+            },
+        });
+    };
+
+    // Kalkulasi harga
+    const subtotal = trip.price * quantity;
+    const serviceFee = 5000 * quantity;
+    const insuranceFee = 5000 * quantity;
+    const total = subtotal + serviceFee + insuranceFee;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 pt-6">
@@ -152,9 +221,10 @@ export default function Checkout({ trip }) {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* LEFT COLUMN */}
+                    {/* LEFT COLUMN: Forms */}
                     <div className="lg:col-span-8 space-y-6">
-                        {/* Trip Summary & Quantity */}
+
+                        {/* 1. Trip Summary & Quantity Card */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
                             <div className="flex gap-4 items-center pb-6 border-b border-neutral-100">
                                 <img
@@ -175,15 +245,19 @@ export default function Checkout({ trip }) {
                                         {trip.joined_count} / {trip.capacity} orang telah bergabung
                                     </div>
                                     <p className="text-primary-700 font-bold">
-                                        Rp {Number(trip.price).toLocaleString("id-ID")}{" "}
-                                        <span className="text-sm font-normal text-neutral-500">/orang</span>
+                                        Rp {trip.price.toLocaleString("id-ID")}{" "}
+                                        <span className="text-sm font-normal text-neutral-500">
+                                            /orang
+                                        </span>
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between pt-6">
                                 <div>
-                                    <h4 className="font-bold text-neutral-900">Total partisipan</h4>
+                                    <h4 className="font-bold text-neutral-900">
+                                        Total partisipan
+                                    </h4>
                                     <p className="text-sm text-neutral-500">
                                         Hanya tersisa {trip.remaining_quota} kuota lagi
                                     </p>
@@ -191,17 +265,21 @@ export default function Checkout({ trip }) {
                                 <div className="flex items-center gap-4">
                                     <button
                                         onClick={() => handleQuantityChange("minus")}
-                                        disabled={quantity <= 1 || isProcessing}
+                                        disabled={quantity <= 1 || isProcessing || snapToken !== null}
                                         className="w-8 h-8 rounded-full border-2 border-primary-100 text-primary-700 flex items-center justify-center hover:bg-primary-50 disabled:opacity-30 transition"
                                     >
                                         <FaMinus className="text-xs" />
                                     </button>
-
-                                    <span className="font-bold text-lg w-4 text-center">{quantity}</span>
-
+                                    <span className="font-bold text-lg w-4 text-center">
+                                        {quantity}
+                                    </span>
                                     <button
                                         onClick={() => handleQuantityChange("plus")}
-                                        disabled={quantity >= trip.remaining_quota || isProcessing}
+                                        disabled={
+                                            quantity >= trip.remaining_quota ||
+                                            isProcessing ||
+                                            snapToken !== null
+                                        }
                                         className="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center shadow-sm hover:bg-primary-800 disabled:opacity-50 transition"
                                     >
                                         <FaPlus className="text-xs" />
@@ -210,11 +288,16 @@ export default function Checkout({ trip }) {
                             </div>
                         </div>
 
-                        {/* Participant Forms */}
+                        {/* 2. Participant Forms — jumlah form = quantity */}
                         {participants.map((p, idx) => (
                             <div
                                 key={idx}
-                                className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 animate-fade-in"
+                                id={`participant-form-${idx}`}
+                                className={`bg-white p-6 rounded-2xl shadow-sm border transition-all duration-300 ${
+                                    errors[idx]?.name || errors[idx]?.phone
+                                        ? "border-red-400 ring-4 ring-red-50"
+                                        : "border-neutral-100"
+                                }`}
                             >
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-lg font-bold text-neutral-900">
@@ -222,7 +305,9 @@ export default function Checkout({ trip }) {
                                     </h3>
                                     <span
                                         className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                            idx % 2 === 0 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                                            idx % 2 === 0
+                                                ? "bg-green-100 text-green-700"
+                                                : "bg-blue-100 text-blue-700"
                                         }`}
                                     >
                                         Person {idx + 1}
@@ -230,81 +315,147 @@ export default function Checkout({ trip }) {
                                 </div>
 
                                 <div className="space-y-5">
-                                    <Input label="Nama Lengkap" placeholder="Masukkan nama lengkap anda sesuai ktp" />
-                                    <Input label="No. Paspor (optional)" placeholder="Nomor paspor resmi anda" />
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    {/* Nama */}
+                                    <div>
                                         <Input
-                                            label="Nomor Telepon"
-                                            placeholder="No Telpon"
-                                            leftAddon={<span className="text-neutral-700 font-medium">+62</span>}
+                                            label="Nama Lengkap"
+                                            placeholder="Masukkan nama lengkap sesuai KTP"
+                                            value={p.name}
+                                            onChange={(e) =>
+                                                handleParticipantChange(idx, "name", e.target.value)
+                                            }
+                                            disabled={snapToken !== null}
                                         />
-                                        <Input label="NIK (Optional)" placeholder="NIK" />
+                                        {errors[idx]?.name && (
+                                            <p className="text-red-500 text-xs font-medium mt-1.5 flex items-center gap-1">
+                                                <IoMdInformationCircleOutline className="text-sm" />
+                                                Nama Lengkap wajib diisi.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Paspor */}
+                                    <div>
+                                        <Input
+                                            label="No. Paspor (Opsional)"
+                                            placeholder="Nomor paspor resmi anda"
+                                            value={p.passport}
+                                            onChange={(e) =>
+                                                handleParticipantChange(idx, "passport", e.target.value)
+                                            }
+                                            disabled={snapToken !== null}
+                                        />
+                                    </div>
+
+                                    {/* Telepon & NIK */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <Input
+                                                label="Nomor Telepon"
+                                                placeholder="No Telpon"
+                                                value={p.phone}
+                                                onChange={(e) =>
+                                                    handleParticipantChange(idx, "phone", e.target.value)
+                                                }
+                                                disabled={snapToken !== null}
+                                                leftAddon={
+                                                    <span className="text-neutral-700 font-medium">
+                                                        +62
+                                                    </span>
+                                                }
+                                            />
+                                            {errors[idx]?.phone && (
+                                                <p className="text-red-500 text-xs font-medium mt-1.5 flex items-center gap-1">
+                                                    <IoMdInformationCircleOutline className="text-sm" />
+                                                    Nomor Telepon wajib diisi.
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <Input
+                                                label="NIK (Opsional)"
+                                                placeholder="NIK"
+                                                value={p.nik}
+                                                onChange={(e) =>
+                                                    handleParticipantChange(idx, "nik", e.target.value)
+                                                }
+                                                disabled={snapToken !== null}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* RIGHT COLUMN */}
+                    {/* RIGHT COLUMN: Order Summary */}
                     <div className="lg:col-span-4">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 sticky top-24">
                             <div className="flex items-center gap-2 mb-6">
                                 <MdOutlineShoppingBag className="text-xl text-neutral-800" />
-                                <h3 className="text-lg font-bold text-neutral-900">Detail Pembayaran</h3>
+                                <h3 className="text-lg font-bold text-neutral-900">
+                                    Detail Pembayaran
+                                </h3>
                             </div>
 
                             <div className="space-y-4 text-sm text-neutral-600 border-b border-neutral-100 pb-6 mb-6">
                                 <div className="flex justify-between items-center">
                                     <span>Subtotal ({quantity} orang)</span>
                                     <span className="font-semibold text-neutral-900">
-                                        Rp {Number(subtotal).toLocaleString("id-ID")}
+                                        Rp {subtotal.toLocaleString("id-ID")}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span>Biaya Layanan</span>
                                     <span className="font-semibold text-neutral-900">
-                                        Rp {Number(serviceFee).toLocaleString("id-ID")}
+                                        Rp {serviceFee.toLocaleString("id-ID")}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span>Biaya Asuransi Trip</span>
                                     <span className="font-semibold text-neutral-900">
-                                        Rp {Number(insuranceFee).toLocaleString("id-ID")}
+                                        Rp {insuranceFee.toLocaleString("id-ID")}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="flex justify-between items-center mb-6">
-                                <span className="font-bold text-neutral-900">Total Pembayaran</span>
+                                <span className="font-bold text-neutral-900">
+                                    Total Pembayaran
+                                </span>
                                 <span className="text-lg font-bold text-neutral-900">
-                                    Rp {Number(total).toLocaleString("id-ID")}
+                                    Rp {total.toLocaleString("id-ID")}
                                 </span>
                             </div>
 
                             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 mb-6">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-2xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed">
-                                    Dengan menekan tombol 'Bayar Sekarang', Anda menyetujui Ketentuan Layanan dan Kebijakan
-                                    Pembatalan kami. Pembayaran ditangani aman oleh Midtrans.
+                                    Dengan menekan tombol 'Bayar Sekarang', Anda
+                                    menyetujui Ketentuan Layanan dan Kebijakan
+                                    Pembatalan kami. Pembayaran ditangani secara aman
+                                    oleh Midtrans.
                                 </p>
                             </div>
 
+                            {formError && (
+                                <p className="mb-4 text-sm text-red-500">{formError}</p>
+                            )}
+
                             <Button
                                 onClick={handlePayment}
-                                disabled={isProcessing || !snapReady}
-                                type="button"
+                                disabled={isProcessing || isSubmitting || quantity < 1}
+                                type="primary"
                                 size="md"
-                                className="w-full font-bold flex justify-center py-3 rounded-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="w-full font-bold flex justify-center py-3 rounded-lg text-white disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                {isProcessing ? "Memproses..." : "Bayar Sekarang"}
+                                {isProcessing || isSubmitting
+                                    ? "Memproses..."
+                                    : snapToken
+                                    ? "Buka Kembali Pembayaran"
+                                    : "Bayar Sekarang"}
                             </Button>
-
-                            {!snapReady && (
-                                <p className="text-xs text-neutral-500 mt-3">
-                                    Memuat pembayaran... (Jika lama, coba refresh)
-                                </p>
-                            )}
                         </div>
                     </div>
                 </div>

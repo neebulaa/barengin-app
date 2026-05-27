@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix icon marker Leaflet supaya muncul dengan benar di bundler
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -15,27 +14,28 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Cache sederhana (1 session) supaya tidak fetch berulang utk query yang sama
 const geocodeCache = new Map();
 
 function MapRecenter({ position }) {
   const map = useMap();
   useEffect(() => {
-    if (position?.length === 2) {
-      map.setView(position);
-    }
+    if (position?.length === 2) map.setView(position);
   }, [position, map]);
   return null;
 }
 
-/**
- * LocationMap
- * Props:
- * - query: string (wajib) -> teks untuk geocode, contoh "Gunung Bromo, Jawa Timur"
- * - label: string -> teks di popup marker
- * - height: number -> tinggi map
- * - zoom: number
- */
+function normalizeQuery(raw) {
+  const text = (raw || "").trim();
+  if (!text) return "";
+
+  // Buang prefix "Trip " biar Nominatim lebih gampang nemu (Trip Solok -> Solok)
+  const withoutTripWord = text.replace(/^trip\s+/i, "").trim();
+
+  // Kalau belum ada "Indonesia", tambahkan hint
+  const hasIndonesia = /indonesia/i.test(withoutTripWord);
+  return hasIndonesia ? withoutTripWord : `${withoutTripWord}, Indonesia`;
+}
+
 export default function LocationMap({
   query,
   label = "Lokasi",
@@ -46,7 +46,7 @@ export default function LocationMap({
   const [position, setPosition] = useState([-6.2, 106.816666]); // default Jakarta
   const [status, setStatus] = useState("idle"); // idle | loading | ok | not_found | error
 
-  const normalizedQuery = useMemo(() => (query || "").trim(), [query]);
+  const normalizedQuery = useMemo(() => normalizeQuery(query), [query]);
 
   useEffect(() => {
     if (!normalizedQuery) return;
@@ -106,7 +106,6 @@ export default function LocationMap({
 
   return (
     <div className={className}>
-      {/* Info status kecil (optional) */}
       <div className="mb-2 text-xs text-neutral-500">
         {status === "loading" && "Mencari lokasi di peta..."}
         {status === "not_found" && "Lokasi tidak ditemukan, menampilkan posisi default."}
