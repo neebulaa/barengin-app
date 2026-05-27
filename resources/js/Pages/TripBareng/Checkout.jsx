@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Head, Link } from "@inertiajs/react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Head, Link, router } from "@inertiajs/react";
+import axios from "axios";
+
 import Container from "@/Components/Container";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
@@ -8,15 +10,42 @@ import MainLayout from "@/Layouts/MainLayout";
 import { FaChevronLeft, FaUserFriends, FaMinus, FaPlus } from "react-icons/fa";
 import { MdOutlineShoppingBag } from "react-icons/md";
 import { IoMdInformationCircleOutline } from "react-icons/io";
-import { BsCheckCircleFill } from "react-icons/bs";
 
 export default function Checkout({ trip }) {
-    const [quantity, setQuantity] = useState(2);
-    const [paymentMethod, setPaymentMethod] = useState("bca_va");
-
-    // Dynamic participants form state
+    const [quantity, setQuantity] = useState(1);
     const [participants, setParticipants] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [snapReady, setSnapReady] = useState(false);
 
+    // =========
+    // 1) Load Midtrans Snap script
+    // =========
+    useEffect(() => {
+        const existing = document.querySelector('script[src*="midtrans.com/snap/snap.js"]');
+        if (existing) {
+            setSnapReady(true);
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
+        // GANTI dengan CLIENT KEY kamu
+        script.setAttribute("data-client-key", "Mid-client-4rh5_t-r2jDJxAyN");
+
+        script.onload = () => setSnapReady(true);
+        script.onerror = () => setSnapReady(false);
+
+        document.head.appendChild(script);
+
+        return () => {
+            // optional: kalau kamu tidak mau remove, boleh dihapus bagian ini
+            document.head.removeChild(script);
+        };
+    }, []);
+
+    // =========
+    // 2) Dynamic participants form (sesuai quantity)
+    // =========
     useEffect(() => {
         setParticipants((prev) => {
             if (prev.length === quantity) return prev;
@@ -36,79 +65,72 @@ export default function Checkout({ trip }) {
     }, [quantity]);
 
     const handleQuantityChange = (type) => {
-        if (type === "minus" && quantity > 1) setQuantity(quantity - 1);
-        if (type === "plus" && quantity < trip.remaining_quota)
-            setQuantity(quantity + 1);
+        if (isProcessing) return;
+
+        if (type === "minus" && quantity > 1) setQuantity((q) => q - 1);
+        if (type === "plus" && quantity < trip.remaining_quota) setQuantity((q) => q + 1);
     };
 
-    // Calculations
-    const subtotal = trip.price * quantity;
-    const serviceFee = 5000;
-    const insuranceFee = 5000;
-    const total = subtotal + serviceFee + insuranceFee;
+    // =========
+    // 3) Kalkulasi
+    // =========
+    const subtotal = useMemo(() => trip.price * quantity, [trip.price, quantity]);
+    const serviceFee = useMemo(() => 5000 * quantity, [quantity]);
+    const insuranceFee = useMemo(() => 5000 * quantity, [quantity]);
+    const total = useMemo(() => subtotal + serviceFee + insuranceFee, [subtotal, serviceFee, insuranceFee]);
 
-    // Mock Payment Methods
-    const paymentMethods = [
-        {
-            id: "bca_va",
-            label: "BCA Virtual Account",
-            icon: (
-                <div className="text-blue-700 font-bold italic text-lg">
-                    BCA
-                </div>
-            ),
-        },
-        {
-            id: "qris",
-            label: "QRIS",
-            icon: (
-                <div className="text-red-600 font-bold text-lg tracking-tighter">
-                    QRIS
-                </div>
-            ),
-        },
-        {
-            id: "gopay",
-            label: "Gopay",
-            subLabel: "+62 89694636303",
-            icon: (
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
-                    G
-                </div>
-            ),
-        },
-        {
-            id: "dana",
-            label: "Dana",
-            subLabel: "+62 89694636303",
-            icon: (
-                <div className="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold text-xs">
-                    D
-                </div>
-            ),
-        },
-        {
-            id: "ovo",
-            label: "Ovo",
-            subLabel: "+62 89694636303",
-            icon: (
-                <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs">
-                    O
-                </div>
-            ),
-        },
-        {
-            id: "mastercard",
-            label: "Mastercard",
-            subLabel: "1234 5678 9123 456",
-            icon: (
-                <div className="flex">
-                    <div className="w-5 h-5 rounded-full bg-red-500 z-10 opacity-90"></div>
-                    <div className="w-5 h-5 rounded-full bg-yellow-500 -ml-2 opacity-90"></div>
-                </div>
-            ),
-        },
-    ];
+    // =========
+    // 4) Pay with Midtrans Snap
+    // =========
+    const handlePayment = async () => {
+        if (!snapReady || !window.snap) {
+            alert("Midtrans Snap belum siap. Coba refresh halaman.");
+            return;
+        }
+
+        if (quantity < 1) return;
+
+        setIsProcessing(true);
+
+        try {
+            // Minta Snap Token ke Laravel
+            const response = await axios.post(`/trip-bareng/${trip.id}/payment`, {
+                quantity: quantity,
+                // (opsional) kirim participants juga kalau backend mau simpan
+                // participants: participants,
+            });
+
+            const { snap_token, transaction_id } = response.data || {};
+
+            if (!snap_token || !transaction_id) {
+                throw new Error("Response token tidak lengkap (snap_token/transaction_id kosong).");
+            }
+
+            window.snap.pay(snap_token, {
+                onSuccess: function () {
+                    // Redirect berdasar transaction_id (ini kunci agar quantity di success akurat)
+                    router.visit(`/trip-bareng/${transaction_id}/success`);
+                },
+                onPending: function () {
+                    // Pending itu normal untuk VA/QRIS/transfer
+                    // Kamu bisa arahkan ke halaman waiting kalau mau, atau cukup stop loading:
+                    setIsProcessing(false);
+                },
+                onError: function () {
+                    alert("Pembayaran gagal. Silakan coba lagi.");
+                    setIsProcessing(false);
+                },
+                onClose: function () {
+                    // User menutup popup
+                    setIsProcessing(false);
+                },
+            });
+        } catch (error) {
+            console.error("Gagal mendapatkan token", error);
+            alert("Terjadi kesalahan sistem. Coba beberapa saat lagi.");
+            setIsProcessing(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 pt-6">
@@ -130,9 +152,9 @@ export default function Checkout({ trip }) {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* LEFT COLUMN: Forms */}
+                    {/* LEFT COLUMN */}
                     <div className="lg:col-span-8 space-y-6">
-                        {/* 1. Trip Summary & Quantity Card */}
+                        {/* Trip Summary & Quantity */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
                             <div className="flex gap-4 items-center pb-6 border-b border-neutral-100">
                                 <img
@@ -150,45 +172,36 @@ export default function Checkout({ trip }) {
                                     </h3>
                                     <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2 font-medium">
                                         <FaUserFriends className="text-neutral-400" />
-                                        {trip.joined_count} / {trip.capacity}{" "}
-                                        orang telah bergabung
+                                        {trip.joined_count} / {trip.capacity} orang telah bergabung
                                     </div>
                                     <p className="text-primary-700 font-bold">
-                                        Rp {trip.price.toLocaleString("id-ID")}
+                                        Rp {Number(trip.price).toLocaleString("id-ID")}{" "}
+                                        <span className="text-sm font-normal text-neutral-500">/orang</span>
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between pt-6">
                                 <div>
-                                    <h4 className="font-bold text-neutral-900">
-                                        Total partisipan
-                                    </h4>
+                                    <h4 className="font-bold text-neutral-900">Total partisipan</h4>
                                     <p className="text-sm text-neutral-500">
-                                        Hanya tersisa {trip.remaining_quota}{" "}
-                                        kuota lagi
+                                        Hanya tersisa {trip.remaining_quota} kuota lagi
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <button
-                                        onClick={() =>
-                                            handleQuantityChange("minus")
-                                        }
-                                        disabled={quantity <= 1}
+                                        onClick={() => handleQuantityChange("minus")}
+                                        disabled={quantity <= 1 || isProcessing}
                                         className="w-8 h-8 rounded-full border-2 border-primary-100 text-primary-700 flex items-center justify-center hover:bg-primary-50 disabled:opacity-30 transition"
                                     >
                                         <FaMinus className="text-xs" />
                                     </button>
-                                    <span className="font-bold text-lg w-4 text-center">
-                                        {quantity}
-                                    </span>
+
+                                    <span className="font-bold text-lg w-4 text-center">{quantity}</span>
+
                                     <button
-                                        onClick={() =>
-                                            handleQuantityChange("plus")
-                                        }
-                                        disabled={
-                                            quantity >= trip.remaining_quota
-                                        }
+                                        onClick={() => handleQuantityChange("plus")}
+                                        disabled={quantity >= trip.remaining_quota || isProcessing}
                                         className="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center shadow-sm hover:bg-primary-800 disabled:opacity-50 transition"
                                     >
                                         <FaPlus className="text-xs" />
@@ -197,7 +210,7 @@ export default function Checkout({ trip }) {
                             </div>
                         </div>
 
-                        {/* 2. Participant Forms (Dynamic) */}
+                        {/* Participant Forms */}
                         {participants.map((p, idx) => (
                             <div
                                 key={idx}
@@ -208,143 +221,90 @@ export default function Checkout({ trip }) {
                                         Info Partisipan {idx + 1}
                                     </h3>
                                     <span
-                                        className={`px-3 py-1 rounded-full text-xs font-bold ${idx % 2 === 0 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}
+                                        className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                            idx % 2 === 0 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                                        }`}
                                     >
                                         Person {idx + 1}
                                     </span>
                                 </div>
 
                                 <div className="space-y-5">
-                                    <Input
-                                        label="Nama Lengkap"
-                                        placeholder="Masukkan nama lengkap anda sesuai ktp"
-                                    />
-                                    <Input
-                                        label="No. Paspor (optional)"
-                                        placeholder="Nomor paspor resmi anda"
-                                    />
+                                    <Input label="Nama Lengkap" placeholder="Masukkan nama lengkap anda sesuai ktp" />
+                                    <Input label="No. Paspor (optional)" placeholder="Nomor paspor resmi anda" />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <Input
                                             label="Nomor Telepon"
                                             placeholder="No Telpon"
-                                            leftAddon={
-                                                <span className="text-neutral-700 font-medium">
-                                                    +62
-                                                </span>
-                                            }
+                                            leftAddon={<span className="text-neutral-700 font-medium">+62</span>}
                                         />
-                                        <Input
-                                            label="NIK (Optional)"
-                                            placeholder="NIK"
-                                        />
+                                        <Input label="NIK (Optional)" placeholder="NIK" />
                                     </div>
                                 </div>
                             </div>
                         ))}
-
-                        {/* 3. Payment Methods */}
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
-                            <h3 className="text-lg font-bold text-neutral-900 mb-6">
-                                Metode Pembayaran
-                            </h3>
-
-                            <div className="space-y-3">
-                                {paymentMethods.map((pm) => (
-                                    <label
-                                        key={pm.id}
-                                        className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === pm.id ? "border-primary-600 bg-primary-50/50" : "border-neutral-100 hover:border-primary-200"}`}
-                                        onClick={() => setPaymentMethod(pm.id)}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 flex justify-center">
-                                                {pm.icon}
-                                            </div>
-                                            <div>
-                                                <p className="font-semibold text-neutral-900 text-sm">
-                                                    {pm.label}
-                                                </p>
-                                                {pm.subLabel && (
-                                                    <p className="text-xs text-neutral-500 mt-0.5">
-                                                        {pm.subLabel}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Radio Circle */}
-                                        <div
-                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === pm.id ? "border-primary-600" : "border-neutral-300"}`}
-                                        >
-                                            {paymentMethod === pm.id && (
-                                                <div className="w-2.5 h-2.5 bg-primary-600 rounded-full" />
-                                            )}
-                                        </div>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
                     </div>
 
-                    {/* RIGHT COLUMN: Order Summary */}
+                    {/* RIGHT COLUMN */}
                     <div className="lg:col-span-4">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 sticky top-24">
                             <div className="flex items-center gap-2 mb-6">
                                 <MdOutlineShoppingBag className="text-xl text-neutral-800" />
-                                <h3 className="text-lg font-bold text-neutral-900">
-                                    Detail Pembayaran
-                                </h3>
+                                <h3 className="text-lg font-bold text-neutral-900">Detail Pembayaran</h3>
                             </div>
 
                             <div className="space-y-4 text-sm text-neutral-600 border-b border-neutral-100 pb-6 mb-6">
                                 <div className="flex justify-between items-center">
-                                    <span>Subtotal</span>
+                                    <span>Subtotal ({quantity} orang)</span>
                                     <span className="font-semibold text-neutral-900">
-                                        Rp {subtotal.toLocaleString("id-ID")}
+                                        Rp {Number(subtotal).toLocaleString("id-ID")}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span>Biaya Layanan</span>
                                     <span className="font-semibold text-neutral-900">
-                                        Rp {serviceFee.toLocaleString("id-ID")}
+                                        Rp {Number(serviceFee).toLocaleString("id-ID")}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span>Biaya Asuransi Trip</span>
                                     <span className="font-semibold text-neutral-900">
-                                        Rp{" "}
-                                        {insuranceFee.toLocaleString("id-ID")}
+                                        Rp {Number(insuranceFee).toLocaleString("id-ID")}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="flex justify-between items-center mb-6">
-                                <span className="font-bold text-neutral-900">
-                                    Total Pembayaran
-                                </span>
+                                <span className="font-bold text-neutral-900">Total Pembayaran</span>
                                 <span className="text-lg font-bold text-neutral-900">
-                                    Rp {total.toLocaleString("id-ID")}
+                                    Rp {Number(total).toLocaleString("id-ID")}
                                 </span>
                             </div>
 
                             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 mb-6">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-2xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed">
-                                    Dengan menekan tombol 'Bayar Sekarang', Anda
-                                    menyetujui Ketentuan Layanan dan Kebijakan
-                                    Pembatalan kami untuk perjalanan grup.
+                                    Dengan menekan tombol 'Bayar Sekarang', Anda menyetujui Ketentuan Layanan dan Kebijakan
+                                    Pembatalan kami. Pembayaran ditangani aman oleh Midtrans.
                                 </p>
                             </div>
 
                             <Button
-                                isButtonLink
-                                href={`/trip-bareng/${trip.id}/payment`}
-                                type="primary"
+                                onClick={handlePayment}
+                                disabled={isProcessing || !snapReady}
+                                type="button"
                                 size="md"
-                                className="w-full font-bold"
+                                className="w-full font-bold flex justify-center text-white py-3 rounded-lg disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                Bayar Sekarang
+                                {isProcessing ? "Memproses..." : "Bayar Sekarang"}
                             </Button>
+
+                            {!snapReady && (
+                                <p className="text-xs text-neutral-500 mt-3">
+                                    Memuat pembayaran... (Jika lama, coba refresh)
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -353,5 +313,4 @@ export default function Checkout({ trip }) {
     );
 }
 
-// Pasang MainLayout
 Checkout.layout = (page) => <MainLayout children={page} />;
