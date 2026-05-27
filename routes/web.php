@@ -125,6 +125,7 @@ Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead
 Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
 Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
 
+
 // Chat
 Route::get('/chat/exp', function(){
     return inertia('Chat/Index2');
@@ -157,7 +158,7 @@ Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-ba
 Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
 Route::post('/trip-bareng/{id}/checkout', [TripsController::class, 'store'])->middleware('auth')->name('trip-bareng.store');
 Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
-Route::get('/trip-bareng/{id}/success', [\App\Http\Controllers\TripsController::class, 'success'])->name('trip-bareng.success');
+Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
 
 // Management User
 // Route::get('/management-user', function(){

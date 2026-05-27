@@ -1,27 +1,54 @@
-import { useState } from "react";
-import { Head, router } from "@inertiajs/react";
+import { useEffect, useState } from "react";
+import { Head, router, usePage } from "@inertiajs/react";
 import TripCard from "@/Components/TripCard";
 import Container from "@/Components/Container";
 import TripSearchForm from "@/Components/TripSearchForm";
 import Pagination from "@/Components/Pagination";
-import Select from "@/Components/Select"; // Import kembali komponen Select kustommu
+import Select from "@/Components/Select";
 
 import MainLayout from "@/Layouts/MainLayout";
 
 export default function Index({ trips, all_trips }) {
+    const { url } = usePage(); // supaya bisa ambil query param dari url inertia
     const [activeTab, setActiveTab] = useState("all");
-    const [sortBy, setSortBy] = useState("");
-    const [filterBy, setFilterBy] = useState("");
+
+    // Ambil query param `sort` dari URL agar dropdown tetap kepilih setelah refresh/back
+    const getSortFromUrl = () => {
+        try {
+            const u = new URL(window.location.href);
+            return u.searchParams.get("sort") || "";
+        } catch {
+            return "";
+        }
+    };
+
+    const [sortBy, setSortBy] = useState(getSortFromUrl());
 
     const tripItems = trips?.data || [];
 
-    const handlePageChange = (newPage) => {
+    const handleSortChange = (value) => {
+        setSortBy(value);
+
         router.get(
-            window.location.pathname, 
-            { page: newPage },
+            window.location.pathname,
+            { sort: value, page: 1 },
             { preserveState: true, preserveScroll: true }
         );
     };
+
+    const handlePageChange = (newPage) => {
+        router.get(
+            window.location.pathname,
+            { page: newPage, sort: sortBy },
+            { preserveState: true, preserveScroll: true }
+        );
+    };
+
+    // Kalau user navigasi (back/forward) dan URL berubah, sync sortBy dari URL lagi
+    useEffect(() => {
+        setSortBy(getSortFromUrl());
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [url]);
 
     return (
         <div className="min-h-screen bg-neutral-50 pb-16 md:pb-24">
@@ -58,38 +85,26 @@ export default function Index({ trips, all_trips }) {
 
             {/* --- List Section --- */}
             <Container className="mt-12 md:mt-16">
-                
                 {/* Header & Filters */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">
                         Cari Trip Terbaikmu
                     </h2>
-                    
-                    {/* [PERBAIKAN]: Menggunakan komponen <Select> kustom seperti gambar */}
+
+                    {/* Urutkan (1 dropdown saja) */}
                     <div className="flex items-center gap-3">
                         <Select
                             label=""
                             value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="w-40"
+                            onChange={(e) => handleSortChange(e.target.value)}
+                            className="w-48"
                             selectClassName="h-10 bg-white"
                         >
                             <option value="">Urutkan</option>
-                            <option value="rating">Rating Tertinggi</option>
+                            <option value="rating_desc">Rating Tertinggi</option>
                             <option value="price_asc">Harga Termurah</option>
                             <option value="price_desc">Harga Termahal</option>
-                        </Select>
-
-                        <Select
-                            label=""
-                            value={filterBy}
-                            onChange={(e) => setFilterBy(e.target.value)}
-                            className="w-40"
-                            selectClassName="h-10 bg-white"
-                        >
-                            <option value="">Filter By</option>
-                            <option value="popular">Paling Populer</option>
-                            <option value="new">Trip Terbaru</option>
+                            <option value="newest">Terbaru</option>
                         </Select>
                     </div>
                 </div>
@@ -105,19 +120,20 @@ export default function Index({ trips, all_trips }) {
                         {trips.last_page > 1 && (
                             <div className="mt-12 md:mt-16 border-t border-neutral-200 pt-8 flex justify-center">
                                 <Pagination
-                                    currentPage={trips.current_page} 
-                                    totalPages={trips.last_page}     
-                                    onPageChange={handlePageChange}  
+                                    currentPage={trips.current_page}
+                                    totalPages={trips.last_page}
+                                    onPageChange={handlePageChange}
                                 />
                             </div>
                         )}
                     </>
                 ) : (
                     <div className="text-center py-20 bg-white rounded-2xl border border-neutral-200 shadow-sm">
-                        <p className="text-neutral-500 text-lg font-medium">Belum ada trip yang tersedia saat ini.</p>
+                        <p className="text-neutral-500 text-lg font-medium">
+                            Belum ada trip yang tersedia saat ini.
+                        </p>
                     </div>
                 )}
-                
             </Container>
         </div>
     );

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
+
 class TripsController extends Controller
 {
     private const SERVICE_FEE = 5000;
