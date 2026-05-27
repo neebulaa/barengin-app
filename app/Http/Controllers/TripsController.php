@@ -127,7 +127,7 @@ class TripsController extends Controller
         $avatars = $participantsQuery
             ->orderByDesc('trip_participants.created_at')
             ->get()
-            ->map(fn ($participant) => $mapUserToAvatar($participant->full_name, $participant->profile_image))
+            ->map(fn($participant) => $mapUserToAvatar($participant->full_name, $participant->profile_image))
             ->values()
             ->all();
 
@@ -191,11 +191,36 @@ class TripsController extends Controller
 
     public function index()
     {
-        $tripsPaginated = DB::table('trips')
+        $sort = request('sort'); // rating_desc | price_asc | price_desc | newest | null
+
+        $query = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
-            ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
-            ->orderBy('trips.created_at', 'desc')
-            ->paginate(9);
+            ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image');
+
+        // Sorting
+        switch ($sort) {
+            case 'rating_desc':
+                // rating bisa null, jadi kasih fallback biar null di bawah
+                $query->orderByRaw('trips.rating IS NULL, trips.rating DESC');
+                break;
+
+            case 'price_asc':
+                $query->orderBy('trips.price', 'asc');
+                break;
+
+            case 'price_desc':
+                $query->orderBy('trips.price', 'desc');
+                break;
+
+            case 'newest':
+            default:
+                $query->orderBy('trips.created_at', 'desc');
+                break;
+        }
+
+        $tripsPaginated = $query
+            ->paginate(9)
+            ->withQueryString(); // penting: supaya ?sort=... ikut kebawa saat ganti page
 
         $tripsPaginated->getCollection()->transform(function ($trip) {
             $startDate = Carbon::parse($trip->start_date);
@@ -203,14 +228,13 @@ class TripsController extends Controller
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
             $joined = $this->getJoinedCountForTrip((int) $trip->id);
-            
             $remaining = max(0, $trip->people_amount - $joined);
 
             $guiderRating = DB::table('user__ratings')
                 ->where('rated_user_id', $trip->host_id)
                 ->where('type', 'pergi_bareng')
                 ->avg('rating_amount');
-            
+
             $guiderReviews = DB::table('user__ratings')
                 ->where('rated_user_id', $trip->host_id)
                 ->where('type', 'pergi_bareng')
@@ -219,13 +243,13 @@ class TripsController extends Controller
             return [
                 'id' => $trip->id,
                 'title' => $trip->name,
-                'location' => 'Indonesia', 
+                'location' => 'Indonesia',
                 'date' => $startDate->format('d M y') . ' - ' . $endDate->format('d M y') . ' (' . $duration . ')',
                 'joined_count' => $joined,
-                'capacity' => $trip->people_amount,
+                'capacity' => (int) $trip->people_amount,
                 'remaining_seats' => $remaining,
-                'rating' => (float) $trip->rating, 
-                'reviews' => rand(10, 150), // Ini review trip (bukan guide), bisa biarkan random dulu kalau belum ada tabelnya
+                'rating' => (float) ($trip->rating ?? 0),
+                'reviews' => rand(10, 150),
                 'price' => (float) $trip->price,
                 'guide' => $trip->guide_name,
                 'guide_avatar' => $trip->profile_image ?? '/assets/default-avatar.png',
@@ -240,7 +264,7 @@ class TripsController extends Controller
         $all_trips = Trip::all();
 
         return Inertia::render('TripBareng/Index', [
-            'trips' => $tripsPaginated, 
+            'trips' => $tripsPaginated,
             'all_trips' => $all_trips,
         ]);
     }
@@ -264,12 +288,12 @@ class TripsController extends Controller
             ->where('rated_user_id', $trip->host_id)
             ->where('type', 'pergi_bareng')
             ->avg('rating_amount');
-            
+
         $ratingText = $guiderRating ? number_format($guiderRating, 1) : 'Baru';
 
         // 3. Ambil activities (itinerary)
         $activitiesDB = DB::table('trip_activities')->where('trip_id', $id)->orderBy('activity_order', 'asc')->get();
-        
+
         $itinerary = $activitiesDB->map(function ($act) {
             $images = DB::table('image_activities')
                 ->where('trip_activity_id', $act->id)
@@ -299,7 +323,7 @@ class TripsController extends Controller
 
         $startDate = Carbon::parse($trip->start_date);
         $endDate = Carbon::parse($trip->end_date);
-        
+
         $tripData = [
             'id' => $trip->id,
             'title' => $trip->name,
@@ -311,15 +335,15 @@ class TripsController extends Controller
             'participant_avatars' => $participantAvatars,
             'capacity' => $trip->people_amount,
             'price' => (float) $trip->price,
-            'description' => $trip->description, 
+            'description' => $trip->description,
             'host' => [
                 'name' => $trip->guide_name,
                 'role' => 'Pemilik',
-                'badge' => 'Expert Guide - ★ ' . $ratingText, 
+                'badge' => 'Expert Guide - ★ ' . $ratingText,
                 'avatar' => $trip->profile_image ?? '/assets/default-avatar.png'
             ],
             'itinerary' => $itinerary,
-            'included' => $included 
+            'included' => $included
         ];
 
         return Inertia::render('TripBareng/Detail', [
@@ -472,35 +496,90 @@ class TripsController extends Controller
 
     public function payment(Request $request, $id)
     {
-        $trip = DB::table('trips')->where('id', $id)->first();
-        if (!$trip) abort(404);
-
-        $order = $this->getTripForOrder((int) $id, $request->integer('order'));
-        $feesTotal = 0;
-
-        if ($order) {
-            $feesTotal = (float) DB::table('trip_order_fees')
-                ->where('trip_order_id', $order->id)
-                ->sum('amount');
+        // WAJIB login (biar user_id tidak null)
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $totalAmount = $order
-            ? (float) ($order->total_amount ?? $order->total)
-            : ((float) $trip->price + self::SERVICE_FEE + self::INSURANCE_FEE);
+        $trip = DB::table('trips')->where('id', $id)->first();
+        if (!$trip) {
+            return response()->json(['message' => 'Trip tidak ditemukan'], 404);
+        }
 
-        $paymentData = [
-            'trip_id' => $id,
-            'order_id' => $order->id ?? null,
-            'total_amount' => $totalAmount,
-            'due_date' => $order && $order->expired_at ? Carbon::parse($order->expired_at)->format('d F Y, H:i') : Carbon::now()->addHours(24)->format('d F Y, H:i'),
-            'bank_name' => $this->paymentMethodLabel($order->payment_method ?? null),
-            'va_number' => $order->va_number ?? '123 456 789 123',
-            'fees_total' => $feesTotal,
+        $validated = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $quantity = (int) $validated['quantity'];
+
+        // Hitung total (samakan dengan frontend kamu)
+        $subtotal = (float) $trip->price * $quantity;
+        $serviceFee = self::SERVICE_FEE * $quantity;
+        $insuranceFee = self::INSURANCE_FEE * $quantity;
+
+        // Midtrans minta integer rupiah
+        $grossAmount = (int) round($subtotal + $serviceFee + $insuranceFee);
+
+        // 1) Buat transaksi (HasUlids akan auto-generate id string)
+        //    Pastikan kolom `id` di tabel transactions tipe string/char(26) atau varchar.
+        $tx = Transaction::create([
+            'user_id' => Auth::id(),
+            'total_amount' => $grossAmount,
+            'type' => self::TRANSACTION_TYPE_TRIP,
+            'payment_method' => 'midtrans_snap',
+            'expired_at' => now()->addHours(24),
+        ]);
+
+        // 2) Setup midtrans config
+        \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+        \Midtrans\Config::$isProduction = (bool) config('services.midtrans.is_production', false);
+        \Midtrans\Config::$isSanitized = true;
+        \Midtrans\Config::$is3ds = true;
+
+        $params = [
+            'transaction_details' => [
+                'order_id' => $tx->id,
+                'gross_amount' => $grossAmount,
+            ],
+            'item_details' => [
+                [
+                    'id' => 'trip-' . $trip->id,
+                    'price' => (int) round((float) $trip->price),
+                    'quantity' => $quantity,
+                    'name' => $trip->name,
+                ],
+                [
+                    'id' => 'service-fee',
+                    'price' => self::SERVICE_FEE,
+                    'quantity' => $quantity,
+                    'name' => 'Biaya Layanan',
+                ],
+                [
+                    'id' => 'insurance-fee',
+                    'price' => self::INSURANCE_FEE,
+                    'quantity' => $quantity,
+                    'name' => 'Asuransi Trip',
+                ],
+            ],
+            'customer_details' => [
+                'first_name' => Auth::user()->full_name ?? Auth::user()->name ?? 'Customer',
+                'email' => Auth::user()->email ?? 'customer@example.com',
+            ],
         ];
 
-        return Inertia::render('TripBareng/WaitingPayment', [
-            'paymentData' => $paymentData,
-        ]);
+        try {
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
+
+            return response()->json([
+                'snap_token' => $snapToken,
+                'transaction_id' => $tx->id,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Gagal membuat Snap Token',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function success(Request $request, $id)

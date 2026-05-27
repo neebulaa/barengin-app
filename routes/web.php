@@ -159,6 +159,7 @@ Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->
 Route::post('/trip-bareng/{id}/checkout', [TripsController::class, 'store'])->middleware('auth')->name('trip-bareng.store');
 Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
 Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
+Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment.post');
 
 // Management User
 // Route::get('/management-user', function(){
