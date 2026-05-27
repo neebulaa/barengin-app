@@ -110,17 +110,6 @@ export default function WaitingPayment({ paymentData }) {
                         </div>
                     </div>
 
-                    {paymentData.order_id && (
-                        <div className="mt-6 flex justify-end">
-                            <Link
-                                href={`/trip-bareng/${paymentData.trip_id}/success?order=${paymentData.order_id}`}
-                                className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-primary-700 text-white font-semibold hover:opacity-90 transition"
-                            >
-                                Saya Sudah Bayar
-                            </Link>
-                        </div>
-                    )}
-
                 </div>
             </Container>
         </div>
