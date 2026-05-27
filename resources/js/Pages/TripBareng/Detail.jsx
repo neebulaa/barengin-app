@@ -21,14 +21,12 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 export default function Detail({ trip }) {
     const currentTrip = trip;
 
-    // Query map yang bisa kamu custom dari backend.
-    // Kalau belum ada, fallback ke title (contoh: "Trip Bromo") biar Nominatim bisa cari.
     const mapQuery = useMemo(() => {
+        // Prioritas: field khusus lokasi -> location -> title
         return (
-            currentTrip?.map_query ||
             currentTrip?.location_detail ||
-            currentTrip?.title ||
             currentTrip?.location ||
+            currentTrip?.title ||
             "Indonesia"
         );
     }, [currentTrip]);
@@ -38,11 +36,11 @@ export default function Detail({ trip }) {
     }, [currentTrip]);
 
     return (
-        <div className="min-h-screen bg-white pb-[160px]">
+        <div className="min-h-screen bg-white pb-[220px]">
             <Head title={`Trip ${currentTrip.title} - Barengin`} />
 
             <Container className="pt-6">
-                {/* --- HERO SECTION --- */}
+                {/* HERO */}
                 <div className="relative h-[350px] md:h-[400px] w-full rounded-3xl overflow-hidden mb-10 shadow-sm">
                     <img
                         src="/assets/trips/hero.jpg"
@@ -55,7 +53,6 @@ export default function Detail({ trip }) {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
 
-                    {/* Tombol kembali */}
                     <Link
                         href="/trip-bareng"
                         className="absolute top-6 left-6 md:top-8 md:left-8 z-10 w-10 h-10 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/40 rounded-full flex items-center justify-center text-white transition-all shadow-sm"
@@ -75,7 +72,6 @@ export default function Detail({ trip }) {
                             <span>{currentTrip.duration}</span>
                         </div>
 
-                        {/* Avatar group & confirmed count */}
                         <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
                             <div className="flex -space-x-3">
                                 {[1, 2, 3].map((i) => (
@@ -95,19 +91,17 @@ export default function Detail({ trip }) {
                                     Wisatawan Terkonfirmasi
                                 </p>
                                 <p className="text-white/80 font-medium">
-                                    {currentTrip.joined_count}/{currentTrip.capacity}{" "}
-                                    telah bergabung
+                                    {currentTrip.joined_count}/{currentTrip.capacity} telah bergabung
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* --- MAIN CONTENT & SIDEBAR --- */}
+                {/* MAIN */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* LEFT COLUMN */}
+                    {/* LEFT */}
                     <div className="lg:col-span-2 space-y-10">
-                        {/* Deskripsi */}
                         <section>
                             <h2 className="text-2xl font-bold text-neutral-900 mb-4">
                                 Tentang Trip {currentTrip.title}
@@ -115,8 +109,7 @@ export default function Detail({ trip }) {
                             <div className="flex items-center gap-2 text-sm text-neutral-700 font-medium mb-5 bg-neutral-50 p-3.5 rounded-xl border border-neutral-200">
                                 <FaRegCalendarAlt className="text-neutral-500 text-lg" />
                                 <span>
-                                    Trip akan berlangsung dari{" "}
-                                    <strong>{currentTrip.date_range}</strong>
+                                    Trip akan berlangsung dari <strong>{currentTrip.date_range}</strong>
                                 </span>
                             </div>
                             <p className="text-neutral-600 leading-relaxed text-[15px] text-justify">
@@ -126,14 +119,10 @@ export default function Detail({ trip }) {
 
                         <hr className="border-neutral-200" />
 
-                        {/* Itinerary */}
                         <section>
                             <div className="space-y-0 relative">
                                 {currentTrip.itinerary.map((item, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex gap-4 md:gap-6 relative group"
-                                    >
+                                    <div key={idx} className="flex gap-4 md:gap-6 relative group">
                                         <div className="flex flex-col items-center">
                                             <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 z-10 text-sm mt-1 transition-colors duration-300 bg-neutral-200 text-neutral-700 group-hover:bg-primary-600 group-hover:text-white">
                                                 {item.step}
@@ -179,33 +168,28 @@ export default function Detail({ trip }) {
                         </section>
                     </div>
 
-                    {/* RIGHT COLUMN */}
+                    {/* RIGHT */}
                     <div className="lg:col-span-1 space-y-6">
-                        {/* Map Card (peta beneran) */}
+                        {/* MAP CARD */}
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-neutral-200">
-                            <div className="flex items-center justify-between mb-3">
-                                <div>
-                                    <h3 className="text-[15px] font-bold text-neutral-900">
-                                        Lokasi Trip
-                                    </h3>
-                                    <p className="text-xs text-neutral-500">
-                                        {mapQuery}
-                                    </p>
-                                </div>
+                            <div className="mb-3">
+                                <h3 className="text-[15px] font-bold text-neutral-900">Lokasi Trip</h3>
+                                <p className="text-xs text-neutral-500">{mapQuery}</p>
                             </div>
 
-                            {/* Tinggi map dibuat lebih besar supaya nyaman dan tidak “ketutup” */}
-                            <LocationMap query={`${mapQuery}, Indonesia`} label={mapLabel} height={260} zoom={12} />
+                            <LocationMap
+                                query={mapQuery}
+                                label={mapLabel}
+                                height={280}
+                                zoom={12}
+                            />
                         </div>
 
-                        {/* Host Card */}
+                        {/* HOST CARD */}
                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-neutral-200 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <img
-                                    src={
-                                        currentTrip.host.avatar ||
-                                        "https://i.pravatar.cc/150?u=kingsman"
-                                    }
+                                    src={currentTrip.host.avatar || "https://i.pravatar.cc/150?u=kingsman"}
                                     className="w-12 h-12 rounded-full border border-neutral-200 object-cover"
                                     alt={currentTrip.host.name}
                                 />
@@ -217,13 +201,9 @@ export default function Detail({ trip }) {
                                         {currentTrip.host.name}
                                     </h4>
                                     <div className="text-xs font-medium">
-                                        <span className="text-orange-500">
-                                            {currentTrip.host.role}
-                                        </span>
+                                        <span className="text-orange-500">{currentTrip.host.role}</span>
                                         <span className="text-neutral-400 mx-1">•</span>
-                                        <span className="text-neutral-500">
-                                            {currentTrip.host.badge}
-                                        </span>
+                                        <span className="text-neutral-500">{currentTrip.host.badge}</span>
                                     </div>
                                 </div>
                             </div>
@@ -232,18 +212,14 @@ export default function Detail({ trip }) {
                             </button>
                         </div>
 
-                        {/* Pricing Card */}
+                        {/* PRICING CARD */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-200">
-                            <h3 className="text-[17px] font-bold text-neutral-900 mb-2">
-                                Total Harga
-                            </h3>
+                            <h3 className="text-[17px] font-bold text-neutral-900 mb-2">Total Harga</h3>
                             <div className="flex items-end gap-1 mb-6">
                                 <span className="text-3xl font-bold text-primary-600">
                                     Rp {currentTrip.price.toLocaleString("id-ID")}
                                 </span>
-                                <span className="text-sm text-neutral-500 mb-1">
-                                    / orang
-                                </span>
+                                <span className="text-sm text-neutral-500 mb-1">/ orang</span>
                             </div>
 
                             <div className="space-y-4 mb-6">
@@ -264,8 +240,7 @@ export default function Detail({ trip }) {
                             <div className="bg-orange-50 border border-orange-200/60 rounded-xl p-4 flex items-start gap-3">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed font-medium">
-                                    Dapat dikembalikan sepenuhnya (refund) jika
-                                    dibatalkan 7 hari sebelum keberangkatan.
+                                    Dapat dikembalikan sepenuhnya (refund) jika dibatalkan 7 hari sebelum keberangkatan.
                                     Tidak termasuk tiket pesawat.
                                 </p>
                             </div>
@@ -274,7 +249,7 @@ export default function Detail({ trip }) {
                 </div>
             </Container>
 
-            {/* --- STICKY BOTTOM ACTION BAR --- */}
+            {/* STICKY BOTTOM ACTION BAR */}
             <div className="fixed bottom-0 left-0 w-full bg-white border-t border-neutral-200 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] z-[60]">
                 <Container className="py-4 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="hidden md:block">
@@ -293,9 +268,7 @@ export default function Detail({ trip }) {
                             </p>
                             <p className="text-xl font-bold text-neutral-900">
                                 Rp {currentTrip.price.toLocaleString("id-ID")}{" "}
-                                <span className="text-sm font-medium text-neutral-500">
-                                    / orang
-                                </span>
+                                <span className="text-sm font-medium text-neutral-500">/ orang</span>
                             </p>
                         </div>
 
