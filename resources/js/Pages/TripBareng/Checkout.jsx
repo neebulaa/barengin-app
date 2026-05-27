@@ -295,7 +295,7 @@ export default function Checkout({ trip }) {
                                 disabled={isProcessing || !snapReady}
                                 type="button"
                                 size="md"
-                                className="w-full font-bold flex justify-center bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="w-full font-bold flex justify-center py-3 rounded-lg disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                                 {isProcessing ? "Memproses..." : "Bayar Sekarang"}
                             </Button>
