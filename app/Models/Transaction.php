@@ -11,7 +11,7 @@ class Transaction extends Model
     protected $primaryKey = 'id';
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['user_id', 'total_amount', 'type', 'payment_method', 'va_number', 'expired_at'];
+    protected $fillable = ['id', 'user_id', 'total_amount', 'type', 'payment_method', 'va_number', 'expired_at'];
 
     protected function casts(){
         return [
@@ -25,10 +25,11 @@ class Transaction extends Model
     }
 
     public function trip_order(){
-        return $this->hasOne(TripOrder::class);
+        return $this->hasOne(TripOrder::class, 'transaction_id');
     }
 
     public function jastip_order(){
         return $this->hasOne(JastipOrder::class);
     }
 }
+

@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
+use App\Models\Transaction;
+use App\Models\TripOrder;
+
+use Midtrans\Config;
+use Midtrans\Snap;
+
 
 class TripsController extends Controller
 {
@@ -494,92 +500,135 @@ class TripsController extends Controller
         return redirect()->route('trip-bareng.payment', ['id' => $trip->id, 'order' => $orderId]);
     }
 
-    public function payment(Request $request, $id)
+    public function storePayment(Request $request, $id)
     {
-        // WAJIB login (biar user_id tidak null)
-        if (!Auth::check()) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
-
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) {
-            return response()->json(['message' => 'Trip tidak ditemukan'], 404);
+            return response()->json(['error' => 'Trip not found'], 404);
         }
 
-        $validated = $request->validate([
-            'quantity' => ['required', 'integer', 'min:1'],
-        ]);
-
-        $quantity = (int) $validated['quantity'];
-
-        // Hitung total (samakan dengan frontend kamu)
-        $subtotal = (float) $trip->price * $quantity;
-        $serviceFee = self::SERVICE_FEE * $quantity;
-        $insuranceFee = self::INSURANCE_FEE * $quantity;
-
-        // Midtrans minta integer rupiah
-        $grossAmount = (int) round($subtotal + $serviceFee + $insuranceFee);
-
-        // 1) Buat transaksi (HasUlids akan auto-generate id string)
-        //    Pastikan kolom `id` di tabel transactions tipe string/char(26) atau varchar.
-        $tx = Transaction::create([
-            'user_id' => Auth::id(),
-            'total_amount' => $grossAmount,
-            'type' => self::TRANSACTION_TYPE_TRIP,
-            'payment_method' => 'midtrans_snap',
-            'expired_at' => now()->addHours(24),
-        ]);
-
-        // 2) Setup midtrans config
-        \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
-        \Midtrans\Config::$isProduction = (bool) config('services.midtrans.is_production', false);
-        \Midtrans\Config::$isSanitized = true;
-        \Midtrans\Config::$is3ds = true;
-
-        $params = [
-            'transaction_details' => [
-                'order_id' => $tx->id,
-                'gross_amount' => $grossAmount,
-            ],
-            'item_details' => [
-                [
-                    'id' => 'trip-' . $trip->id,
-                    'price' => (int) round((float) $trip->price),
-                    'quantity' => $quantity,
-                    'name' => $trip->name,
-                ],
-                [
-                    'id' => 'service-fee',
-                    'price' => self::SERVICE_FEE,
-                    'quantity' => $quantity,
-                    'name' => 'Biaya Layanan',
-                ],
-                [
-                    'id' => 'insurance-fee',
-                    'price' => self::INSURANCE_FEE,
-                    'quantity' => $quantity,
-                    'name' => 'Asuransi Trip',
-                ],
-            ],
-            'customer_details' => [
-                'first_name' => Auth::user()->full_name ?? Auth::user()->name ?? 'Customer',
-                'email' => Auth::user()->email ?? 'customer@example.com',
-            ],
-        ];
+        $quantity = $request->integer('quantity', 1);
+        if ($quantity < 1) {
+            return response()->json(['error' => 'Invalid quantity'], 400);
+        }
 
         try {
-            $snapToken = \Midtrans\Snap::getSnapToken($params);
+            // Calculate totals
+            $subtotal = $trip->price * $quantity;
+            $serviceFee = self::SERVICE_FEE * $quantity;
+            $insuranceFee = self::INSURANCE_FEE * $quantity;
+            $totalAmount = $subtotal + $serviceFee + $insuranceFee;
+
+            // Create Transaction (UUID for ID)
+            $transactionId = (string) Str::uuid();
+            $userId = auth()->id(); 
+
+            $transaction = Transaction::create([
+                'id' => $transactionId,
+                'user_id' => $userId,
+                'total_amount' => $totalAmount,
+                'type' => 'trip',
+                'payment_method' => 'midtrans',
+                'va_number' => '', // Will be filled by Midtrans callback
+                'expired_at' => Carbon::now()->addHours(24),
+            ]);
+
+            // Create TripOrder
+            $tripOrder = TripOrder::create([
+                'trip_id' => $id,
+                'user_id' => $userId,
+                'transaction_id' => $transactionId,
+                'quantity' => $quantity,
+                'total' => $totalAmount,
+                'order_status' => 'pending',
+            ]);
+
+            // Prepare Midtrans Snap Token params
+            $snapParams = [
+                'transaction_details' => [
+                    'order_id' => $transactionId,
+                    'gross_amount' => (int) $totalAmount,
+                ],
+                'item_details' => [
+                    [
+                        'id' => 'trip_' . $id,
+                        'price' => (int) $trip->price,
+                        'quantity' => $quantity,
+                        'name' => $trip->name,
+                    ],
+                    [
+                        'id' => 'service_fee',
+                        'price' => (int) self::SERVICE_FEE,
+                        'quantity' => $quantity,
+                        'name' => 'Biaya Layanan',
+                    ],
+                    [
+                        'id' => 'insurance_fee',
+                        'price' => (int) self::INSURANCE_FEE,
+                        'quantity' => $quantity,
+                        'name' => 'Biaya Asuransi Trip',
+                    ],
+                ],
+                'customer_details' => [
+                    'first_name' => auth()->user()?->full_name ?? 'Guest',
+                    'email' => auth()->user()?->email ?? 'guest@barengin.app',
+                    'phone' => auth()->user()?->phone ?? '62812345678',
+                ],
+                'callbacks' => [
+                    'finish' => route('trip-bareng.success', ['id' => $id]),
+                    'error' => route('trip-bareng.checkout', ['id' => $id]),
+                    'pending' => route('trip-bareng.checkout', ['id' => $id]),
+                ],
+            ];
+
+            // Generate Snap Token
+            $snapToken = Snap::getSnapToken($snapParams);
 
             return response()->json([
                 'snap_token' => $snapToken,
-                'transaction_id' => $tx->id,
+                'transaction_id' => $transactionId,
+                'order_id' => $tripOrder->id,
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Gagal membuat Snap Token',
-                'error' => $e->getMessage(),
+                'error' => 'Failed to create payment: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    // 🔄 UPDATED: GET payment untuk display halaman (jika ada order_id di query)
+    public function payment(Request $request, $id)
+    {
+        $trip = DB::table('trips')->where('id', $id)->first();
+        if (!$trip) abort(404);
+
+        // Jika ada order_id, ambil data dari database
+        $orderId = $request->integer('order');
+        $order = null;
+        $totalAmount = (float) $trip->price + self::SERVICE_FEE + self::INSURANCE_FEE;
+
+        if ($orderId) {
+            $order = TripOrder::with('transaction')
+                ->where('id', $orderId)
+                ->first();
+
+            if ($order) {
+                $totalAmount = $order->total;
+            }
+        }
+
+        $paymentData = [
+            'trip_id' => $id,
+            'order_id' => $orderId,
+            'total_amount' => $totalAmount,
+            'due_date' => Carbon::now()->addHours(24)->format('d F Y, H:i'),
+            'bank_name' => 'Midtrans Payment Gateway',
+            'va_number' => $order?->transaction?->va_number ?? 'Pending',
+        ];
+
+        return Inertia::render('TripBareng/WaitingPayment', [
+            'paymentData' => $paymentData,
+        ]);
     }
 
     public function success(Request $request, $id)
@@ -587,28 +636,32 @@ class TripsController extends Controller
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
 
-        $order = $this->getTripForOrder((int) $id, $request->integer('order'));
-        $quantity = (int) ($order->quantity ?? 1);
-        $transactionId = $order->transaction_id ?? ('OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT));
-        $tripTitle = $order->trip_name ?? $trip->name;
-        $tripImage = $order->image ?? ($trip->image ?? '/assets/trips/bromo.jpg');
+        $startDate = Carbon::parse($trip->start_date);
+        $endDate = Carbon::parse($trip->end_date);
 
-        $startDate = Carbon::parse($order->start_date ?? $trip->start_date);
-        $endDate = Carbon::parse($order->end_date ?? $trip->end_date);
-        $joined = $this->getJoinedCountForTrip((int) $id);
+        // Get transaction_id dari query parameter (dari Midtrans callback)
+        $transactionId = $request->query('transaction_id');
+        $quantity = 1;
 
-        $successData = [
-            'transaction_id' => $transactionId,
-            'trip_title' => $tripTitle,
+        if ($transactionId) {
+            $transaction = Transaction::find($transactionId);
+            $tripOrder = TripOrder::where('transaction_id', $transactionId)->first();
+            if ($tripOrder) {
+                $quantity = $tripOrder->quantity;
+            }
+        }
+
+        $order = [
+            'transaction_id' => $transactionId ?? 'OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT),
+            'trip_title' => $trip->name,
             'date_range' => $startDate->format('d M') . ' - ' . $endDate->format('d M Y'),
             'quantity' => $quantity,
-            'image' => $tripImage,
-            'friends_waiting' => max(0, $joined - $quantity),
-            'slot_message' => "Kamu berhasil memesan {$quantity} slot",
+            'image' => $trip->image ?? '/assets/trips/bromo.jpg',
+            'friends_waiting' => rand(3, 15),
         ];
 
         return Inertia::render('TripBareng/Success', [
-            'order' => $successData,
+            'order' => $order,
         ]);
     }
 }

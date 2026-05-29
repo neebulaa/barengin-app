@@ -156,18 +156,11 @@ Route::get('/leaderboard', function () {
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
 Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
-
-// INI yang dibutuhkan Checkout.jsx: POST untuk minta snap_token + transaction_id
-Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'processPayment'])->name('trip-bareng.payment');
-
-// Success HARUS berdasarkan transaction_id
-Route::get('/trip-bareng/{transaction_id}/success', [TripsController::class, 'successByTransaction'])->name('trip-bareng.success');
-// Management User
-// Route::get('/management-user', function(){
-//     $users = User::all();
-
-//     return inertia('Admin/ManagementUser', ['users' => $users]);
-// })->name('management-user');
+// 🆕 NEW: POST endpoint untuk generate Snap Token
+Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'storePayment'])->name('trip-bareng.payment.store');
+// 🔄 KEEP: GET endpoint untuk display payment page
+Route::get('/trip-bareng/{id}/payment', [TripsController::class, 'payment'])->name('trip-bareng.payment');
+Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
 
 Route::get('/management-user', function () {
     return inertia('Admin/ManagementUser', ['users' => \App\Models\User::all()]);

@@ -47,7 +47,9 @@ export default function Checkout({ trip }) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                return Array.isArray(parsed) ? parsed : [createEmptyParticipant()];
+                return Array.isArray(parsed)
+                    ? parsed
+                    : [createEmptyParticipant()];
             } catch {
                 return [createEmptyParticipant()];
             }
@@ -70,7 +72,7 @@ export default function Checkout({ trip }) {
                     ...prev,
                     ...Array.from(
                         { length: quantity - prev.length },
-                        createEmptyParticipant
+                        createEmptyParticipant,
                     ),
                 ];
             }
@@ -83,23 +85,23 @@ export default function Checkout({ trip }) {
     useEffect(() => {
         const script = document.createElement("script");
         script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-        script.setAttribute("data-client-key", "Mid-client-4rh5_t-r2jDJxAyN");
+        script.setAttribute(
+            "data-client-key",
+            import.meta.env.VITE_MIDTRANS_CLIENT_KEY ?? "Mid-client-4rh5_t-r2jDJxAyN",
+        );
         document.head.appendChild(script);
 
-        return () => {
-            if (document.head.contains(script)) {
-                document.head.removeChild(script);
-            }
-        };
+        return () => document.head.removeChild(script);
     }, []);
 
     // ✅ PERBAIKAN: handleParticipantChange hanya satu versi (dengan validasi inline)
     const handleParticipantChange = (index, field, value) => {
         setParticipants((prev) =>
             prev.map((item, idx) =>
-                idx === index ? { ...item, [field]: value } : item
-            )
+                idx === index ? { ...item, [field]: value } : item,
+            ),
         );
+        
 
         // Hapus pesan error saat user mulai mengetik
         if (errors[index] && errors[index][field]) {
@@ -146,7 +148,9 @@ export default function Checkout({ trip }) {
 
         // Scroll ke form yang belum diisi
         if (firstInvalidIndex !== -1) {
-            const element = document.getElementById(`participant-form-${firstInvalidIndex}`);
+            const element = document.getElementById(
+                `participant-form-${firstInvalidIndex}`,
+            );
             if (element) {
                 element.scrollIntoView({ behavior: "smooth", block: "center" });
             }
@@ -158,14 +162,17 @@ export default function Checkout({ trip }) {
             openMidtransPopup(snapToken);
             return;
         }
-
+        
         // Buat transaksi baru
         setIsProcessing(true);
         try {
-            const response = await axios.post(`/trip-bareng/${trip.id}/payment`, {
-                quantity: quantity,
-                participants: participants,
-            });
+            const response = await axios.post(
+                `/trip-bareng/${trip.id}/payment`,
+                {
+                    quantity: quantity,
+                    participants: participants,
+                },
+            );
 
             setSnapToken(response.data.snap_token);
             openMidtransPopup(response.data.snap_token);
@@ -176,6 +183,7 @@ export default function Checkout({ trip }) {
         }
     };
 
+    
     const openMidtransPopup = (token) => {
         window.snap.pay(token, {
             onSuccess: function (result) {
@@ -223,7 +231,6 @@ export default function Checkout({ trip }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* LEFT COLUMN: Forms */}
                     <div className="lg:col-span-8 space-y-6">
-
                         {/* 1. Trip Summary & Quantity Card */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
                             <div className="flex gap-4 items-center pb-6 border-b border-neutral-100">
@@ -242,7 +249,8 @@ export default function Checkout({ trip }) {
                                     </h3>
                                     <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2 font-medium">
                                         <FaUserFriends className="text-neutral-400" />
-                                        {trip.joined_count} / {trip.capacity} orang telah bergabung
+                                        {trip.joined_count} / {trip.capacity}{" "}
+                                        orang telah bergabung
                                     </div>
                                     <p className="text-primary-700 font-bold">
                                         Rp {trip.price.toLocaleString("id-ID")}{" "}
@@ -259,13 +267,20 @@ export default function Checkout({ trip }) {
                                         Total partisipan
                                     </h4>
                                     <p className="text-sm text-neutral-500">
-                                        Hanya tersisa {trip.remaining_quota} kuota lagi
+                                        Hanya tersisa {trip.remaining_quota}{" "}
+                                        kuota lagi
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <button
-                                        onClick={() => handleQuantityChange("minus")}
-                                        disabled={quantity <= 1 || isProcessing || snapToken !== null}
+                                        onClick={() =>
+                                            handleQuantityChange("minus")
+                                        }
+                                        disabled={
+                                            quantity <= 1 ||
+                                            isProcessing ||
+                                            snapToken !== null
+                                        }
                                         className="w-8 h-8 rounded-full border-2 border-primary-100 text-primary-700 flex items-center justify-center hover:bg-primary-50 disabled:opacity-30 transition"
                                     >
                                         <FaMinus className="text-xs" />
@@ -274,7 +289,9 @@ export default function Checkout({ trip }) {
                                         {quantity}
                                     </span>
                                     <button
-                                        onClick={() => handleQuantityChange("plus")}
+                                        onClick={() =>
+                                            handleQuantityChange("plus")
+                                        }
                                         disabled={
                                             quantity >= trip.remaining_quota ||
                                             isProcessing ||
@@ -322,7 +339,11 @@ export default function Checkout({ trip }) {
                                             placeholder="Masukkan nama lengkap sesuai KTP"
                                             value={p.name}
                                             onChange={(e) =>
-                                                handleParticipantChange(idx, "name", e.target.value)
+                                                handleParticipantChange(
+                                                    idx,
+                                                    "name",
+                                                    e.target.value,
+                                                )
                                             }
                                             disabled={snapToken !== null}
                                         />
@@ -341,7 +362,11 @@ export default function Checkout({ trip }) {
                                             placeholder="Nomor paspor resmi anda"
                                             value={p.passport}
                                             onChange={(e) =>
-                                                handleParticipantChange(idx, "passport", e.target.value)
+                                                handleParticipantChange(
+                                                    idx,
+                                                    "passport",
+                                                    e.target.value,
+                                                )
                                             }
                                             disabled={snapToken !== null}
                                         />
@@ -355,7 +380,11 @@ export default function Checkout({ trip }) {
                                                 placeholder="No Telpon"
                                                 value={p.phone}
                                                 onChange={(e) =>
-                                                    handleParticipantChange(idx, "phone", e.target.value)
+                                                    handleParticipantChange(
+                                                        idx,
+                                                        "phone",
+                                                        e.target.value,
+                                                    )
                                                 }
                                                 disabled={snapToken !== null}
                                                 leftAddon={
@@ -378,7 +407,11 @@ export default function Checkout({ trip }) {
                                                 placeholder="NIK"
                                                 value={p.nik}
                                                 onChange={(e) =>
-                                                    handleParticipantChange(idx, "nik", e.target.value)
+                                                    handleParticipantChange(
+                                                        idx,
+                                                        "nik",
+                                                        e.target.value,
+                                                    )
                                                 }
                                                 disabled={snapToken !== null}
                                             />
@@ -415,7 +448,8 @@ export default function Checkout({ trip }) {
                                 <div className="flex justify-between items-center">
                                     <span>Biaya Asuransi Trip</span>
                                     <span className="font-semibold text-neutral-900">
-                                        Rp {insuranceFee.toLocaleString("id-ID")}
+                                        Rp{" "}
+                                        {insuranceFee.toLocaleString("id-ID")}
                                     </span>
                                 </div>
                             </div>
@@ -434,18 +468,22 @@ export default function Checkout({ trip }) {
                                 <p className="text-xs text-orange-800 leading-relaxed">
                                     Dengan menekan tombol 'Bayar Sekarang', Anda
                                     menyetujui Ketentuan Layanan dan Kebijakan
-                                    Pembatalan kami. Pembayaran ditangani secara aman
-                                    oleh Midtrans.
+                                    Pembatalan kami. Pembayaran ditangani secara
+                                    aman oleh Midtrans.
                                 </p>
                             </div>
 
                             {formError && (
-                                <p className="mb-4 text-sm text-red-500">{formError}</p>
+                                <p className="mb-4 text-sm text-red-500">
+                                    {formError}
+                                </p>
                             )}
 
                             <Button
                                 onClick={handlePayment}
-                                disabled={isProcessing || isSubmitting || quantity < 1}
+                                disabled={
+                                    isProcessing || isSubmitting || quantity < 1
+                                }
                                 type="primary"
                                 size="md"
                                 className="w-full font-bold flex justify-center py-3 rounded-lg text-white disabled:opacity-70 disabled:cursor-not-allowed"
@@ -453,8 +491,8 @@ export default function Checkout({ trip }) {
                                 {isProcessing || isSubmitting
                                     ? "Memproses..."
                                     : snapToken
-                                    ? "Buka Kembali Pembayaran"
-                                    : "Bayar Sekarang"}
+                                      ? "Buka Kembali Pembayaran"
+                                      : "Bayar Sekarang"}
                             </Button>
                         </div>
                     </div>
