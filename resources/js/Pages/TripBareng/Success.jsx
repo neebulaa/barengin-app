@@ -76,7 +76,7 @@ export default function Success({ order }) {
                 <div className="w-full max-w-[500px] flex flex-col gap-4 mt-2">
                     {/* Tombol Primary (Biru) dengan icon chat */}
                     <Button 
-                        isButtonLink
+                        isButtonLink={false}
                         type="primary" 
                         size="md" 
                         rounded={true}
