@@ -1,5 +1,5 @@
 import React from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import MainLayout from "@/Layouts/MainLayout";
@@ -8,6 +8,9 @@ import { FaRegCalendarAlt, FaUserFriends } from "react-icons/fa";
 import { BsCheckLg, BsChatDotsFill } from "react-icons/bs";
 
 export default function Success({ order }) {
+    const handleOpenTripGroupChat = () => {
+        router.post(`/chat/trip/${order.trip_id}/group`);
+    };
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center pt-16 pb-32">
             <Head title="Pembayaran Berhasil - Barengin" />
@@ -79,6 +82,7 @@ export default function Success({ order }) {
                         size="md" 
                         rounded={true}
                         className="w-full font-bold flex items-center justify-center gap-2 text-white"
+                        onClick={handleOpenTripGroupChat}
                     >
                         <BsChatDotsFill className="text-lg" />
                         Masuk ke Grup Chat

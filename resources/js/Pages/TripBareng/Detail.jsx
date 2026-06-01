@@ -1,5 +1,5 @@
-import React from "react";
-import { Head, router } from "@inertiajs/react";
+import React, { useMemo } from "react";
+import { Head, Link, router } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import LocationMap from "@/Components/LocationMap";

@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class ChatConversationController extends Controller
 {
@@ -53,11 +54,17 @@ class ChatConversationController extends Controller
         $me = $request->user();
         $isGuider = (int) $trip->guider_id === (int) $me->id;
 
-        $isParticipants = DB::table('trip_participants')->where('trip_id', $trip->id)->where($me->id)->exists();
-        abort_unless($isGuider || $isParticipants, 403, 'Kamu tidka punya akses ke group chat ini.');
+        $isBuyer = DB::table('trip_orders')
+            ->where('trip_id', $trip->id)
+            ->where('user_id', $me->id)
+            ->exists();
 
-        $conversationId = Conversation::query()->where('is_group', true)->where('trip_id', $trip->id)
-        ->value('id');
+        abort_unless($isGuider || $isBuyer, 403, 'Kamu tidak punya akses ke grup trip ini');
+
+        $conversationId = Conversation::query()
+            ->where('is_group', true)
+            ->where('trip_id', $trip->id)
+            ->value('id');
 
         if (! $conversationId) {
             $conversation = DB::transaction(function () use ($trip) {
@@ -71,22 +78,22 @@ class ChatConversationController extends Controller
             $conversationId = $conversation->id;
         }
 
-        $participantIds = DB::table('trip_participants')
+        $buyerIds = DB::table('trip_orders')
             ->where('trip_id', $trip->id)
-            ->whereNotNull('user_id')
+            // ->where('order_status', 'paid')
             ->pluck('user_id')
             ->unique()
-            ->values()
-            ->all();
+            ->values();
 
-        $allIds = collect($participantIds)
+        $memberIds = $buyerIds
             ->push($trip->guider_id)
             ->unique()
             ->values();
 
         $conv = Conversation::findOrFail($conversationId);
-        $existing = $conv->participants()->pluck('users.id')->all();
-        $toAttach = $allIds->diff($existing);
+        $existingIds = $conv->participants()->pluck('users.id');
+
+        $toAttach = $memberIds->diff($existingIds);
 
         foreach ($toAttach as $uid) {
             $conv->participants()->attach($uid, ['last_read_at' => now()]);
