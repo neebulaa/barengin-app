@@ -123,6 +123,7 @@ Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead
 Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
 Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
 Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
+Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
 
 // Chat
 Route::get('/chat/exp', function(){
