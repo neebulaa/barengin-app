@@ -7,13 +7,27 @@ import Button from "@/Components/Button";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { 
-    FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle, 
-    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar
+import {
+    FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
+    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar, FaHeart, FaRegHeart
 } from "react-icons/fa";
 
 export default function Show({ trip }) {
-    const [position, setPosition] = useState([-6.1751, 106.8272]); 
+    const [position, setPosition] = useState([-6.1751, 106.8272]);
+    const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
+
+    const handleToggleLike = () => {
+        setIsLiked((v) => !v);
+        router.post(
+            "/favorites/toggle",
+            { type: "pergi_bareng", id: trip.id },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => setIsLiked((v) => !v),
+            },
+        );
+    };
 
     useEffect(() => {
         if (!trip?.details?.titik_kumpul) return; 
@@ -252,9 +266,28 @@ export default function Show({ trip }) {
                             <div className="bg-white rounded-2xl border border-neutral-200 p-4">
                                 <p className="text-xs text-neutral-500 mb-1">Ikut pergi bareng sekarang</p>
                                 <p className="text-sm font-bold mb-4">{trip.title}</p>
-                                <Button isButtonLink href={`/pergi-bareng/${trip.id}/join`} type="primary" className="w-full">
-                                    Ikut Sekarang &rarr;
-                                </Button>
+                                <div className="flex items-center gap-3">
+                                    <Button isButtonLink href={`/pergi-bareng/${trip.id}/join`} type="primary" className="flex-1">
+                                        Ikut Sekarang &rarr;
+                                    </Button>
+                                    <button
+                                        type="button"
+                                        onClick={handleToggleLike}
+                                        aria-pressed={isLiked}
+                                        aria-label={isLiked ? "Batal sukai" : "Sukai"}
+                                        className={`h-11 w-11 shrink-0 rounded-full border flex items-center justify-center transition-colors ${
+                                            isLiked
+                                                ? "border-red-500 text-red-500 bg-red-50"
+                                                : "border-neutral-300 text-neutral-500 hover:text-red-500 hover:border-red-500 hover:bg-red-50"
+                                        }`}
+                                    >
+                                        {isLiked ? (
+                                            <FaHeart className="text-[17px]" />
+                                        ) : (
+                                            <FaRegHeart className="text-[17px]" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

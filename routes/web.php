@@ -8,15 +8,16 @@ use App\Http\Controllers\Chat\ChatConversationController;
 use App\Http\Controllers\Chat\ChatReadController;
 use App\Http\Controllers\Chat\ChatUserController;
 use App\Http\Controllers\ForumController;
-use App\Http\Controllers\ForumProfileController;
 use App\Http\Controllers\ForumFollowController;
-use App\Http\Controllers\ForumPeopleController;
 use App\Http\Controllers\ForumLocationController;
-use App\Http\Controllers\TripsController;
-use App\Http\Controllers\PostController;
+use App\Http\Controllers\ForumPeopleController;
+use App\Http\Controllers\ForumProfileController;
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\PergiBarengController;
-
-
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ProfileHistoryController;
+use App\Http\Controllers\TripsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -98,6 +99,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/forum/locations/search', [ForumLocationController::class, 'search']);
     Route::get('/forum/locations/reverse', [ForumLocationController::class, 'reverse']);
     Route::get('/forum/locations/popular', [ForumLocationController::class, 'popular']);
+
+    // Favorites (Like) untuk Trip & Pergi Bareng
+    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
+
+    // Profile History
+    Route::get('/profile-history', [ProfileHistoryController::class, 'index'])->name('profile-history');
+    Route::put('/profile-history', [ProfileHistoryController::class, 'update'])->name('profile-history.update');
+    Route::post('/profile-history/image', [ProfileHistoryController::class, 'updateProfileImage'])->name('profile-history.image.update');
+    Route::delete('/profile-history/image', [ProfileHistoryController::class, 'removeProfileImage'])->name('profile-history.image.remove');
 });
 
 Route ::get('/pergi-bareng',function(){
@@ -115,6 +125,9 @@ Route::prefix('pergi-bareng')->group(function () {
 
 
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
+
+// Midtrans webhook (server-to-server, tanpa auth & CSRF)
+Route::post('/midtrans/notification', [MidtransController::class, 'notification'])->name('midtrans.notification');
 
 Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
 Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');

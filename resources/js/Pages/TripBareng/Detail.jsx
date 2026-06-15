@@ -26,6 +26,7 @@ import {
     FaCamera,
     FaArrowRight,
     FaRegHeart,
+    FaHeart,
     FaChevronLeft,
     FaTicketAlt,
     FaUserTie,
@@ -35,6 +36,21 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 
 export default function Detail({ trip }) {
     const currentTrip = trip;
+
+    const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
+
+    const handleToggleLike = () => {
+        setIsLiked((v) => !v);
+        router.post(
+            "/favorites/toggle",
+            { type: "trip", id: trip.id },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => setIsLiked((v) => !v),
+            },
+        );
+    };
 
     const IconMap = {
         FaCarSide:    FaCarSide,
@@ -398,8 +414,22 @@ export default function Detail({ trip }) {
                             >
                                 Booking Sekarang <FaArrowRight className="text-sm" />
                             </Button>
-                            <button className="w-11 h-11 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-500 hover:text-red-500 hover:border-red-500 hover:bg-red-50 transition-colors bg-white shrink-0">
-                                <FaRegHeart className="text-[17px]" />
+                            <button
+                                type="button"
+                                onClick={handleToggleLike}
+                                aria-pressed={isLiked}
+                                aria-label={isLiked ? "Batal sukai trip" : "Sukai trip"}
+                                className={`w-11 h-11 rounded-full border flex items-center justify-center transition-colors bg-white shrink-0 ${
+                                    isLiked
+                                        ? "border-red-500 text-red-500 bg-red-50"
+                                        : "border-neutral-300 text-neutral-500 hover:text-red-500 hover:border-red-500 hover:bg-red-50"
+                                }`}
+                            >
+                                {isLiked ? (
+                                    <FaHeart className="text-[17px]" />
+                                ) : (
+                                    <FaRegHeart className="text-[17px]" />
+                                )}
                             </button>
                         </div>
                     </div>

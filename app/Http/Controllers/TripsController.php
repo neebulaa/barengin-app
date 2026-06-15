@@ -13,7 +13,7 @@ use Midtrans\Snap;
 
 class TripsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $tripsPaginated = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
@@ -21,7 +21,16 @@ class TripsController extends Controller
             ->orderBy('trips.created_at', 'desc')
             ->paginate(9);
 
-        $tripsPaginated->getCollection()->transform(function ($trip) {
+        $likedTripIds = $request->user()
+            ? DB::table('favorites')
+                ->where('user_id', $request->user()->id)
+                ->where('favoritable_type', 'trip')
+                ->pluck('favoritable_id')
+                ->all()
+            : [];
+        $likedTripIds = array_flip($likedTripIds);
+
+        $tripsPaginated->getCollection()->transform(function ($trip) use ($likedTripIds) {
             $startDate = Carbon::parse($trip->start_date);
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
@@ -59,7 +68,7 @@ class TripsController extends Controller
                 'guide_reviews' => $guiderReviews,
                 'guide_badge' => 'Expert Guide',
                 'image' => $trip->image ?? '/assets/trips/bromo.jpg',
-                'liked' => false,
+                'liked' => isset($likedTripIds[$trip->id]),
             ];
         });
 
@@ -71,7 +80,7 @@ class TripsController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         // 1. Ambil data spesifik trip
         $trip = DB::table('trips')
@@ -146,6 +155,13 @@ class TripsController extends Controller
             ],
             'itinerary'   => $itinerary,
             'facilities'  => $facilities,
+            'liked'       => $request->user()
+                ? DB::table('favorites')
+                    ->where('user_id', $request->user()->id)
+                    ->where('favoritable_type', 'trip')
+                    ->where('favoritable_id', $trip->id)
+                    ->exists()
+                : false,
         ];
 
         return Inertia::render('TripBareng/Detail', [
@@ -276,6 +292,12 @@ class TripsController extends Controller
 
         try {
             $snapToken = \Midtrans\Snap::getSnapToken($params);
+
+            // Simpan token agar pembayaran bisa dibuka kembali dari Profile History
+            DB::table('transactions')->where('id', $transactionId)->update([
+                'snap_token' => $snapToken,
+                'updated_at' => now(),
+            ]);
 
             return response()->json([
                 'snap_token'     => $snapToken,

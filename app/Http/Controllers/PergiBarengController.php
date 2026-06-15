@@ -88,8 +88,16 @@ class PergiBarengController extends Controller
 
         $trips = $query->get();
 
+        $likedIds = $request->user()
+            ? DB::table('favorites')
+                ->where('user_id', $request->user()->id)
+                ->where('favoritable_type', 'pergi_bareng')
+                ->pluck('favoritable_id')
+                ->flip()
+            : collect();
+
         // 3. Format data agar sesuai dengan props yang diminta oleh PergiBarengCard.jsx di React
-        $formattedTrips = $trips->map(function ($trip) {
+        $formattedTrips = $trips->map(function ($trip) use ($likedIds) {
             $parsedDate = $trip->time_appointment;
             
             $avgRating = $trip->initiator?->allRating() ?? 0;
@@ -122,6 +130,7 @@ class PergiBarengController extends Controller
                 'transportType' => $trip->transportation,
                 'transportIcon' => $transportIcon,
                 'href' => '/pergi-bareng/' . $trip->id,
+                'liked' => $likedIds->has($trip->id),
             ];
         });
 
@@ -144,13 +153,22 @@ class PergiBarengController extends Controller
     {
         // Load semua relasi yang dibutuhkan termasuk user_ratings dari initiator
         $trip = PergiBareng::with([
-            'initiator.user_ratings', 
+            'initiator.user_ratings',
             'pergi_bareng_participants.user',
             'financing_estimate'
         ])->findOrFail($id);
-        
+
+        $data = $this->formatTripData($trip);
+        $data['liked'] = request()->user()
+            ? DB::table('favorites')
+                ->where('user_id', request()->user()->id)
+                ->where('favoritable_type', 'pergi_bareng')
+                ->where('favoritable_id', $trip->id)
+                ->exists()
+            : false;
+
         return Inertia::render('PergiBareng/Show', [
-            'trip' => $this->formatTripData($trip)
+            'trip' => $data
         ]);
     }
 
