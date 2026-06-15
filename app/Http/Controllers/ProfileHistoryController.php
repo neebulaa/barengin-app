@@ -270,6 +270,7 @@ class ProfileHistoryController extends Controller
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->where('trip_orders.user_id', $user->id)
             ->where('trip_orders.order_status', 'paid')
+            ->where('trips.end_date', '<', now()) // hanya yang sudah selesai
             ->select(
                 'trips.id', 'trips.name', 'trips.image', 'trips.location',
                 'trips.start_date', 'trips.end_date',
@@ -318,6 +319,7 @@ class ProfileHistoryController extends Controller
             ->join('pergi_barengs', 'pergi_bareng_participants.pergi_bareng_id', '=', 'pergi_barengs.id')
             ->join('users', 'pergi_barengs.initiator_id', '=', 'users.id')
             ->where('pergi_bareng_participants.user_id', $user->id)
+            ->where('pergi_barengs.time_appointment', '<', now()) // hanya yang sudah lewat
             ->select(
                 'pergi_barengs.id', 'pergi_barengs.name', 'pergi_barengs.img_name',
                 'pergi_barengs.departure_loc', 'pergi_barengs.time_appointment',

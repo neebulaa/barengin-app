@@ -30,6 +30,24 @@ export default function Show({ trip }) {
         );
     };
 
+    const [following, setFollowing] = useState(
+        Boolean(trip.organizer?.is_following),
+    );
+
+    const handleToggleFollow = () => {
+        if (!trip.organizer?.username) return;
+        setFollowing((v) => !v);
+        router.post(
+            `/forum/users/${trip.organizer.username}/follow`,
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => setFollowing((v) => !v),
+            },
+        );
+    };
+
     useEffect(() => {
         if (!trip?.details?.titik_kumpul) return; 
 
@@ -196,7 +214,16 @@ export default function Show({ trip }) {
                                             <FaStar className="text-warning-500"/> {trip.organizer.rating}
                                         </div>
                                     </div>
-                                    <Button size="xs" variant="outline" className="ml-2">Follow</Button>
+                                    {!trip.organizer?.is_self && (
+                                        <Button
+                                            size="xs"
+                                            variant={following ? "solid" : "outline"}
+                                            className="ml-2"
+                                            onClick={handleToggleFollow}
+                                        >
+                                            {following ? "Mengikuti" : "Follow"}
+                                        </Button>
+                                    )}
                                 </div>
                                 
                                 {/* Participants */}

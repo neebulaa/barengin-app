@@ -18,6 +18,7 @@ class TripsController extends Controller
         $tripsPaginated = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
+            ->whereDate('trips.end_date', '>=', now()) // sembunyikan trip yang sudah lewat
             ->orderBy('trips.created_at', 'desc')
             ->paginate(9);
 
@@ -35,20 +36,25 @@ class TripsController extends Controller
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
-            // [PERBAIKAN]: Hitung partisipan murni sesuai tabel DB (tanpa angka acak)
-            $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+            // Peserta = user unik yang sudah membayar (trip_orders)
+            $joined = DB::table('trip_orders')
+                ->where('trip_id', $trip->id)
+                ->where('order_status', 'paid')
+                ->distinct()
+                ->count('user_id');
 
             // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
             $remaining = $trip->people_amount - $joined;
 
+            // Rating pemandu dari ulasan trip (type: jalan_bareng)
             $guiderRating = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
-                ->where('type', 'pergi_bareng')
+                ->where('type', 'jalan_bareng')
                 ->avg('rating_amount');
 
             $guiderReviews = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
-                ->where('type', 'pergi_bareng')
+                ->where('type', 'jalan_bareng')
                 ->count();
 
             return [
@@ -91,13 +97,27 @@ class TripsController extends Controller
 
         if (!$trip) abort(404);
 
-        // [PERBAIKAN]: Hitung jumlah partisipan riil dari database (Bukan rand() lagi)
-        $joined = DB::table('trip_participants')->where('trip_id', $trip->id)->count();
+        // Peserta = user unik yang sudah membayar (trip_orders)
+        $participants = DB::table('trip_orders')
+            ->join('users', 'trip_orders.user_id', '=', 'users.id')
+            ->where('trip_orders.trip_id', $trip->id)
+            ->where('trip_orders.order_status', 'paid')
+            ->select('users.id', 'users.full_name', 'users.profile_image')
+            ->distinct()
+            ->get()
+            ->map(fn ($u) => [
+                'id'     => $u->id,
+                'name'   => $u->full_name,
+                'avatar' => $this->resolveAvatar($u->profile_image),
+            ])
+            ->values();
 
-        // 2. Ambil Rata-Rata Rating Guide
+        $joined = $participants->count();
+
+        // 2. Ambil Rata-Rata Rating Guide (type: jalan_bareng)
         $guiderRating = DB::table('user_ratings')
             ->where('rated_user_id', $trip->host_id)
-            ->where('type', 'pergi_bareng')
+            ->where('type', 'jalan_bareng')
             ->avg('rating_amount');
 
         $ratingText = $guiderRating ? number_format($guiderRating, 1) : 'Baru';
@@ -144,6 +164,8 @@ class TripsController extends Controller
             'date_range'  => $startDate->format('d F Y') . ' hingga ' . $endDate->format('d F Y'),
             'joined_count' => $joined,
             'capacity'    => $trip->people_amount,
+            'remaining_seats' => max(0, $trip->people_amount - $joined),
+            'participants' => $participants,
             'price'       => (float) $trip->price,
             'description' => $trip->description,
             'host' => [
@@ -151,7 +173,7 @@ class TripsController extends Controller
                 'name' => $trip->guide_name,
                 'role' => 'Pemilik',
                 'badge' => 'Expert Guide - ★ ' . $ratingText,
-                'avatar' => $trip->profile_image ?? '/assets/default-profile.png'
+                'avatar' => $this->resolveAvatar($trip->profile_image),
             ],
             'itinerary'   => $itinerary,
             'facilities'  => $facilities,
@@ -360,5 +382,18 @@ class TripsController extends Controller
         }
 
         return '/storage/' . $path;
+    }
+
+    private function resolveAvatar(?string $path): string
+    {
+        if (! $path) {
+            return asset('assets/default-profile.png');
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        return asset('storage/' . $path);
     }
 }

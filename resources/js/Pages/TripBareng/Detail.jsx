@@ -176,21 +176,27 @@ export default function Detail({ trip }) {
                             <span>{currentTrip.duration}</span>
                         </div>
 
-                        {/* Avatar Group — dinamis berdasarkan joined_count */}
+                        {/* Avatar Group — peserta asli yang sudah bergabung */}
                         {currentTrip.joined_count > 0 && (
                             <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md w-fit px-4 py-2.5 rounded-full border border-white/20">
                                 <div className="flex -space-x-3">
-                                    {Array.from({ length: Math.min(currentTrip.joined_count, 3) }).map((_, i) => (
-                                        <img
-                                            key={i}
-                                            src={`https://i.pravatar.cc/100?img=${i + 10}`}
-                                            className="w-8 h-8 rounded-full border-2 border-white/40 object-cover"
-                                            alt="User"
-                                        />
-                                    ))}
-                                    {currentTrip.joined_count > 3 && (
+                                    {(currentTrip.participants ?? [])
+                                        .slice(0, 4)
+                                        .map((p, i) => (
+                                            <img
+                                                key={i}
+                                                src={p.avatar}
+                                                title={p.name}
+                                                className="w-8 h-8 rounded-full border-2 border-white/40 object-cover bg-neutral-200"
+                                                alt={p.name}
+                                                onError={(e) => {
+                                                    e.target.src = "/assets/default-profile.png";
+                                                }}
+                                            />
+                                        ))}
+                                    {currentTrip.joined_count > 4 && (
                                         <div className="w-8 h-8 rounded-full border-2 border-white/40 bg-blue-100 text-primary-700 flex items-center justify-center text-xs font-bold z-10">
-                                            +{currentTrip.joined_count - 3}
+                                            +{currentTrip.joined_count - 4}
                                         </div>
                                     )}
                                 </div>
@@ -198,6 +204,9 @@ export default function Detail({ trip }) {
                                     <p className="font-semibold text-white">Wisatawan Terkonfirmasi</p>
                                     <p className="text-white/80 font-medium">
                                         {currentTrip.joined_count}/{currentTrip.capacity} telah bergabung
+                                        {currentTrip.remaining_seats > 0 && (
+                                            <> · sisa {currentTrip.remaining_seats} kursi</>
+                                        )}
                                     </p>
                                 </div>
                             </div>
