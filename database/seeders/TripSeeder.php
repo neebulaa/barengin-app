@@ -86,6 +86,7 @@ class TripSeeder extends Seeder
                 'price'        => $price,
                 'image'        => $tripImage,
                 'location'     => $cityName, // ← nama kota asli, bukan "Indonesia"
+                'status'       => 'created', // sudah dipublish (cron akan ubah ke ongoing/done sesuai tanggal)
                 'created_at'   => now(),
                 'updated_at'   => now(),
             ]);

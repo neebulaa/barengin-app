@@ -29,7 +29,7 @@ export default function Message({ auth, messages = {}, filters = {} }) {
 
     // 2. Fungsi Eksekusi Hapus
     const confirmDelete = () => {
-        router.delete(`/Admin/message/${deleteModal.msgId}`, {
+        router.delete(`/admin/message/${deleteModal.msgId}`, {
             preserveScroll: true,
             onSuccess: () => {
                 setDeleteModal({ isOpen: false, msgId: null, msgName: "" });
@@ -44,7 +44,7 @@ export default function Message({ auth, messages = {}, filters = {} }) {
 
     // Fungsi Ganti Halaman
     const handlePageChange = (page) => {
-        router.get(`/Admin/message`, { search: searchTerm, page: page }, {
+        router.get(`/admin/message`, { search: searchTerm, page: page }, {
             preserveState: true,
             preserveScroll: true,
         });
@@ -53,7 +53,7 @@ export default function Message({ auth, messages = {}, filters = {} }) {
     // Fungsi Pencarian (Search)
     const handleSearch = (e) => {
         if (e.key === "Enter") {
-            router.get(`/Admin/message`, { search: searchTerm }, {
+            router.get(`/admin/message`, { search: searchTerm }, {
                 preserveState: true,
             });
         }

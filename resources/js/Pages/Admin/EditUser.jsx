@@ -16,7 +16,6 @@ export default function EditUser({ user }) {
         phone: "+62 89694636303",
         birth_date: "18/03/2006",
         profile_image: "/assets/default-profile.png",
-        is_jastiper: false,
         is_guider: false,
         is_admin: false,
         is_verified: false,
@@ -24,7 +23,6 @@ export default function EditUser({ user }) {
 
     // Inertia useForm untuk menghandle data yang BISA diubah (Roles & Verification)
     const { data, setData, put, processing } = useForm({
-        is_jastiper: safeUser.is_jastiper,
         is_guider: safeUser.is_guider,
         is_admin: safeUser.is_admin,
         verified: safeUser.is_verified === 1 || safeUser.is_verified === true,
@@ -63,7 +61,7 @@ export default function EditUser({ user }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Kirim perubahan role & verifikasi ke backend
-        put(`/Admin/management-user/${safeUser.id}`);
+        put(`/admin/management-user/${safeUser.id}`);
     };
 
     return (
@@ -132,7 +130,7 @@ export default function EditUser({ user }) {
             ========================================== */}
             <div className="p-6 border-b border-neutral-100 flex items-center gap-4">
                 <Link
-                    href="/Admin/management-user"
+                    href="/admin/management-user"
                     className="p-2 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-600"
                 >
                     <FiChevronLeft size={24} />
@@ -232,20 +230,6 @@ export default function EditUser({ user }) {
                 <div className="mb-8">
                     <label className="text-sm font-semibold text-neutral-700 block mb-3">Roles</label>
                     <div className="border border-neutral-200 rounded-2xl p-4 flex flex-col gap-3">
-                        
-                        {/* Jastiper Checkbox Card */}
-                        <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_jastiper ? "border-[#0077D3] bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
-                            <div>
-                                <div className="font-bold text-neutral-900 text-sm mb-0.5">Jastiper</div>
-                                <div className="text-xs text-neutral-500">User bisa mengoperasikan jastip</div>
-                            </div>
-                            <input
-                                type="checkbox"
-                                checked={data.is_jastiper}
-                                onChange={(e) => setData("is_jastiper", e.target.checked)}
-                                className="w-5 h-5 rounded border-neutral-300 text-[#0077D3] focus:ring-[#0077D3] cursor-pointer"
-                            />
-                        </label>
 
                         {/* Guider Checkbox Card */}
                         <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_guider ? "border-[#0077D3] bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>

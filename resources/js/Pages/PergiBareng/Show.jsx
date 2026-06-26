@@ -1,6 +1,6 @@
 import React, { useState, useEffect }from "react";
 import { FaChevronLeft } from "react-icons/fa";
-import { Head, Link, router } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
@@ -9,13 +9,40 @@ import 'leaflet/dist/leaflet.css';
 
 import {
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
-    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar, FaHeart, FaRegHeart
+    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar, FaHeart, FaRegHeart,
+    FaMinus, FaPlus, FaLock
 } from "react-icons/fa";
 import { BsChatDots } from "react-icons/bs";
 
 export default function Show({ trip }) {
+    const { auth } = usePage().props;
+    const isLoggedIn = Boolean(auth?.user);
+
     const [position, setPosition] = useState([-6.1751, 106.8272]);
     const [isLiked, setIsLiked] = useState(Boolean(trip.liked));
+
+    // ── Join state ──────────────────────────────────────────
+    const remaining = Math.max(0, trip.remaining ?? (trip.capacity - trip.joined));
+    const isFull = remaining < 1;
+    const [seats, setSeats] = useState(1);
+    const [joining, setJoining] = useState(false);
+
+    const handleSeatChange = (type) => {
+        setSeats((s) => {
+            if (type === "minus") return Math.max(1, s - 1);
+            return Math.min(remaining, s + 1);
+        });
+    };
+
+    const handleJoin = () => {
+        if (isFull || seats < 1) return;
+        setJoining(true);
+        router.post(
+            `/pergi-bareng/${trip.id}/join`,
+            { quantity: seats },
+            { onFinish: () => setJoining(false) },
+        );
+    };
 
     const handleToggleLike = () => {
         setIsLiked((v) => !v);
@@ -220,24 +247,24 @@ export default function Show({ trip }) {
                                     )}
                                 </div>
                                 
-                                {/* Participants */}
+                                {/* Participants (sudah diperluas sesuai jumlah kursi yang dipesan) */}
                                 {trip.participants.map((p, i) => (
                                     <div key={i} className="flex items-center justify-between p-3 border border-neutral-100 rounded-xl hover:bg-neutral-50 transition">
                                         <div className="flex items-center gap-3 flex-1">
                                             <img src={p.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
                                             <div className="flex-1">
                                                 <p className="text-sm font-semibold flex items-center gap-1">{p.name} {p.verified && <FaCheckCircle className="text-primary-500 text-xs"/>}</p>
-                                                <p className="text-xs text-neutral-500">
-                                                    {p.age ? `Usia ${p.age} Tahun` : 'Umur tidak tersedia'}
-                                                </p>
+                                                <p className="text-xs text-neutral-500">{p.seat_label || 'Partisipan'}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 ml-2">
                                             <div className="text-xs text-neutral-600 flex items-center gap-0.5 whitespace-nowrap">
-                                                <FaStar className="text-warning-500"/> {p.rating.toFixed(1)}
+                                                <FaStar className="text-warning-500"/> {Number(p.rating).toFixed(1)}
                                             </div>
                                         </div>
-                                        <Button size="xs" variant="outline" className="ml-2">View Profile</Button>
+                                        {p.username && (
+                                            <Button isButtonLink href={`/forum/users/${p.username}`} size="xs" variant="outline" className="ml-2">View Profile</Button>
+                                        )}
                                     </div>
                                 ))}
 
@@ -309,13 +336,75 @@ export default function Show({ trip }) {
                                 </div>
                             </div>
                             
-                            {/* Tombol Aksi */}
-                            <div className="bg-white rounded-2xl border border-neutral-200 p-4">
+                            {/* Tombol Aksi / Join */}
+                            <div className="bg-white rounded-2xl border border-neutral-200 p-5">
                                 <p className="text-xs text-neutral-500 mb-1">Ikut pergi bareng sekarang</p>
                                 <p className="text-sm font-bold mb-4">{trip.title}</p>
-                                <Button isButtonLink href={`/pergi-bareng/${trip.id}/join`} type="primary" className="w-full">
-                                    Ikut Sekarang &rarr;
-                                </Button>
+
+                                {!isLoggedIn ? (
+                                    <Button isButtonLink href="/login" type="primary" className="w-full justify-center gap-2">
+                                        <FaLock className="text-xs" /> Masuk untuk Ikut
+                                    </Button>
+                                ) : trip.organizer?.is_self ? (
+                                    <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-center text-sm text-neutral-600">
+                                        Anda penyelenggara trip ini.
+                                    </div>
+                                ) : trip.is_participant ? (
+                                    <div className="bg-success-50 border border-success-100 rounded-xl p-3 text-center text-sm font-semibold text-success-700">
+                                        Anda sudah tergabung di trip ini.
+                                    </div>
+                                ) : trip.has_requested ? (
+                                    <div className="space-y-3">
+                                        <div className="bg-warning-50 border border-warning-100 rounded-xl p-3 text-center text-sm font-semibold text-warning-700">
+                                            Permintaan terkirim, menunggu persetujuan penyelenggara.
+                                        </div>
+                                        <Button isButtonLink href={`/pergi-bareng/${trip.id}/request-sent`} variant="outline" className="w-full justify-center">
+                                            Lihat Status
+                                        </Button>
+                                    </div>
+                                ) : isFull ? (
+                                    <Button type="neutral" disabled className="w-full justify-center opacity-60 cursor-not-allowed">
+                                        Kuota Penuh
+                                    </Button>
+                                ) : (
+                                    <>
+                                        {/* Counter kursi */}
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div>
+                                                <p className="font-bold text-neutral-900 text-sm">Jumlah kursi</p>
+                                                <p className="text-xs text-neutral-500">Tersisa {remaining} kuota lagi</p>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSeatChange("minus")}
+                                                    disabled={seats <= 1}
+                                                    className="w-8 h-8 rounded-full border-2 border-primary-100 text-primary-700 flex items-center justify-center hover:bg-primary-50 disabled:opacity-30 transition"
+                                                >
+                                                    <FaMinus className="text-xs" />
+                                                </button>
+                                                <span className="font-bold text-lg w-4 text-center">{seats}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSeatChange("plus")}
+                                                    disabled={seats >= remaining}
+                                                    className="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center shadow-sm hover:bg-primary-800 disabled:opacity-50 transition"
+                                                >
+                                                    <FaPlus className="text-xs" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            type="primary"
+                                            className="w-full justify-center"
+                                            onClick={handleJoin}
+                                            disabled={joining}
+                                        >
+                                            {joining ? "Memproses..." : <>Ikut Sekarang &rarr;</>}
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

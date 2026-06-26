@@ -14,13 +14,8 @@ return new class extends Migration
         Schema::create('pergi_bareng_participants', function(Blueprint $table){
             $table->id();
             $table->foreignId('pergi_bareng_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade')->onUpdate('cascade');
-            $table->string('full_name');
-            $table->string('paspor', 12)->nullable();
-            $table->string('phone_number', 15);
-            $table->string('nik', 16);
-            $table->date('birth_date')->nullable();
-            $table->tinyInteger('age')->nullable();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
+            $table->integer('quantity')->default(1);
             $table->timestamps();
         });
     }

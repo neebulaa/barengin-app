@@ -4,17 +4,44 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 
 class Trip extends Model
 {
     use HasFactory;
-    protected $fillable = ['name', 'description', 'people_amount', 'start_date', 'end_date', 'rating', 'price'];
+
+    public const STATUS_DRAFT   = 'draft';
+    public const STATUS_CREATED = 'created';
+    public const STATUS_ONGOING = 'ongoing';
+    public const STATUS_DONE    = 'done';
+
+    /** Label bahasa Indonesia untuk tiap status */
+    public const STATUS_LABELS = [
+        self::STATUS_DRAFT   => 'Draf',
+        self::STATUS_CREATED => 'Terjadwal',
+        self::STATUS_ONGOING => 'Berlangsung',
+        self::STATUS_DONE    => 'Selesai',
+    ];
+
+    protected $fillable = [
+        'guider_id', 'name', 'description', 'people_amount',
+        'start_date', 'end_date', 'rating', 'price',
+        'image', 'location', 'status',
+    ];
+
     protected function casts()
     {
         return [
             'rating' => 'decimal:2',
-            'price' => 'decimal:2'
+            'price' => 'decimal:2',
+            'start_date' => 'date',
+            'end_date' => 'date',
         ];
+    }
+
+    public function guider()
+    {
+        return $this->belongsTo(User::class, 'guider_id');
     }
 
     public function detail_trips()
@@ -24,7 +51,7 @@ class Trip extends Model
 
     public function facilities()
     {
-        return $this->belongsToMany(TripFacility::class, 'trip_facilities', 'trip_id', 'facility_id');
+        return $this->belongsToMany(Facility::class, 'trip_facilities', 'trip_id', 'facility_id');
     }
 
     public function trip_orders()
@@ -35,5 +62,44 @@ class Trip extends Model
     public function conversations()
     {
         return $this->hasOne(Conversation::class);
+    }
+
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status] ?? $this->status;
+    }
+
+    /** Status yang seharusnya berdasarkan tanggal trip (untuk trip yang sudah dipublish). */
+    public static function statusFromDates($start, $end): string
+    {
+        $today = Carbon::now()->startOfDay();
+        $startDay = Carbon::parse($start)->startOfDay();
+        $endDay = Carbon::parse($end)->endOfDay();
+
+        if ($today->lt($startDay)) {
+            return self::STATUS_CREATED;
+        }
+        if ($today->gt($endDay)) {
+            return self::STATUS_DONE;
+        }
+        return self::STATUS_ONGOING;
+    }
+
+    /**
+     * Perbarui status semua trip yang sudah dipublish (bukan draft)
+     * mengikuti tanggalnya. Dipakai oleh cron & saat membuka dashboard.
+     */
+    public static function refreshStatuses(): int
+    {
+        $changed = 0;
+        self::where('status', '!=', self::STATUS_DRAFT)->get()->each(function ($trip) use (&$changed) {
+            $expected = self::statusFromDates($trip->start_date, $trip->end_date);
+            if ($trip->status !== $expected) {
+                $trip->status = $expected;
+                $trip->save();
+                $changed++;
+            }
+        });
+        return $changed;
     }
 }

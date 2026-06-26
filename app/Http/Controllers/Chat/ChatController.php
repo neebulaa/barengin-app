@@ -43,7 +43,7 @@ class ChatController extends Controller
         $conversation->load([
             'participants:id,full_name,profile_image',
             'trip:id,name',
-            'pergi_bareng:id,name',
+            'pergi_bareng:id,name,img_name',
         ]);
 
         $peer = $conversation->participants->firstWhere('id', '!=', $user->id);
@@ -78,12 +78,17 @@ class ChatController extends Controller
                 ],
             ]);
 
+        $headerAvatar = $conversation->is_group
+            ? ($this->groupAvatar($conversation) ?? asset('assets/default-profile.png'))
+            : ($peer?->public_profile_image ?? asset('assets/default-profile.png'));
+
         return Inertia::render('Chat/Show', [
             'conversations' => $conversations,
             'conversation' => [
                 'id' => $conversation->id,
                 'is_group' => (bool) $conversation->is_group,
                 'title' => $title ?? 'Chat',
+                'avatar' => $headerAvatar,
                 'peer_last_read_at' => $peerLastReadAt,
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
@@ -183,7 +188,7 @@ class ChatController extends Controller
             ->with([
                 'participants:id,full_name,profile_image',
                 'trip:id,name',
-                'pergi_bareng:id,name'
+                'pergi_bareng:id,name,img_name'
             ])
             ->get()
             ->map(function ($c) use ($user) {
@@ -194,7 +199,7 @@ class ChatController extends Controller
                     : optional($c->participants->firstWhere('id', '!=', $user->id))->full_name;
 
                 $avatar = $c->is_group
-                    ? asset('assets/default-profile.png')
+                    ? ($this->groupAvatar($c) ?? asset('assets/default-profile.png'))
                     : ($c->participants->firstWhere('id', '!=', $user->id)?->public_profile_image ?? asset('assets/default-profile.png'));
 
                 $me = $c->participants->firstWhere('id', $user->id);
@@ -232,5 +237,21 @@ class ChatController extends Controller
             })
             ->sortByDesc(fn ($c) => $c['last_message_at'] ?? 0)
             ->values();
+    }
+
+    /**
+     * Avatar grup: gunakan gambar pergi bareng bila ada, jatuhkan ke header default
+     * pergi bareng untuk grup pergi bareng. Mengembalikan null untuk grup non-pergi-bareng
+     * (mis. grup trip) sehingga pemanggil memakai fallback-nya sendiri.
+     */
+    private function groupAvatar(Conversation $conversation): ?string
+    {
+        if (! $conversation->pergi_bareng) {
+            return null;
+        }
+
+        return $conversation->pergi_bareng->img_name
+            ? asset('storage/' . $conversation->pergi_bareng->img_name)
+            : asset('assets/pergi-bareng/PergiBarengHeader.avif');
     }
 }

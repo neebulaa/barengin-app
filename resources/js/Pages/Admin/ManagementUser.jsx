@@ -57,7 +57,6 @@ export default function ManagementUser({ users = [] }) {
             const userRoles = [];
             if (user.is_admin) userRoles.push("Admin");
             if (user.is_guider) userRoles.push("Guider");
-            if (user.is_jastiper) userRoles.push("Jastiper");
             if (userRoles.length === 0) userRoles.push("User Biasa");
 
             return {
@@ -113,7 +112,7 @@ export default function ManagementUser({ users = [] }) {
 
     // 2. Fungsi saat tombol "Ya, Hapus" di dalam popup diklik
     const confirmDelete = () => {
-        router.delete(`/Admin/management-user/${deleteModal.userId}`, {
+        router.delete(`/admin/management-user/${deleteModal.userId}`, {
             preserveScroll: true,
             onSuccess: () => {
                 // Tutup popup setelah berhasil dihapus
@@ -219,7 +218,6 @@ export default function ManagementUser({ users = [] }) {
                             className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm focus:ring-2 focus:ring-[#0077D3] outline-none cursor-pointer appearance-none transition-all"
                         >
                             <option value="">Filter By (Semua)</option>
-                            <option value="Jastiper">Jastiper</option>
                             <option value="Guider">Guider</option>
                             <option value="Admin">Admin</option>
                             <option value="User Biasa">User Biasa</option>
@@ -287,7 +285,7 @@ export default function ManagementUser({ users = [] }) {
                                                 
                                                 {/* TOMBOL EDIT */}
                                                 <Link
-                                                    href={`/Admin/management-user/${user.id}/edit-role`}
+                                                    href={`/admin/management-user/${user.id}/edit-role`}
                                                     className="p-2 bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 rounded-lg transition-colors inline-flex items-center justify-center"
                                                     title="Edit Role User"
                                                 >
@@ -340,7 +338,7 @@ export default function ManagementUser({ users = [] }) {
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <Link
-                                            href={`/Admin/management-user/${user.id}/edit-role`}
+                                            href={`/admin/management-user/${user.id}/edit-role`}
                                             className="p-2 bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 rounded-lg transition-colors inline-flex"
                                         >
                                             <FiEdit2 size={16} />

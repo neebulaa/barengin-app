@@ -1,0 +1,221 @@
+import React, { useState, useMemo } from "react";
+import { Head, Link, router } from "@inertiajs/react";
+import AdminLayout from "@/Layouts/AdminLayout";
+import { FiSearch, FiTrash2, FiPlus, FiAlertCircle, FiUsers } from "react-icons/fi";
+import { BsChatDotsFill } from "react-icons/bs";
+
+export default function Index({ trips = [] }) {
+    const [search, setSearch] = useState("");
+    const [sortBy, setSortBy] = useState("latest");
+    const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
+
+    const rows = useMemo(() => {
+        let list = trips.filter((t) => {
+            const q = search.toLowerCase();
+            return (
+                t.name?.toLowerCase().includes(q) ||
+                t.destination?.toLowerCase().includes(q) ||
+                t.departure?.toLowerCase().includes(q) ||
+                t.code?.toLowerCase().includes(q)
+            );
+        });
+
+        if (sortBy === "seats") list = [...list].sort((a, b) => b.joined - a.joined);
+        else if (sortBy === "status") list = [...list].sort((a, b) => a.status.localeCompare(b.status));
+        // "latest" -> sudah diurutkan dari server
+
+        return list;
+    }, [trips, search, sortBy]);
+
+    const openGroupChat = (id) => router.post(`/chat/pergi-bareng/${id}/group`);
+
+    const confirmDelete = () => {
+        router.delete(`/admin/pergi-bareng/${deleteModal.id}`, {
+            preserveScroll: true,
+            onSuccess: () => setDeleteModal({ open: false, id: null, name: "" }),
+        });
+    };
+
+    const statusBadge = (status) =>
+        status === "aktif"
+            ? "bg-blue-100 text-[#0077D3]"
+            : "bg-green-100 text-green-700";
+
+    return (
+        <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
+            <Head title="Managemen Pergi Bareng" />
+
+            {/* Modal hapus */}
+            {deleteModal.open && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                        <div className="p-6 text-center">
+                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <FiAlertCircle size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-neutral-900 mb-2">Hapus Pergi Bareng?</h3>
+                            <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
+                                Yakin ingin menghapus <br />
+                                <span className="font-bold text-neutral-900">{deleteModal.name}</span>?
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setDeleteModal({ open: false, id: null, name: "" })}
+                                    className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-sm transition-colors"
+                                >
+                                    Ya, Hapus
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="p-4 sm:p-6">
+                {/* Toolbar */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 mb-6">
+                    <div className="relative flex-1 max-w-md">
+                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+                        <input
+                            type="text"
+                            placeholder="Search Pergi Bareng..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none text-sm transition-all"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="appearance-none w-40 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm focus:ring-2 focus:ring-[#0077D3] outline-none cursor-pointer transition-all"
+                            >
+                                <option value="latest">Terbaru</option>
+                                <option value="seats">Kursi Terisi</option>
+                                <option value="status">Status</option>
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <Link
+                            href="/admin/pergi-bareng/create"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0077D3] text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition-colors whitespace-nowrap"
+                        >
+                            <FiPlus /> Tambah Pergi Bareng
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Tabel */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[820px]">
+                        <thead>
+                            <tr className="text-neutral-500 text-xs font-bold uppercase tracking-wider border-b border-neutral-100">
+                                <th className="py-3 px-4">ID</th>
+                                <th className="py-3 px-4">Tujuan</th>
+                                <th className="py-3 px-4">Keberangkatan</th>
+                                <th className="py-3 px-4">Waktu Pergi</th>
+                                <th className="py-3 px-4">Jml. Kursi</th>
+                                <th className="py-3 px-4">Status</th>
+                                <th className="py-3 px-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100">
+                            {rows.length > 0 ? (
+                                rows.map((t) => (
+                                    <tr key={t.id} className="hover:bg-neutral-50/50 transition">
+                                        <td className="py-4 px-4 text-sm font-medium text-neutral-500">{t.code}</td>
+                                        <td className="py-4 px-4">
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src={t.image}
+                                                    alt={t.name}
+                                                    className="w-11 h-11 rounded-lg object-cover border border-neutral-200"
+                                                    onError={(e) => (e.target.src = "/assets/pergi-bareng/PergiBarengHeader.avif")}
+                                                />
+                                                <span className="font-semibold text-neutral-900 text-sm max-w-[180px] truncate">{t.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-4 text-sm text-neutral-600 max-w-[200px]">
+                                            <span className="line-clamp-2">{t.departure}</span>
+                                        </td>
+                                        <td className="py-4 px-4 text-sm text-neutral-700 whitespace-nowrap">
+                                            <div className="font-medium">{t.date_label}</div>
+                                            <div className="text-xs text-neutral-400">{t.time_label}</div>
+                                        </td>
+                                        <td className="py-4 px-4 text-sm font-semibold text-[#0077D3] whitespace-nowrap">
+                                            {t.joined}/{t.capacity}
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge(t.status)}`}>
+                                                {t.status}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Link
+                                                    href={`/admin/pergi-bareng/${t.id}/requests`}
+                                                    className="relative p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"
+                                                    title="Lihat permintaan bergabung"
+                                                >
+                                                    <FiUsers size={16} />
+                                                    {t.pending_requests > 0 && (
+                                                        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                                            {t.pending_requests}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                                <button
+                                                    onClick={() => openGroupChat(t.id)}
+                                                    className="p-2 bg-blue-50 text-[#0077D3] hover:bg-blue-100 rounded-lg transition-colors"
+                                                    title="Buka grup chat"
+                                                >
+                                                    <BsChatDotsFill size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })}
+                                                    className="p-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                                                    title="Hapus"
+                                                >
+                                                    <FiTrash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" className="py-12 text-center text-neutral-500 text-sm">
+                                        Belum ada pergi bareng. Klik "Tambah Pergi Bareng" untuk membuat.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+Index.layout = (page) => (
+    <AdminLayout title="Dasbor - Home" subtitle="Selamat datang!">
+        <div className="mb-6">
+            <h1 className="text-2xl font-bold text-neutral-900">Managemen Pergi Bareng</h1>
+            <p className="text-neutral-500 text-sm">Pantau aktivitas pergi bareng anda dengan efisien.</p>
+        </div>
+        {page}
+    </AdminLayout>
+);

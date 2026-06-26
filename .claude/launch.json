@@ -36,6 +36,16 @@
         "C:\\laragon\\www\\news"
       ],
       "port": 8099
+    },
+    {
+      "name": "barengin",
+      "runtimeExecutable": "php",
+      "runtimeArgs": [
+        "artisan",
+        "serve"
+      ],
+      "autoPort": true,
+      "port": 8000
     }
   ]
 }

@@ -1,0 +1,259 @@
+import React, { useState } from "react";
+import { Head, Link, useForm } from "@inertiajs/react";
+import AdminLayout from "@/Layouts/AdminLayout";
+import { FiPlus, FiX, FiUploadCloud, FiChevronLeft } from "react-icons/fi";
+
+export default function Create({ transportations = [] }) {
+    const [preview, setPreview] = useState(null);
+
+    const { data, setData, post, processing, errors } = useForm({
+        name: "",
+        destination_loc: "",
+        departure_loc: "",
+        date: "",
+        time: "",
+        transportation: "",
+        description: "",
+        people_amount: "",
+        financing_estimates: [""],
+        image: null,
+    });
+
+    const setEstimate = (i, value) => {
+        const next = [...data.financing_estimates];
+        next[i] = value;
+        setData("financing_estimates", next);
+    };
+    const addEstimate = () => setData("financing_estimates", [...data.financing_estimates, ""]);
+    const removeEstimate = (i) =>
+        setData("financing_estimates", data.financing_estimates.filter((_, idx) => idx !== i));
+
+    const handleImage = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setData("image", file);
+        setPreview(URL.createObjectURL(file));
+    };
+
+    const submit = (e) => {
+        e.preventDefault();
+        post("/admin/pergi-bareng", { forceFormData: true });
+    };
+
+    const fieldError = (key) =>
+        errors[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
+
+    const inputClass =
+        "w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none text-sm transition-all";
+    const labelClass = "block text-sm font-bold text-neutral-800 mb-1.5";
+    const cardTitle = "text-lg font-bold text-[#0077D3] mb-4";
+
+    return (
+        <form onSubmit={submit}>
+            <Head title="Tambah Pergi Bareng Baru" />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Kolom kiri */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Destinasi & titik kumpul */}
+                    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
+                        <h3 className={cardTitle}>Destination &amp; Meeting Point</h3>
+
+                        <div className="mb-4">
+                            <label className={labelClass}>Nama Pergi Bareng</label>
+                            <input
+                                type="text"
+                                value={data.name}
+                                onChange={(e) => setData("name", e.target.value)}
+                                placeholder="cth: Bandara Soekarno Hatta ke Bandung"
+                                className={inputClass}
+                            />
+                            {fieldError("name")}
+                        </div>
+
+                        <div className="mb-4">
+                            <label className={labelClass}>Tujuan Lokasi</label>
+                            <input
+                                type="text"
+                                value={data.destination_loc}
+                                onChange={(e) => setData("destination_loc", e.target.value)}
+                                placeholder="Lokasi tujuan"
+                                className={inputClass}
+                            />
+                            {fieldError("destination_loc")}
+                        </div>
+
+                        <div>
+                            <label className={labelClass}>Titik Kumpul</label>
+                            <input
+                                type="text"
+                                value={data.departure_loc}
+                                onChange={(e) => setData("departure_loc", e.target.value)}
+                                placeholder="Lokasi titik kumpul"
+                                className={inputClass}
+                            />
+                            {fieldError("departure_loc")}
+                        </div>
+                    </div>
+
+                    {/* Logistik */}
+                    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
+                        <h3 className={cardTitle}>Pergi Bareng Logistics</h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label className={labelClass}>Tanggal</label>
+                                <input
+                                    type="date"
+                                    value={data.date}
+                                    onChange={(e) => setData("date", e.target.value)}
+                                    className={inputClass}
+                                />
+                                {fieldError("date")}
+                            </div>
+                            <div>
+                                <label className={labelClass}>Jam Kumpul</label>
+                                <input
+                                    type="time"
+                                    value={data.time}
+                                    onChange={(e) => setData("time", e.target.value)}
+                                    className={inputClass}
+                                />
+                                {fieldError("time")}
+                            </div>
+                            <div>
+                                <label className={labelClass}>Transportasi</label>
+                                <select
+                                    value={data.transportation}
+                                    onChange={(e) => setData("transportation", e.target.value)}
+                                    className={inputClass + " bg-white cursor-pointer"}
+                                >
+                                    <option value="">Pilih Kendaraan</option>
+                                    {transportations.map((t) => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                                {fieldError("transportation")}
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className={labelClass}>Deskripsi</label>
+                            <textarea
+                                rows={4}
+                                value={data.description}
+                                onChange={(e) => setData("description", e.target.value)}
+                                placeholder="Deskripsi tentang pergi bareng, ekspektasi, dan kesepakatan aturan bersama..."
+                                className={inputClass + " resize-none"}
+                            />
+                            {fieldError("description")}
+                        </div>
+
+                        <div>
+                            <label className={labelClass}>Estimasi Pembiayaan</label>
+                            <div className="space-y-2">
+                                {data.financing_estimates.map((est, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={est}
+                                            onChange={(e) => setEstimate(i, e.target.value)}
+                                            placeholder="cth: Pembayaran Tol"
+                                            className={inputClass}
+                                        />
+                                        {data.financing_estimates.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeEstimate(i)}
+                                                className="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors shrink-0"
+                                            >
+                                                <FiX size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={addEstimate}
+                                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[#0077D3] hover:underline"
+                            >
+                                <FiPlus /> Tambah estimasi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Kolom kanan */}
+                <div className="space-y-6">
+                    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
+                        <h3 className={cardTitle}>Participants</h3>
+                        <label className={labelClass}>Jumlah Orang</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={data.people_amount}
+                            onChange={(e) => setData("people_amount", e.target.value)}
+                            placeholder="0"
+                            className={inputClass}
+                        />
+                        {fieldError("people_amount")}
+                        <p className="text-xs text-neutral-400 mt-2">Jumlah kursi yang tersedia untuk trip ini.</p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
+                        <h3 className={cardTitle}>Gambar Tujuan</h3>
+                        <label className="block cursor-pointer">
+                            <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
+                            <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-[#0077D3] hover:text-[#0077D3] transition-colors overflow-hidden bg-neutral-50">
+                                {preview ? (
+                                    <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <>
+                                        <FiUploadCloud size={28} className="mb-2" />
+                                        <span className="text-sm font-medium">Unggah</span>
+                                    </>
+                                )}
+                            </div>
+                        </label>
+                        {fieldError("image")}
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-6 flex items-center gap-3">
+                <button
+                    type="submit"
+                    disabled={processing}
+                    className="px-7 py-3 rounded-xl bg-[#0077D3] text-white font-semibold hover:bg-blue-700 shadow-sm transition-colors disabled:opacity-60"
+                >
+                    {processing ? "Menyimpan..." : "Buat Pergi Bareng"}
+                </button>
+                <Link
+                    href="/admin/pergi-bareng"
+                    className="px-5 py-3 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 transition-colors"
+                >
+                    Batal
+                </Link>
+            </div>
+        </form>
+    );
+}
+
+Create.layout = (page) => (
+    <AdminLayout title="Dasbor - Home" subtitle="Selamat datang!">
+        <div className="mb-6 flex items-center gap-3">
+            <Link
+                href="/admin/pergi-bareng"
+                className="p-2 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
+            >
+                <FiChevronLeft size={18} />
+            </Link>
+            <div>
+                <h1 className="text-2xl font-bold text-neutral-900">Tambah Pergi Bareng Baru</h1>
+                <p className="text-neutral-500 text-sm">Rencanakan perjalanan kolaboratifmu selanjutnya...</p>
+            </div>
+        </div>
+        {page}
+    </AdminLayout>
+);

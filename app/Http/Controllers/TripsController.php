@@ -22,7 +22,8 @@ class TripsController extends Controller
         $query = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
-            ->whereDate('trips.end_date', '>=', now()); // sembunyikan trip yang sudah lewat
+            ->whereDate('trips.end_date', '>=', now()) // sembunyikan trip yang sudah lewat
+            ->where('trips.status', '!=', 'draft'); // hanya trip yang sudah dipublish
 
         if ($tujuan !== '') {
             $query->where(function ($q) use ($tujuan) {
@@ -98,7 +99,7 @@ class TripsController extends Controller
             ];
         });
 
-        $all_trips = Trip::all();
+        $all_trips = Trip::where('status', '!=', 'draft')->get();
 
         return Inertia::render('TripBareng/Index', [
             'trips' => $tripsPaginated,
@@ -121,6 +122,7 @@ class TripsController extends Controller
             ->first();
 
         if (!$trip) abort(404);
+        if ($trip->status === 'draft') abort(404); // draft belum dipublish
 
         // Peserta = user unik yang sudah membayar (trip_orders)
         $participants = DB::table('trip_orders')

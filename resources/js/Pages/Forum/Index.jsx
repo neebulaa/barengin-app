@@ -208,7 +208,7 @@ function ForumIndexPage({ posts, tags, filters }) {
                     <header className="mb-8">
                         <h1 className="text-3xl md:text-4xl font-semibold text-neutral-900">
                             Setiap Perjalanan{" "}
-                            <span className="text-neutral-400">
+                            <span className="text-neutral-500">
                                 Harus Selalu Diabadikan
                             </span>
                         </h1>

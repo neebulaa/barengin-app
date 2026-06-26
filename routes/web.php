@@ -21,6 +21,8 @@ use App\Http\Controllers\ProfileHistoryController;
 use App\Http\Controllers\TripsController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminMessageController;
+use App\Http\Controllers\AdminPergiBarengController;
+use App\Http\Controllers\AdminTripController;
 use App\Http\Controllers\ContactController;
 use Illuminate\Support\Facades\Route;
 
@@ -127,9 +129,12 @@ Route ::get('/pergi-bareng',function(){
 Route::prefix('pergi-bareng')->group(function () {
     Route::get('/', [PergiBarengController::class, 'index'])->name('pergi-bareng.index');
     Route::get('/{id}', [PergiBarengController::class, 'show'])->name('pergi-bareng.show');
-    Route::get('/{id}/join', [PergiBarengController::class, 'join'])->name('pergi-bareng.join');
-    Route::post('/{id}/join', [PergiBarengController::class, 'store'])->name('pergi-bareng.store');
-    Route::get('/{id}/success', [PergiBarengController::class, 'success'])->name('pergi-bareng.success');
+
+    // Pengajuan keikutsertaan (butuh login, menunggu persetujuan penyelenggara)
+    Route::middleware('auth')->group(function () {
+        Route::post('/{id}/join', [PergiBarengController::class, 'store'])->name('pergi-bareng.store');
+        Route::get('/{id}/request-sent', [PergiBarengController::class, 'requestSent'])->name('pergi-bareng.request-sent');
+    });
 });
 
 
@@ -171,18 +176,46 @@ Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->na
 //     return inertia('Admin/ManagementUser', ['users' => $users]);
 // })->name('management-user');
 
-Route::prefix('Admin')->group(function () {
-    
-    Route::get('/', function () {
-        return inertia('Admin/Test');
-    })->name('admin'); 
+Route::prefix('admin')->group(function () {
 
-    Route::get('/management-user', [AdminUserController::class, 'index'])->name('management-user');
-    Route::get('/management-user/{id}/edit-role', [AdminUserController::class, 'edit'])->name('management-user.edit');
-    Route::put('/management-user/{id}', [AdminUserController::class, 'update'])->name('management-user.update');
-    Route::delete('/management-user/{id}', [AdminUserController::class, 'destroy'])->name('management-user.destroy');
+    // Halaman khusus admin (is_admin)
+    Route::middleware(['auth', 'role:admin'])->group(function () {
+        Route::get('/', function () {
+            return inertia('Admin/Test');
+        })->name('admin');
 
-    Route::get('/message', [AdminMessageController::class, 'index'])->name('admin.message.index');
-    Route::delete('/message/{id}', [AdminMessageController::class, 'destroy'])->name('admin.message.destroy');
+        Route::get('/management-user', [AdminUserController::class, 'index'])->name('management-user');
+        Route::get('/management-user/{id}/edit-role', [AdminUserController::class, 'edit'])->name('management-user.edit');
+        Route::put('/management-user/{id}', [AdminUserController::class, 'update'])->name('management-user.update');
+        Route::delete('/management-user/{id}', [AdminUserController::class, 'destroy'])->name('management-user.destroy');
+
+        Route::get('/message', [AdminMessageController::class, 'index'])->name('admin.message.index');
+        Route::delete('/message/{id}', [AdminMessageController::class, 'destroy'])->name('admin.message.destroy');
+    });
+
+    // Manajemen Trip (pemandu/guider)
+    Route::middleware(['auth', 'role:guider'])->prefix('trip')->name('admin.trip.')->group(function () {
+        Route::get('/', [AdminTripController::class, 'index'])->name('index');
+        Route::get('/create', [AdminTripController::class, 'create'])->name('create');
+        Route::get('/analytics', [AdminTripController::class, 'analytics'])->name('analytics');
+        Route::post('/', [AdminTripController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [AdminTripController::class, 'edit'])->whereNumber('id')->name('edit');
+        Route::post('/{id}', [AdminTripController::class, 'update'])->whereNumber('id')->name('update');
+        Route::post('/{id}/publish', [AdminTripController::class, 'publish'])->whereNumber('id')->name('publish');
+        Route::delete('/{id}', [AdminTripController::class, 'destroy'])->whereNumber('id')->name('destroy');
+    });
+
+    // Manajemen Pergi Bareng (penyelenggara) — terbuka untuk semua user yang login
+    Route::middleware('auth')->prefix('pergi-bareng')->name('admin.pergi-bareng.')->group(function () {
+        Route::get('/', [AdminPergiBarengController::class, 'index'])->name('index');
+        Route::get('/create', [AdminPergiBarengController::class, 'create'])->name('create');
+        Route::get('/analytics', [AdminPergiBarengController::class, 'analytics'])->name('analytics');
+        Route::post('/', [AdminPergiBarengController::class, 'store'])->name('store');
+        Route::delete('/{id}', [AdminPergiBarengController::class, 'destroy'])->whereNumber('id')->name('destroy');
+
+        Route::get('/{id}/requests', [AdminPergiBarengController::class, 'requests'])->whereNumber('id')->name('requests');
+        Route::post('/{id}/requests/{requestId}/approve', [AdminPergiBarengController::class, 'approve'])->whereNumber('id')->whereNumber('requestId')->name('requests.approve');
+        Route::delete('/{id}/requests/{requestId}', [AdminPergiBarengController::class, 'reject'])->whereNumber('id')->whereNumber('requestId')->name('requests.reject');
+    });
 
 });

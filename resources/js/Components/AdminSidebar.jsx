@@ -15,45 +15,64 @@ import {
 import { FaSuitcase, FaCar } from "react-icons/fa6";
 
 export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const user = props.auth?.user;
 
-    // Data Menu Navigasi
+    // Data Menu Navigasi. `requires` = flag user yang dibutuhkan (null = semua user).
     const navMenus = [
         {
             group: "PEMANDU TRIP",
             short: "TRP",
+            requires: "is_guider",
             items: [
-                { name: "Manajemen Trip", icon: <FaSuitcase />, href: "/Admin/trip" },
-                { name: "Analitik Trip", icon: <FiPieChart />, href: "/Admin/trip/analytics" },
+                { name: "Managemen Trip", icon: <FaSuitcase />, href: "/admin/trip" },
+                { name: "Analitik Trip", icon: <FiPieChart />, href: "/admin/trip/analytics" },
             ],
         },
         {
             group: "JASTIPER",
             short: "JST",
+            requires: null,
             items: [
-                { name: "Manajemen Jastip", icon: <FiShoppingCart />, href: "/Admin/jastip" },
-                { name: "Analitik Jastip", icon: <FiBarChart2 />, href: "/Admin/jastip/analytics" },
+                { name: "Manajemen Jastip", icon: <FiShoppingCart />, href: "/admin/jastip" },
+                { name: "Analitik Jastip", icon: <FiBarChart2 />, href: "/admin/jastip/analytics" },
             ],
         },
         {
             group: "PERGI BARENG",
             short: "PBR",
+            requires: null,
             items: [
-                { name: "Manajemen Pergi Bareng", icon: <FaCar />, href: "/Admin/pergi-bareng" },
-                { name: "Analitik Pergi Bareng", icon: <FiTrendingUp />, href: "/Admin/pergi-bareng/analytics" },
+                { name: "Managemen Pergi Bareng", icon: <FaCar />, href: "/admin/pergi-bareng" },
+                { name: "Analitik Pergi Bareng", icon: <FiTrendingUp />, href: "/admin/pergi-bareng/analytics" },
             ],
         },
         {
             group: "ADMIN",
             short: "ADM",
+            requires: "is_admin",
             items: [
-                { name: "Manajemen User", icon: <FiUsers />, href: "/Admin/management-user" }, 
-                { name: "Pesan", icon: <FiMessageSquare />, href: "/Admin/message" },
+                { name: "Beranda Admin", icon: <FiHome />, href: "/admin" },
+                { name: "Manajemen Pengguna", icon: <FiUsers />, href: "/admin/management-user" },
+                { name: "Pesan", icon: <FiMessageSquare />, href: "/admin/message" },
             ],
         },
     ];
 
-    const isActive = (href) => url.startsWith(href);
+    // Render menu hanya untuk role yang sesuai
+    const visibleMenus = navMenus.filter((menu) => !menu.requires || Boolean(user?.[menu.requires]));
+
+    // Tentukan satu href aktif: cocokkan url lalu pilih yang paling spesifik (terpanjang),
+    // sehingga "/admin/pergi-bareng" tidak ikut menyala saat di "/admin/pergi-bareng/analytics".
+    const matchHref = (href) =>
+        href === "/admin" ? url === "/admin" : url === href || url.startsWith(href + "/");
+
+    const activeHref = visibleMenus
+        .flatMap((menu) => menu.items.map((item) => item.href))
+        .filter(matchHref)
+        .sort((a, b) => b.length - a.length)[0];
+
+    const isActive = (href) => href === activeHref;
 
     return (
         <>
@@ -107,7 +126,7 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen
 
                 {/* List Menu */}
                 <div className="flex-1 overflow-y-auto py-6 custom-scrollbar">
-                    {navMenus.map((menu, index) => (
+                    {visibleMenus.map((menu, index) => (
                         <div key={index} className="mb-6">
                             <div className={`px-6 mb-3 text-xs font-bold text-neutral-400 tracking-wider transition-all ${isCollapsed ? "text-center text-[10px]" : ""}`}>
                                 {isCollapsed ? menu.short : menu.group}
@@ -123,18 +142,20 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen
                                                 title={isCollapsed ? item.name : ""}
                                                 className={`flex items-center rounded-xl transition-all duration-200 group
                                                     ${isCollapsed ? "justify-center py-3" : "px-3 py-3 gap-3"}
-                                                    ${active ? "text-[#0077D3]" : "text-neutral-600 hover:bg-neutral-50"}
+                                                    ${active && !isCollapsed ? "bg-[#0077D3] text-white shadow-sm shadow-blue-200" : ""}
+                                                    ${!active ? "text-neutral-600 hover:bg-neutral-50" : ""}
                                                 `}
                                             >
-                                                <div className={`flex items-center justify-center transition-all 
+                                                <div className={`flex items-center justify-center transition-all
                                                     ${isCollapsed && active ? "bg-[#0077D3] text-white w-10 h-10 rounded-lg shadow-sm" : "text-lg"}
-                                                    ${!isCollapsed && active ? "text-[#0077D3]" : "text-neutral-500 group-hover:text-[#0077D3]"}
+                                                    ${!isCollapsed && active ? "text-white" : ""}
+                                                    ${!active ? "text-neutral-500 group-hover:text-[#0077D3]" : ""}
                                                 `}>
                                                     {item.icon}
                                                 </div>
 
                                                 {!isCollapsed && (
-                                                    <span className={`font-medium text-sm whitespace-nowrap ${active ? "text-[#0077D3] font-semibold" : ""}`}>
+                                                    <span className={`font-medium text-sm whitespace-nowrap ${active ? "text-white font-semibold" : ""}`}>
                                                         {item.name}
                                                     </span>
                                                 )}

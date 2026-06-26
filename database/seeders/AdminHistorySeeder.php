@@ -57,6 +57,7 @@ class AdminHistorySeeder extends Seeder
             'price'         => 2500000,
             'image'         => $image,
             'location'      => 'Jawa Timur',
+            'status'        => 'done', // trip lampau untuk riwayat
             'created_at'    => now()->subDays(15),
             'updated_at'    => now(),
         ]);
@@ -102,10 +103,7 @@ class AdminHistorySeeder extends Seeder
         DB::table('pergi_bareng_participants')->insert([
             'pergi_bareng_id' => $pbId,
             'user_id'         => $admin->id,
-            'full_name'       => $admin->full_name ?? 'Admin Barengin',
-            'phone_number'    => '+628123456789',
-            'nik'             => '3174000000000001',
-            'birth_date'      => '2000-01-01',
+            'quantity'        => 1,
             'created_at'      => now()->subDays(6),
             'updated_at'      => now()->subDays(6),
         ]);

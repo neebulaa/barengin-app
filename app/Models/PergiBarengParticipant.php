@@ -9,11 +9,7 @@ class PergiBarengParticipant extends Model
     protected $fillable = [
         'pergi_bareng_id',
         'user_id',
-        'full_name',
-        'birth_date', 
-        'paspor',
-        'phone_number',
-        'nik',
+        'quantity',
     ];
 
     public function user(){

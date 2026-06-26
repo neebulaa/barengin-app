@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\PergiBareng;
-use App\Models\PergiBarengParticipant;
+use App\Models\PergiBarengRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class PergiBarengController extends Controller
 {
@@ -28,6 +27,18 @@ class PergiBarengController extends Controller
                 ->exists()
             : false;
 
+        // Jumlah kursi yang sudah disetujui (akumulasi kuantitas tiap partisipan)
+        $joined = (int) $trip->pergi_bareng_participants->sum('quantity');
+        $remaining = max(0, $trip->people_amount - $joined);
+
+        // Status user yang sedang login terhadap trip ini
+        $isParticipant = $authId
+            ? $trip->pergi_bareng_participants->contains('user_id', $authId)
+            : false;
+        $hasRequested = $authId
+            ? $trip->pergi_bareng_requests->contains('user_id', $authId)
+            : false;
+
         return [
             'id' => $trip->id,
             'trip_id' => 'PERBAR-' . str_pad($trip->id, 6, '0', STR_PAD_LEFT),
@@ -35,7 +46,10 @@ class PergiBarengController extends Controller
             'date' => $parsedDate->translatedFormat('d M Y'),
             'time' => $parsedDate->format('H:i'),
             'capacity' => $trip->people_amount,
-            'joined' => $trip->pergi_bareng_participants->count(),
+            'joined' => $joined,
+            'remaining' => $remaining,
+            'is_participant' => $isParticipant,
+            'has_requested' => $hasRequested,
             'description' => $trip->description,
             'img_name' => $trip->img_name,
             'details' => [
@@ -56,21 +70,23 @@ class PergiBarengController extends Controller
                 'is_following' => $isFollowing,
                 'is_self' => $authId === $trip->initiator?->id,
             ],
-            'participants' => $trip->pergi_bareng_participants->map(function ($p) {
-                // Hitung umur
-                $age = '?'; // Default jika kosong
-                if ($p->birth_date) {
-                    $age = Carbon::parse($p->birth_date)->age; // Ini akan menghasilkan angka saja (misal: 25)
-                }
-                
-                return [
-                    'name' => $p->full_name,
-                    'age' => $age, // <-- Cukup kirim angkanya saja atau '?'
-                    'rating' => 5.0, 
-                    'avatar' => $p->user ? ($p->user->public_profile_image ?? '/assets/default-profile.png') : '/assets/default-profile.png',
-                    'verified' => $p->user_id ? true : false
+            // Tiap partisipan diperluas sebanyak kuantitas kursi yang dipesan
+            'participants' => $trip->pergi_bareng_participants->flatMap(function ($p) {
+                $entry = [
+                    'user_id' => $p->user_id,
+                    'name' => $p->user?->full_name ?? 'Partisipan',
+                    'username' => $p->user?->username,
+                    'rating' => 5.0,
+                    'avatar' => $p->user?->public_profile_image ?? '/assets/default-profile.png',
+                    'verified' => (bool) $p->user_id,
                 ];
-            }),
+
+                $qty = max(1, (int) $p->quantity);
+
+                return collect(range(1, $qty))->map(fn ($seat) => array_merge($entry, [
+                    'seat_label' => $qty > 1 ? "Kursi {$seat} dari {$qty}" : null,
+                ]));
+            })->values(),
             'financing_estimates' => $trip->financing_estimate
             ? $trip->financing_estimate->map(fn ($fe) => [
                 'id' => $fe->id,
@@ -200,6 +216,7 @@ class PergiBarengController extends Controller
         $trip = PergiBareng::with([
             'initiator.user_ratings',
             'pergi_bareng_participants.user',
+            'pergi_bareng_requests',
             'financing_estimate'
         ])->findOrFail($id);
 
@@ -217,103 +234,72 @@ class PergiBarengController extends Controller
         ]);
     }
 
-    public function join($id)
+    public function store(Request $request, $id)
     {
-        // Load semua relasi yang dibutuhkan termasuk user_ratings dari initiator
-        $trip = PergiBareng::with([
-            'initiator.user_ratings', 
-            'pergi_bareng_participants.user'
-        ])->findOrFail($id);
-        
-        return Inertia::render('PergiBareng/Join', [
-            'trip' => $this->formatTripData($trip)
-        ]);
-    }
+        $trip = PergiBareng::with(['pergi_bareng_participants', 'pergi_bareng_requests'])
+            ->findOrFail($id);
 
-  public function store(Request $request, $id)
-    {
-        $trip = PergiBareng::findOrFail($id);
+        $userId = Auth::id();
 
-        $validated = $request->validate([
-            'participants' => 'required|array|min:1',
-            'participants.*.nama' => 'required|string|max:100', 
-            'participants.*.tanggal_lahir' => 'required|date|before:today', 
-            'participants.*.paspor' => 'nullable|string|max:12',
-            'participants.*.telepon' => [
-                'required', 
-                'string', 
-                'min:9',
-                'max:14'
-            ],
-            'participants.*.nik' => [
-                'required', 
-                'regex:/^\d{16}$/'
-            ],
-        ], [
-            'participants.*.tanggal_lahir.required' => 'Tanggal lahir wajib diisi',
-            'participants.*.tanggal_lahir.date' => 'Format tanggal tidak valid',
-            // --- PESAN ERROR ---
-            'participants.*.telepon.required' => 'Nomor telepon wajib diisi.',
-            'participants.*.telepon.min' => 'Nomor telepon terlalu pendek (minimal 9 angka).',
-            'participants.*.telepon.max' => 'Nomor telepon terlalu panjang (maksimal 14 angka).',
-            'participants.*.nik.regex' => 'NIK harus terdiri dari 16 digit angka',
-            'participants.*.nik.required' => 'NIK wajib diisi',
-        ]);
+        // Hanya user yang login yang boleh mengajukan
+        abort_unless($userId, 403, 'Silakan login terlebih dahulu untuk bergabung.');
 
-        foreach ($validated['participants'] as $participant) {
-            // mengamankan dan merapikan nomor
-            $phone = $this->normalizePhone($participant['telepon']);
-            
-            PergiBarengParticipant::create([
-                'pergi_bareng_id' => $trip->id,
-                'user_id' => Auth::id(),
-                'full_name' => $participant['nama'], 
-                'birth_date' => $participant['tanggal_lahir'], 
-                'paspor' => $participant['paspor'] ?? null,
-                'phone_number' => $phone,
-                'nik' => $participant['nik'],
+        // Penyelenggara tidak bisa bergabung ke trip-nya sendiri
+        if ((int) $trip->initiator_id === (int) $userId) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Anda adalah penyelenggara trip ini.',
             ]);
         }
 
-        return redirect()->route('pergi-bareng.success', $trip->id)
-                        ->with('success', 'Anda berhasil bergabung dengan trip ini!');
+        // Cegah pengajuan / keikutsertaan ganda
+        if ($trip->pergi_bareng_requests->contains('user_id', $userId)) {
+            return redirect()->route('pergi-bareng.request-sent', $trip->id);
+        }
+        if ($trip->pergi_bareng_participants->contains('user_id', $userId)) {
+            return redirect()->route('pergi-bareng.show', $trip->id)
+                ->with('flash', ['type' => 'info', 'message' => 'Anda sudah tergabung dalam trip ini.']);
+        }
+
+        $joined = (int) $trip->pergi_bareng_participants->sum('quantity');
+        $remaining = max(0, $trip->people_amount - $joined);
+
+        $validated = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', 'max:' . max(1, $remaining)],
+        ], [
+            'quantity.max' => 'Jumlah kursi melebihi kuota yang tersisa.',
+        ]);
+
+        PergiBarengRequest::create([
+            'pergi_bareng_id' => $trip->id,
+            'user_id' => $userId,
+            'quantity' => $validated['quantity'],
+        ]);
+
+        return redirect()->route('pergi-bareng.request-sent', $trip->id);
     }
 
-    public function success($id)
+    public function requestSent($id)
     {
         $trip = PergiBareng::with([
-            'initiator.user_ratings', 
-            'pergi_bareng_participants.user'
+            'initiator.user_ratings',
+            'pergi_bareng_participants.user',
+            'pergi_bareng_requests',
         ])->findOrFail($id);
-        
-        return Inertia::render('PergiBareng/Success', [
-            'trip' => $this->formatTripData($trip)
+
+        $myRequest = $trip->pergi_bareng_requests
+            ->firstWhere('user_id', Auth::id());
+
+        // Tidak ada permintaan tertunda -> kembali ke detail
+        if (! $myRequest) {
+            return redirect()->route('pergi-bareng.show', $trip->id);
+        }
+
+        $data = $this->formatTripData($trip);
+        $data['requested_quantity'] = (int) $myRequest->quantity;
+
+        return Inertia::render('PergiBareng/RequestSent', [
+            'trip' => $data,
         ]);
-    }
-
-    /**
-     * Normalisasi nomor telepon ke format +62
-     */
-    private function normalizePhone(?string $phone): ?string
-    {
-        if (!$phone) {
-            return null;
-        }
-
-        $phone = preg_replace('/[^\d+]/', '', $phone);
-        
-        if (str_starts_with($phone, '+62')) {
-            return $phone;
-        }
-        
-        if (str_starts_with($phone, '62')) {
-            return '+' . $phone;
-        }
-        
-        if (str_starts_with($phone, '0')) {
-            return '+62' . substr($phone, 1);
-        }
-        
-        return '+62' . $phone;
     }
 }

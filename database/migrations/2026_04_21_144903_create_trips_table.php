@@ -23,6 +23,8 @@ return new class extends Migration
             $table->decimal('price', 15,2);
             $table->string('image')->nullable();
             $table->string('location');
+            // draft -> created (terjadwal) -> ongoing (berlangsung) -> done (selesai)
+            $table->enum('status', ['draft', 'created', 'ongoing', 'done'])->default('draft');
             $table->timestamps();
         });
     }

@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
         ]);
 
+        // Alias middleware role-based access
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+        ]);
+
         // Webhook Midtrans dikecualikan dari verifikasi CSRF
         $middleware->validateCsrfTokens(except: [
             'midtrans/notification',

@@ -35,7 +35,6 @@ class AdminUserController extends Controller
         $user->update([
             'is_admin' => $request->is_admin,
             'is_guider' => $request->is_guider,
-            'is_jastiper' => $request->is_jastiper,
             'is_verified' => $request->verified,
         ]);
 

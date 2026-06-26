@@ -35,6 +35,12 @@ export default function NavbarAuth() {
         user?.avatar ||
         "/assets/default-profile.png";
 
+    // Tujuan dashboard sesuai role pengguna.
+    // - admin  -> Beranda Admin (/admin, khusus is_admin)
+    // - guider -> Manajemen Trip (/admin/trip, khusus is_guider)
+    // - lainnya -> Manajemen Pergi Bareng (terbuka untuk semua user yang login)
+    const dashboardHref = user?.is_admin ? "/admin" : user?.is_guider ? "/admin/trip" : "/admin/pergi-bareng";
+
     const closeAll = () => {
         setIsDesktopDropdownOpen(false);
         setIsProfileOpen(false);
@@ -101,7 +107,7 @@ export default function NavbarAuth() {
                         items={[
                             {
                                 label: "Dashboard",
-                                href: "/dashboard",
+                                href: dashboardHref,
                                 icon: MdDashboard,
                             },
                             {
@@ -200,7 +206,7 @@ export default function NavbarAuth() {
                             buttonClassName="text-neutral-600"
                         >
                             <Link
-                                href="/dashboard"
+                                href={dashboardHref}
                                 onClick={closeAll}
                                 className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
                             >

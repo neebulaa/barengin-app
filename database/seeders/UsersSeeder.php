@@ -22,9 +22,7 @@ class UsersSeeder extends Seeder
             'phone'     => '081234567890',
             'gender'    => 'male',
             'is_admin'  => true,
-            'is_guider' => false,
-            'is_jastiper'=> false,
-        ]);
+            'is_guider' => false,        ]);
 
         User::create([
             'full_name' => 'Budi Penumpang',
@@ -34,9 +32,7 @@ class UsersSeeder extends Seeder
             'phone'     => '089234217890',
             'gender'    => 'male',
             'is_admin'  => false,
-            'is_guider' => false,
-            'is_jastiper'=> false,
-        ]);
+            'is_guider' => false,        ]);
 
         User::create([
             'full_name' => 'Lili Jastiper',
@@ -46,9 +42,7 @@ class UsersSeeder extends Seeder
             'phone'     => '085555555555',
             'gender'    => 'female',
             'is_admin'  => false,
-            'is_guider' => false,
-            'is_jastiper'=> true,
-        ]);
+            'is_guider' => false,        ]);
 
         User::create([
             'full_name' => 'Andi Guider',
@@ -58,8 +52,6 @@ class UsersSeeder extends Seeder
             'phone'     => '085786542111',
             'gender'    => 'male',
             'is_admin'  => false,
-            'is_guider' => true,
-            'is_jastiper'=> false,
-        ]);
+            'is_guider' => true,        ]);
     }
 }
