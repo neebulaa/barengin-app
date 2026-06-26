@@ -130,7 +130,7 @@ export default function ManagementUser({ users = [] }) {
         let colorClasses = "";
         if (role === "Jastiper") colorClasses = "bg-green-100 text-green-700";
         else if (role === "Guider") colorClasses = "bg-orange-100 text-orange-700";
-        else if (role === "Admin") colorClasses = "bg-blue-100 text-[#0077D3]";
+        else if (role === "Admin") colorClasses = "bg-blue-100 text-primary-700";
         else colorClasses = "bg-gray-100 text-gray-600";
 
         return (
@@ -162,11 +162,11 @@ export default function ManagementUser({ users = [] }) {
                                 <FiAlertCircle size={32} />
                             </div>
                             
-                            <h3 className="text-xl font-bold text-neutral-900 mb-2">Hapus User?</h3>
+                            <h3 className="text-xl font-bold text-neutral-700 mb-2">Hapus User?</h3>
                             
                             <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
                                 Apakah kamu yakin ingin menghapus <br/>
-                                <span className="font-bold text-neutral-900">{deleteModal.userName}</span>? <br/>
+                                <span className="font-bold text-neutral-700">{deleteModal.userName}</span>? <br/>
                                 {/* Tindakan ini tidak dapat dibatalkan. */}
                             </p>
                             
@@ -191,7 +191,7 @@ export default function ManagementUser({ users = [] }) {
 
             <div className="p-4 sm:p-6 border-b border-neutral-100">
                 <div className="mb-4 sm:mb-6">
-                    <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-1">
+                    <h2 className="text-xl sm:text-2xl font-bold text-neutral-700 mb-1">
                         Manajemen User
                     </h2>
                     <p className="text-neutral-500 text-xs sm:text-sm">
@@ -207,7 +207,7 @@ export default function ManagementUser({ users = [] }) {
                             placeholder="Cari nama atau email..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none text-sm transition-all"
+                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all"
                         />
                     </div>
 
@@ -215,7 +215,7 @@ export default function ManagementUser({ users = [] }) {
                         <select
                             value={filterRole}
                             onChange={(e) => setFilterRole(e.target.value)}
-                            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm focus:ring-2 focus:ring-[#0077D3] outline-none cursor-pointer appearance-none transition-all"
+                            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer appearance-none transition-all"
                         >
                             <option value="">Filter By (Semua)</option>
                             <option value="Guider">Guider</option>
@@ -236,7 +236,7 @@ export default function ManagementUser({ users = [] }) {
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
-                            <tr className="bg-[#F4F7FB] border-y border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
+                            <tr className="bg-neutral-100 border-y border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
                                 <th className="py-4 px-6">NAME</th>
                                 <th className="py-4 px-6">EMAIL</th>
                                 <th className="py-4 px-6">ROLES</th>
@@ -253,11 +253,11 @@ export default function ManagementUser({ users = [] }) {
                                                     {user.initials}
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className="font-bold text-neutral-900 text-sm">
+                                                    <span className="font-bold text-neutral-700 text-sm">
                                                         {user.name}
                                                     </span>
                                                     {user.verified && (
-                                                        <FaCircleCheck className="text-[#0077D3] text-sm flex-shrink-0" />
+                                                        <FaCircleCheck className="text-primary-700 text-sm flex-shrink-0" />
                                                     )}
                                                 </div>
                                             </div>
@@ -317,11 +317,11 @@ export default function ManagementUser({ users = [] }) {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="font-bold text-neutral-900 text-base truncate">
+                                            <span className="font-bold text-neutral-700 text-base truncate">
                                                 {user.name}
                                             </span>
                                             {user.verified && (
-                                                <FaCircleCheck className="text-[#0077D3] text-sm flex-shrink-0" />
+                                                <FaCircleCheck className="text-primary-700 text-sm flex-shrink-0" />
                                             )}
                                         </div>
                                         <p className="text-neutral-500 text-xs truncate mt-0.5">
@@ -361,7 +361,7 @@ export default function ManagementUser({ users = [] }) {
                 </div>
             </div>
 
-            <div className="bg-[#F4F7FB] p-4 border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="bg-neutral-100 p-4 border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="text-xs text-neutral-500 font-medium text-center md:text-left">
                     Showing {paginatedUsers.length} of {filteredUsers.length} entries
                 </div>

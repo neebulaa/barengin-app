@@ -143,31 +143,37 @@ Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng
 // Midtrans webhook (server-to-server, tanpa auth & CSRF)
 Route::post('/midtrans/notification', [MidtransController::class, 'notification'])->name('midtrans.notification');
 
-Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
-Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
-Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
-Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
-Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
-Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
-Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
-Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
+// Chat — hanya untuk user yang sudah login
+Route::middleware('auth')->group(function () {
+    Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
+    Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
+    Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
+    Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
+    Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
+    Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
+    Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
 
-// Chat
-Route::get('/chat/exp', function(){
-    return inertia('Chat/Index2');
-})->name('chat.exp');
+    Route::get('/chat/exp', function(){
+        return inertia('Chat/Index2');
+    })->name('chat.exp');
+});
 
 // Leaderboard
 Route::get('/leaderboard', function () {
     return inertia('Leaderboard/Index');
 })->name('leaderboard');
 
-// Trip Bareng
+// Trip Bareng — daftar & detail boleh dilihat publik
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 Route::get('/trip-bareng/{id}', [TripsController::class, 'show'])->name('trip-bareng.show');
-Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
-Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'processPayment'])->name('trip-bareng.payment');
-Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
+
+// Pemesanan trip wajib login
+Route::middleware('auth')->group(function () {
+    Route::get('/trip-bareng/{id}/checkout', [TripsController::class, 'checkout'])->name('trip-bareng.checkout');
+    Route::post('/trip-bareng/{id}/payment', [TripsController::class, 'processPayment'])->name('trip-bareng.payment');
+    Route::get('/trip-bareng/{id}/success', [TripsController::class, 'success'])->name('trip-bareng.success');
+});
 
 // Management User
 // Route::get('/management-user', function(){

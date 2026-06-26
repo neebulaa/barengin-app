@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import Button from "@/Components/Button";
 import { FiSearch, FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiUploadCloud, FiExternalLink, FiAlertCircle } from "react-icons/fi";
 
 const STATUS_STYLES = {
@@ -44,15 +45,15 @@ export default function Index({ trips = [] }) {
             {deleteModal.open && (
                 <Modal onClose={() => setDeleteModal({ open: false, id: null, name: "" })}
                     icon={<FiAlertCircle size={32} />} iconClass="bg-red-100 text-red-500"
-                    title="Hapus Draft Trip?" body={<>Yakin ingin menghapus <span className="font-bold text-neutral-900">{deleteModal.name}</span>?</>}
+                    title="Hapus Draft Trip?" body={<>Yakin ingin menghapus <span className="font-bold text-neutral-700">{deleteModal.name}</span>?</>}
                     confirmLabel="Ya, Hapus" confirmClass="bg-red-600 hover:bg-red-700" onConfirm={confirmDelete} />
             )}
             {/* Modal publish */}
             {publishModal.open && (
                 <Modal onClose={() => setPublishModal({ open: false, id: null, name: "" })}
-                    icon={<FiUploadCloud size={32} />} iconClass="bg-blue-100 text-[#0077D3]"
-                    title="Publish Trip?" body={<>Setelah dipublish, <span className="font-bold text-neutral-900">{publishModal.name}</span> akan tampil di Trip Bareng dan <span className="font-semibold">tidak bisa diedit/dihapus lagi</span>.</>}
-                    confirmLabel="Ya, Publish" confirmClass="bg-[#0077D3] hover:bg-blue-700" onConfirm={confirmPublish} />
+                    icon={<FiUploadCloud size={32} />} iconClass="bg-blue-100 text-primary-700"
+                    title="Publish Trip?" body={<>Setelah dipublish, <span className="font-bold text-neutral-700">{publishModal.name}</span> akan tampil di Trip Bareng dan <span className="font-semibold">tidak bisa diedit/dihapus lagi</span>.</>}
+                    confirmLabel="Ya, Publish" confirmClass="bg-primary-700 hover:bg-blue-700" onConfirm={confirmPublish} />
             )}
 
             <div className="p-4 sm:p-6">
@@ -60,12 +61,11 @@ export default function Index({ trips = [] }) {
                     <div className="relative flex-1 max-w-md">
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                         <input type="text" placeholder="Cari trip..." value={search} onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] outline-none text-sm transition-all" />
+                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all" />
                     </div>
-                    <Link href="/admin/trip/create"
-                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0077D3] text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition whitespace-nowrap">
+                    <Button isButtonLink href="/admin/trip/create" size="sm" className="gap-2 whitespace-nowrap">
                         Buat Perjalanan <FiPlus />
-                    </Link>
+                    </Button>
                 </div>
 
                 <div className="divide-y divide-neutral-100">
@@ -81,20 +81,20 @@ export default function Index({ trips = [] }) {
                                 onError={(e) => (e.target.src = "/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg")} />
 
                             <div className="min-w-0 flex-1">
-                                <p className="font-bold text-neutral-900 text-sm truncate">{t.name}</p>
+                                <p className="font-bold text-neutral-700 text-sm truncate">{t.name}</p>
                                 <p className="text-xs text-neutral-400">{t.date_label}</p>
                             </div>
 
                             <div className="hidden md:block w-40 text-right">
                                 <p className="text-xs text-neutral-400 truncate">{t.location}</p>
-                                <p className="font-bold text-neutral-900 text-sm">{rupiah(t.price)}</p>
+                                <p className="font-bold text-neutral-700 text-sm">{rupiah(t.price)}</p>
                             </div>
 
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${STATUS_STYLES[t.status] || "bg-neutral-100 text-neutral-600"}`}>
                                 {t.status_label}
                             </span>
 
-                            <div className="hidden sm:block text-xs font-semibold text-[#0077D3] w-14 text-center shrink-0">
+                            <div className="hidden sm:block text-xs font-semibold text-primary-700 w-14 text-center shrink-0">
                                 {t.joined}/{t.capacity}
                             </div>
 
@@ -115,7 +115,7 @@ export default function Index({ trips = [] }) {
                                                         <FiEdit2 size={15} /> Edit Draft
                                                     </Link>
                                                     <button onClick={() => { setOpenMenu(null); setPublishModal({ open: true, id: t.id, name: t.name }); }}
-                                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#0077D3] hover:bg-blue-50">
+                                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary-700 hover:bg-blue-50">
                                                         <FiUploadCloud size={15} /> Publish
                                                     </button>
                                                     <button onClick={() => { setOpenMenu(null); setDeleteModal({ open: true, id: t.id, name: t.name }); }}
@@ -152,7 +152,7 @@ function Modal({ onClose, icon, iconClass, title, body, confirmLabel, confirmCla
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
                 <div className="p-6 text-center">
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${iconClass}`}>{icon}</div>
-                    <h3 className="text-xl font-bold text-neutral-900 mb-2">{title}</h3>
+                    <h3 className="text-xl font-bold text-neutral-700 mb-2">{title}</h3>
                     <p className="text-neutral-500 text-sm mb-6 leading-relaxed">{body}</p>
                     <div className="flex items-center gap-3">
                         <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 transition">Batal</button>
@@ -167,7 +167,7 @@ function Modal({ onClose, icon, iconClass, title, body, confirmLabel, confirmCla
 Index.layout = (page) => (
     <AdminLayout title="Dasbor - Home" subtitle="Selamat datang, Pemandu!">
         <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-900">Aktivitas Pembuatan Perjalanan</h1>
+            <h1 className="text-2xl font-bold text-neutral-700">Aktivitas Pembuatan Perjalanan</h1>
             <p className="text-neutral-500 text-sm">Kelola trip, publikasikan, dan pantau statusnya.</p>
         </div>
         {page}

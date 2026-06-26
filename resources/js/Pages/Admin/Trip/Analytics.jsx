@@ -8,9 +8,9 @@ function StatCard({ icon, label, value }) {
     return (
         <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5">
             <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2">
-                <span className="text-[#0077D3]">{icon}</span> {label}
+                <span className="text-primary-700">{icon}</span> {label}
             </div>
-            <p className="text-2xl font-bold text-neutral-900">{value}</p>
+            <p className="text-2xl font-bold text-neutral-700">{value}</p>
         </div>
     );
 }
@@ -36,7 +36,7 @@ export default function Analytics({ stats }) {
 Analytics.layout = (page) => (
     <AdminLayout title="Dasbor - Home" subtitle="Selamat datang, Pemandu!">
         <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-900">Analitik Trip</h1>
+            <h1 className="text-2xl font-bold text-neutral-700">Analitik Trip</h1>
             <p className="text-neutral-500 text-sm">Pantau analisa dari trip yang kamu buat...</p>
         </div>
         {page}

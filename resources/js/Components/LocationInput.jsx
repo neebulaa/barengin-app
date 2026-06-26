@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import Input from "@/Components/Input";
 
 /**
  * Input lokasi dengan rekomendasi tempat (OpenStreetMap / Nominatim).
- * - prioritizeIndonesia: tampilkan hasil di Indonesia lebih dulu (untuk Trip).
+ * Berbeda dari PlaceAutocomplete: tidak memakai komponen <Input>, melainkan
+ * <input> biasa dengan `className` yang dilempar, agar konsisten dengan styling form sekitarnya.
  *
  * value/onChange bekerja dengan string nama tempat.
  */
-export default function PlaceAutocomplete({
-    label,
+export default function LocationInput({
     value = "",
     onChange,
     placeholder,
-    leftIcon,
-    prioritizeIndonesia = false,
+    className = "",
+    prioritizeIndonesia = true,
 }) {
     const [query, setQuery] = useState(value);
     const [results, setResults] = useState([]);
@@ -24,21 +23,20 @@ export default function PlaceAutocomplete({
     const abortRef = useRef(null);
     const skipNextFetch = useRef(false);
 
-    // Sinkron jika value dari luar berubah (mis. prefill filter)
+    // Sinkron jika value dari luar berubah
     useEffect(() => {
         setQuery(value);
     }, [value]);
 
     // Tutup dropdown saat klik di luar
     useEffect(() => {
-        function handleClickOutside(e) {
+        const handleClickOutside = (e) => {
             if (wrapRef.current && !wrapRef.current.contains(e.target)) {
                 setOpen(false);
             }
-        }
+        };
         document.addEventListener("mousedown", handleClickOutside);
-        return () =>
-            document.removeEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     // Debounced fetch ke Nominatim
@@ -58,7 +56,6 @@ export default function PlaceAutocomplete({
             try {
                 if (abortRef.current) abortRef.current.abort();
                 abortRef.current = new AbortController();
-
                 setLoading(true);
 
                 const params = new URLSearchParams({
@@ -76,11 +73,11 @@ export default function PlaceAutocomplete({
                 let data = await res.json();
 
                 if (prioritizeIndonesia && Array.isArray(data)) {
-                    data = [...data].sort((a, b) => {
-                        const aId = a.address?.country_code === "id" ? 0 : 1;
-                        const bId = b.address?.country_code === "id" ? 0 : 1;
-                        return aId - bId;
-                    });
+                    data = [...data].sort(
+                        (a, b) =>
+                            (a.address?.country_code === "id" ? 0 : 1) -
+                            (b.address?.country_code === "id" ? 0 : 1),
+                    );
                 }
 
                 setResults(Array.isArray(data) ? data : []);
@@ -96,35 +93,34 @@ export default function PlaceAutocomplete({
     }, [query, prioritizeIndonesia]);
 
     const handleSelect = (item) => {
-        const name = item.name || item.display_name?.split(",")[0] || query;
+        // Pakai alamat lengkap (display_name), bukan hanya judulnya
+        const full = item.display_name || item.name || query;
         skipNextFetch.current = true;
-        setQuery(name);
-        onChange?.(name);
+        setQuery(full);
+        onChange?.(full);
         setResults([]);
         setOpen(false);
     };
 
     return (
         <div className="relative" ref={wrapRef}>
-            <Input
-                label={label}
-                placeholder={placeholder}
-                leftIcon={leftIcon}
+            <input
+                type="text"
                 value={query}
+                placeholder={placeholder}
+                autoComplete="off"
+                className={className}
                 onChange={(e) => {
                     setQuery(e.target.value);
                     onChange?.(e.target.value);
                 }}
                 onFocus={() => results.length > 0 && setOpen(true)}
-                autoComplete="off"
             />
 
             {open && (results.length > 0 || loading) && (
                 <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
                     {loading && results.length === 0 && (
-                        <li className="px-4 py-2 text-sm text-neutral-400">
-                            Mencari...
-                        </li>
+                        <li className="px-4 py-2 text-sm text-neutral-400">Mencari...</li>
                     )}
                     {results.map((item) => (
                         <li key={item.place_id}>
@@ -133,9 +129,8 @@ export default function PlaceAutocomplete({
                                 onClick={() => handleSelect(item)}
                                 className="block w-full px-4 py-2 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50"
                             >
-                                <span className="font-medium text-neutral-900">
-                                    {item.name ||
-                                        item.display_name?.split(",")[0]}
+                                <span className="font-medium text-neutral-700">
+                                    {item.name || item.display_name?.split(",")[0]}
                                 </span>
                                 <span className="block truncate text-xs text-neutral-500">
                                     {item.display_name}

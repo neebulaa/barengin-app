@@ -49,14 +49,25 @@ class PostSeeder extends Seeder
             ]);
         });
 
-        // Add images for each post (1–3 images)
+        // Gambar pemandangan (scenery) untuk postingan forum
+        $sceneryImages = [
+            '/assets/trip-bareng/list-trip/candi_borobudur/trip_bareng-candi_borobudur-1.jpg',
+            '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg',
+            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-1.jpg',
+            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-2.jpg',
+            '/assets/trip-bareng/list-trip/c3076436a3227fcc40c253e4e7782a31.jpg',
+            '/assets/home/gallery.jpg',
+            '/assets/home/hero-bg.jpg',
+        ];
+
+        // Add images for each post (1–3 gambar pemandangan acak)
         foreach ($posts as $post) {
             $imageCount = rand(1, 3);
 
             for ($i = 0; $i < $imageCount; $i++) {
                 PostImage::create([
                     'post_id' => $post->id,
-                    'img_name' => '/assets/default-profile.png',
+                    'img_name' => $sceneryImages[array_rand($sceneryImages)],
                 ]);
             }
         }

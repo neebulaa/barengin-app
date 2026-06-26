@@ -46,7 +46,7 @@ Create.layout = (page) => (
                 <FiChevronLeft size={18} />
             </Link>
             <div>
-                <h1 className="text-2xl font-bold text-neutral-900">Buat Perjalanan Baru</h1>
+                <h1 className="text-2xl font-bold text-neutral-700">Buat Perjalanan Baru</h1>
                 <p className="text-neutral-500 text-sm">Rencanakan perjalanan kolaboratifmu selanjutnya...</p>
             </div>
         </div>

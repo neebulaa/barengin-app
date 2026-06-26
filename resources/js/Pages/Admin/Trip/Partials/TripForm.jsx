@@ -1,10 +1,11 @@
 import React, { useState } from "react";
+import Button from "@/Components/Button";
 import { FiPlus, FiX, FiUploadCloud, FiTrash2, FiImage } from "react-icons/fi";
 
 const inputClass =
-    "w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none text-sm transition-all";
-const labelClass = "block text-sm font-bold text-neutral-800 mb-1.5";
-const cardTitle = "text-lg font-bold text-[#0077D3] mb-4";
+    "w-full px-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all";
+const labelClass = "block text-sm font-medium text-neutral-700 mb-1.5";
+const cardTitle = "text-lg font-semibold text-primary-700 mb-4";
 
 const emptyActivity = () => ({
     name: "",
@@ -135,8 +136,8 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                 <div key={i} className="rounded-2xl border border-neutral-200 p-5 relative">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-2">
-                                            <span className="w-7 h-7 rounded-full bg-[#0077D3] text-white text-sm font-bold flex items-center justify-center">{i + 1}</span>
-                                            <h4 className="font-bold text-neutral-900">Aktivitas {String(i + 1).padStart(2, "0")}</h4>
+                                            <span className="w-7 h-7 rounded-full bg-primary-700 text-white text-sm font-bold flex items-center justify-center">{i + 1}</span>
+                                            <h4 className="font-semibold text-neutral-700">Aktivitas {String(i + 1).padStart(2, "0")}</h4>
                                         </div>
                                         {data.activities.length > 1 && (
                                             <button type="button" onClick={() => removeActivity(i)}
@@ -195,7 +196,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                                 </button>
                                             </div>
                                         ))}
-                                        <label className="w-16 h-16 rounded-lg border-2 border-dashed border-neutral-300 flex items-center justify-center text-neutral-400 hover:border-[#0077D3] hover:text-[#0077D3] cursor-pointer transition">
+                                        <label className="w-16 h-16 rounded-lg border-2 border-dashed border-neutral-300 flex items-center justify-center text-neutral-400 hover:border-primary-700 hover:text-primary-700 cursor-pointer transition">
                                             <input type="file" accept="image/*" multiple className="hidden"
                                                 onChange={(e) => addActivityImages(i, e.target.files)} />
                                             <FiImage size={18} />
@@ -206,7 +207,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         </div>
 
                         <button type="button" onClick={addActivity}
-                            className="mt-4 w-full border-2 border-dashed border-neutral-300 rounded-2xl py-4 flex items-center justify-center gap-2 text-sm font-semibold text-[#0077D3] hover:bg-blue-50/40 transition">
+                            className="mt-4 w-full border-2 border-dashed border-neutral-300 rounded-2xl py-4 flex items-center justify-center gap-2 text-sm font-semibold text-primary-700 hover:bg-blue-50/40 transition">
                             <FiPlus /> Tambahkan aktivitas selanjutnya
                         </button>
                     </div>
@@ -222,7 +223,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                 <label key={name} className="flex items-center justify-between cursor-pointer">
                                     <span className="text-sm text-neutral-700">{name}</span>
                                     <input type="checkbox" checked={data.facilities.includes(name)} onChange={() => toggleFacility(name)}
-                                        className="w-5 h-5 rounded border-neutral-300 text-[#0077D3] focus:ring-[#0077D3] cursor-pointer" />
+                                        className="w-5 h-5 rounded border-neutral-300 text-primary-700 focus:ring-primary-700 cursor-pointer" />
                                 </label>
                             ))}
                         </div>
@@ -237,7 +238,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         <h3 className={cardTitle}>Profil Perjalanan</h3>
                         <label className="block cursor-pointer">
                             <input type="file" accept="image/*" onChange={handleTripImage} className="hidden" />
-                            <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-[#0077D3] hover:text-[#0077D3] transition overflow-hidden bg-neutral-50">
+                            <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-primary-700 hover:text-primary-700 transition overflow-hidden bg-neutral-50">
                                 {imagePreview ? (
                                     <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                                 ) : (
@@ -252,10 +253,9 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
             {/* Aksi */}
             <div className="mt-6">
-                <button type="submit" disabled={processing}
-                    className="px-7 py-3 rounded-xl border border-neutral-300 text-neutral-700 font-semibold hover:bg-neutral-50 transition disabled:opacity-60">
+                <Button disabled={processing} className="font-semibold">
                     {processing ? "Menyimpan..." : submitLabel}
-                </button>
+                </Button>
                 <p className="text-xs text-amber-600 font-medium mt-2">Trip disimpan sebagai draft. Publish dari halaman daftar trip agar tampil di Trip Bareng.</p>
             </div>
 
@@ -264,7 +264,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
-                            <h3 className="text-lg font-bold text-neutral-900">Tambah Fasilitas Lainnya</h3>
+                            <h3 className="text-lg font-bold text-neutral-700">Tambah Fasilitas Lainnya</h3>
                             <button type="button" onClick={() => setShowFacilityModal(false)} className="text-neutral-400 hover:text-neutral-700">
                                 <FiX size={20} />
                             </button>
@@ -283,7 +283,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                             <button type="button" onClick={() => setShowFacilityModal(false)}
                                 className="px-4 py-2 rounded-lg border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-100 transition">Cancel</button>
                             <button type="button" onClick={addFacility}
-                                className="px-4 py-2 rounded-lg bg-[#0077D3] text-white font-semibold hover:bg-blue-700 transition inline-flex items-center gap-1.5">
+                                className="px-4 py-2 rounded-lg bg-primary-700 text-white font-semibold hover:bg-blue-700 transition inline-flex items-center gap-1.5">
                                 <FiPlus /> Add
                             </button>
                         </div>

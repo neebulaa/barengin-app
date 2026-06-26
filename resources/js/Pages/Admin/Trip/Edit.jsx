@@ -57,7 +57,7 @@ Edit.layout = (page) => (
                 <FiChevronLeft size={18} />
             </Link>
             <div>
-                <h1 className="text-2xl font-bold text-neutral-900">Edit Draft Perjalanan</h1>
+                <h1 className="text-2xl font-bold text-neutral-700">Edit Draft Perjalanan</h1>
                 <p className="text-neutral-500 text-sm">Perbarui detail trip selagi masih berstatus draf.</p>
             </div>
         </div>

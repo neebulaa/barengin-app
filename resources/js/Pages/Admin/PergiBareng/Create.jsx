@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import Button from "@/Components/Button";
+import LocationInput from "@/Components/LocationInput";
 import { FiPlus, FiX, FiUploadCloud, FiChevronLeft } from "react-icons/fi";
 
 export default function Create({ transportations = [] }) {
@@ -44,9 +46,9 @@ export default function Create({ transportations = [] }) {
         errors[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
 
     const inputClass =
-        "w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none text-sm transition-all";
-    const labelClass = "block text-sm font-bold text-neutral-800 mb-1.5";
-    const cardTitle = "text-lg font-bold text-[#0077D3] mb-4";
+        "w-full px-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all";
+    const labelClass = "block text-sm font-medium text-neutral-700 mb-1.5";
+    const cardTitle = "text-lg font-semibold text-primary-700 mb-4";
 
     return (
         <form onSubmit={submit}>
@@ -73,10 +75,9 @@ export default function Create({ transportations = [] }) {
 
                         <div className="mb-4">
                             <label className={labelClass}>Tujuan Lokasi</label>
-                            <input
-                                type="text"
+                            <LocationInput
                                 value={data.destination_loc}
-                                onChange={(e) => setData("destination_loc", e.target.value)}
+                                onChange={(v) => setData("destination_loc", v)}
                                 placeholder="Lokasi tujuan"
                                 className={inputClass}
                             />
@@ -85,10 +86,9 @@ export default function Create({ transportations = [] }) {
 
                         <div>
                             <label className={labelClass}>Titik Kumpul</label>
-                            <input
-                                type="text"
+                            <LocationInput
                                 value={data.departure_loc}
-                                onChange={(e) => setData("departure_loc", e.target.value)}
+                                onChange={(v) => setData("departure_loc", v)}
                                 placeholder="Lokasi titik kumpul"
                                 className={inputClass}
                             />
@@ -176,7 +176,7 @@ export default function Create({ transportations = [] }) {
                             <button
                                 type="button"
                                 onClick={addEstimate}
-                                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[#0077D3] hover:underline"
+                                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-700 hover:underline"
                             >
                                 <FiPlus /> Tambah estimasi
                             </button>
@@ -205,7 +205,7 @@ export default function Create({ transportations = [] }) {
                         <h3 className={cardTitle}>Gambar Tujuan</h3>
                         <label className="block cursor-pointer">
                             <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
-                            <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-[#0077D3] hover:text-[#0077D3] transition-colors overflow-hidden bg-neutral-50">
+                            <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-primary-700 hover:text-primary-700 transition-colors overflow-hidden bg-neutral-50">
                                 {preview ? (
                                     <img src={preview} alt="Preview" className="w-full h-full object-cover" />
                                 ) : (
@@ -222,19 +222,12 @@ export default function Create({ transportations = [] }) {
             </div>
 
             <div className="mt-6 flex items-center gap-3">
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="px-7 py-3 rounded-xl bg-[#0077D3] text-white font-semibold hover:bg-blue-700 shadow-sm transition-colors disabled:opacity-60"
-                >
+                <Button disabled={processing} className="font-semibold">
                     {processing ? "Menyimpan..." : "Buat Pergi Bareng"}
-                </button>
-                <Link
-                    href="/admin/pergi-bareng"
-                    className="px-5 py-3 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 transition-colors"
-                >
+                </Button>
+                <Button isButtonLink href="/admin/pergi-bareng" variant="outline" type="neutral" className="font-semibold">
                     Batal
-                </Link>
+                </Button>
             </div>
         </form>
     );
@@ -250,7 +243,7 @@ Create.layout = (page) => (
                 <FiChevronLeft size={18} />
             </Link>
             <div>
-                <h1 className="text-2xl font-bold text-neutral-900">Tambah Pergi Bareng Baru</h1>
+                <h1 className="text-2xl font-bold text-neutral-700">Tambah Pergi Bareng Baru</h1>
                 <p className="text-neutral-500 text-sm">Rencanakan perjalanan kolaboratifmu selanjutnya...</p>
             </div>
         </div>

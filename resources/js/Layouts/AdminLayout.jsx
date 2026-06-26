@@ -10,7 +10,7 @@ export default function AdminLayout({ children, title = "Dasbor - Home", subtitl
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-[#F4F7FB] flex font-sans">
+        <div className="min-h-screen bg-neutral-50 flex font-poppins">
             {/* Mengatur Meta Title secara dinamis */}
             <Head title={title} />
 
@@ -25,7 +25,7 @@ export default function AdminLayout({ children, title = "Dasbor - Home", subtitl
             {/* Bungkus Konten Utama dan Navbar */}
             <div
                 className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out
-                    ${isCollapsed ? "lg:ml-20" : "lg:ml-64"}
+                    ${isCollapsed ? "lg:ml-20" : "lg:ml-72"}
                 `}
             >
                 {/* Panggil komponen Navbar dan lempar judul serta state mobile */}

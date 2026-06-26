@@ -30,11 +30,11 @@ export default function Requests({ trip, requests = [] }) {
             <div className="p-5 border-b border-neutral-100 flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <p className="text-xs text-neutral-400 font-medium">{trip.code}</p>
-                    <h2 className="text-lg font-bold text-neutral-900">{trip.name}</h2>
+                    <h2 className="text-lg font-bold text-neutral-700">{trip.name}</h2>
                     <p className="text-sm text-neutral-500">{trip.destination}</p>
                 </div>
                 <div className="text-right">
-                    <p className="text-sm font-semibold text-[#0077D3]">{trip.joined}/{trip.capacity} kursi terisi</p>
+                    <p className="text-sm font-semibold text-primary-700">{trip.joined}/{trip.capacity} kursi terisi</p>
                     <p className="text-xs text-neutral-400">Sisa {trip.remaining} kursi</p>
                 </div>
             </div>
@@ -62,9 +62,9 @@ export default function Requests({ trip, requests = [] }) {
                                             onError={(e) => (e.target.src = "/assets/default-profile.png")}
                                         />
                                         <div className="min-w-0">
-                                            <p className="font-semibold text-neutral-900 text-sm truncate">{req.user.name}</p>
+                                            <p className="font-semibold text-neutral-700 text-sm truncate">{req.user.name}</p>
                                             <p className="text-xs text-neutral-500">
-                                                Meminta <span className="font-semibold text-[#0077D3]">{req.quantity} kursi</span>
+                                                Meminta <span className="font-semibold text-primary-700">{req.quantity} kursi</span>
                                                 {req.requested_at ? ` • ${req.requested_at}` : ""}
                                             </p>
                                         </div>
@@ -111,7 +111,7 @@ Requests.layout = (page) => (
                 <FiChevronLeft size={18} />
             </Link>
             <div>
-                <h1 className="text-2xl font-bold text-neutral-900">Permintaan Bergabung</h1>
+                <h1 className="text-2xl font-bold text-neutral-700">Permintaan Bergabung</h1>
                 <p className="text-neutral-500 text-sm">Setujui atau tolak permintaan, lalu undang ke grup chat.</p>
             </div>
         </div>

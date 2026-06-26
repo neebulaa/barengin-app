@@ -78,7 +78,7 @@ export default function EditUser({ user }) {
                             {/* Header Modal */}
                             <div className="flex items-start gap-4 mb-4">
                                 {modalType === "verify" ? (
-                                    <div className="w-12 h-12 bg-[#E1F0FF] text-[#0077D3] rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-12 bg-[#E1F0FF] text-primary-700 rounded-xl flex items-center justify-center flex-shrink-0">
                                         <FaKey size={20} />
                                     </div>
                                 ) : (
@@ -88,7 +88,7 @@ export default function EditUser({ user }) {
                                 )}
 
                                 <div>
-                                    <h3 className="text-lg font-bold text-neutral-900 mb-1">
+                                    <h3 className="text-lg font-bold text-neutral-700 mb-1">
                                         {modalType === "verify" ? "Verify User" : "Unverify User"}
                                     </h3>
                                     <p className="text-neutral-500 text-sm leading-relaxed">
@@ -113,7 +113,7 @@ export default function EditUser({ user }) {
                                     onClick={confirmVerificationChange}
                                     className={`px-5 py-2.5 rounded-xl font-semibold text-white shadow-sm transition-colors ${
                                         modalType === "verify"
-                                            ? "bg-[#0077D3] hover:bg-blue-700"
+                                            ? "bg-primary-700 hover:bg-blue-700"
                                             : "bg-red-600 hover:bg-red-700"
                                     }`}
                                 >
@@ -136,7 +136,7 @@ export default function EditUser({ user }) {
                     <FiChevronLeft size={24} />
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold text-neutral-900">Edit User</h2>
+                    <h2 className="text-2xl font-bold text-neutral-700">Edit User</h2>
                     <p className="text-neutral-500 text-sm">Ubah data user aplikasi Barengin</p>
                 </div>
             </div>
@@ -154,9 +154,9 @@ export default function EditUser({ user }) {
                         onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
                     />
                     <div>
-                        <h4 className="font-semibold text-neutral-900 mb-1">Profile Picture</h4>
+                        <h4 className="font-semibold text-neutral-700 mb-1">Profile Picture</h4>
                         <p className="text-xs text-neutral-500 mb-2">JPG, GIF or PNG. Max Size of 5mb</p>
-                        <button type="button" className="text-[#0077D3] text-sm font-semibold hover:underline">
+                        <button type="button" className="text-primary-700 text-sm font-semibold hover:underline">
                             Remove Image
                         </button>
                     </div>
@@ -232,30 +232,30 @@ export default function EditUser({ user }) {
                     <div className="border border-neutral-200 rounded-2xl p-4 flex flex-col gap-3">
 
                         {/* Guider Checkbox Card */}
-                        <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_guider ? "border-[#0077D3] bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
+                        <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_guider ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
-                                <div className="font-bold text-neutral-900 text-sm mb-0.5">Guider</div>
+                                <div className="font-bold text-neutral-700 text-sm mb-0.5">Guider</div>
                                 <div className="text-xs text-neutral-500">User bisa mengoperasikan trip bareng</div>
                             </div>
                             <input
                                 type="checkbox"
                                 checked={data.is_guider}
                                 onChange={(e) => setData("is_guider", e.target.checked)}
-                                className="w-5 h-5 rounded border-neutral-300 text-[#0077D3] focus:ring-[#0077D3] cursor-pointer"
+                                className="w-5 h-5 rounded border-neutral-300 text-primary-700 focus:ring-primary-700 cursor-pointer"
                             />
                         </label>
 
                         {/* Admin Checkbox Card */}
-                        <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_admin ? "border-[#0077D3] bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
+                        <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_admin ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
-                                <div className="font-bold text-neutral-900 text-sm mb-0.5">Admin</div>
+                                <div className="font-bold text-neutral-700 text-sm mb-0.5">Admin</div>
                                 <div className="text-xs text-neutral-500">User bisa mempunyai akses admin</div>
                             </div>
                             <input
                                 type="checkbox"
                                 checked={data.is_admin}
                                 onChange={(e) => setData("is_admin", e.target.checked)}
-                                className="w-5 h-5 rounded border-neutral-300 text-[#0077D3] focus:ring-[#0077D3] cursor-pointer"
+                                className="w-5 h-5 rounded border-neutral-300 text-primary-700 focus:ring-primary-700 cursor-pointer"
                             />
                         </label>
 
@@ -271,7 +271,7 @@ export default function EditUser({ user }) {
                             type="button"
                             onClick={handleToggleClick}
                             className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors duration-300 ease-in-out focus:outline-none ${
-                                data.verified ? "bg-[#0077D3]" : "bg-neutral-300"
+                                data.verified ? "bg-primary-700" : "bg-neutral-300"
                             }`}
                         >
                             <div
@@ -280,7 +280,7 @@ export default function EditUser({ user }) {
                                 }`}
                             />
                         </button>
-                        <span className="text-sm font-medium text-[#0077D3] cursor-pointer" onClick={handleToggleClick}>
+                        <span className="text-sm font-medium text-primary-700 cursor-pointer" onClick={handleToggleClick}>
                             {data.verified ? "Click to unverify user" : "Click to verify user"}
                         </span>
                     </div>
@@ -290,7 +290,7 @@ export default function EditUser({ user }) {
                 <button
                     type="submit"
                     disabled={processing}
-                    className="px-8 py-3 bg-[#0077D3] text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                    className="px-8 py-3 bg-primary-700 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                 >
                     Save User
                 </button>

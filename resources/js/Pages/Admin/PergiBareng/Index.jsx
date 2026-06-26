@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import Button from "@/Components/Button";
 import { FiSearch, FiTrash2, FiPlus, FiAlertCircle, FiUsers } from "react-icons/fi";
 import { BsChatDotsFill } from "react-icons/bs";
 
@@ -38,7 +39,7 @@ export default function Index({ trips = [] }) {
 
     const statusBadge = (status) =>
         status === "aktif"
-            ? "bg-blue-100 text-[#0077D3]"
+            ? "bg-blue-100 text-primary-700"
             : "bg-green-100 text-green-700";
 
     return (
@@ -53,10 +54,10 @@ export default function Index({ trips = [] }) {
                             <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <FiAlertCircle size={32} />
                             </div>
-                            <h3 className="text-xl font-bold text-neutral-900 mb-2">Hapus Pergi Bareng?</h3>
+                            <h3 className="text-xl font-bold text-neutral-700 mb-2">Hapus Pergi Bareng?</h3>
                             <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
                                 Yakin ingin menghapus <br />
-                                <span className="font-bold text-neutral-900">{deleteModal.name}</span>?
+                                <span className="font-bold text-neutral-700">{deleteModal.name}</span>?
                             </p>
                             <div className="flex items-center gap-3">
                                 <button
@@ -87,7 +88,7 @@ export default function Index({ trips = [] }) {
                             placeholder="Search Pergi Bareng..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none text-sm transition-all"
+                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all"
                         />
                     </div>
 
@@ -96,7 +97,7 @@ export default function Index({ trips = [] }) {
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="appearance-none w-40 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm focus:ring-2 focus:ring-[#0077D3] outline-none cursor-pointer transition-all"
+                                className="appearance-none w-40 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
                             >
                                 <option value="latest">Terbaru</option>
                                 <option value="seats">Kursi Terisi</option>
@@ -109,12 +110,9 @@ export default function Index({ trips = [] }) {
                             </div>
                         </div>
 
-                        <Link
-                            href="/admin/pergi-bareng/create"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0077D3] text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition-colors whitespace-nowrap"
-                        >
+                        <Button isButtonLink href="/admin/pergi-bareng/create" size="sm" className="gap-2 whitespace-nowrap">
                             <FiPlus /> Tambah Pergi Bareng
-                        </Link>
+                        </Button>
                     </div>
                 </div>
 
@@ -145,7 +143,7 @@ export default function Index({ trips = [] }) {
                                                     className="w-11 h-11 rounded-lg object-cover border border-neutral-200"
                                                     onError={(e) => (e.target.src = "/assets/pergi-bareng/PergiBarengHeader.avif")}
                                                 />
-                                                <span className="font-semibold text-neutral-900 text-sm max-w-[180px] truncate">{t.name}</span>
+                                                <span className="font-semibold text-neutral-700 text-sm max-w-[180px] truncate">{t.name}</span>
                                             </div>
                                         </td>
                                         <td className="py-4 px-4 text-sm text-neutral-600 max-w-[200px]">
@@ -155,7 +153,7 @@ export default function Index({ trips = [] }) {
                                             <div className="font-medium">{t.date_label}</div>
                                             <div className="text-xs text-neutral-400">{t.time_label}</div>
                                         </td>
-                                        <td className="py-4 px-4 text-sm font-semibold text-[#0077D3] whitespace-nowrap">
+                                        <td className="py-4 px-4 text-sm font-semibold text-primary-700 whitespace-nowrap">
                                             {t.joined}/{t.capacity}
                                         </td>
                                         <td className="py-4 px-4">
@@ -179,7 +177,7 @@ export default function Index({ trips = [] }) {
                                                 </Link>
                                                 <button
                                                     onClick={() => openGroupChat(t.id)}
-                                                    className="p-2 bg-blue-50 text-[#0077D3] hover:bg-blue-100 rounded-lg transition-colors"
+                                                    className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
                                                     title="Buka grup chat"
                                                 >
                                                     <BsChatDotsFill size={16} />
@@ -213,7 +211,7 @@ export default function Index({ trips = [] }) {
 Index.layout = (page) => (
     <AdminLayout title="Dasbor - Home" subtitle="Selamat datang!">
         <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-900">Managemen Pergi Bareng</h1>
+            <h1 className="text-2xl font-bold text-neutral-700">Managemen Pergi Bareng</h1>
             <p className="text-neutral-500 text-sm">Pantau aktivitas pergi bareng anda dengan efisien.</p>
         </div>
         {page}

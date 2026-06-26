@@ -77,11 +77,11 @@ export default function Message({ auth, messages = {}, filters = {} }) {
                                 <FiAlertCircle size={32} />
                             </div>
                             
-                            <h3 className="text-xl font-bold text-neutral-900 mb-2">Hapus Pesan?</h3>
+                            <h3 className="text-xl font-bold text-neutral-700 mb-2">Hapus Pesan?</h3>
                             
                             <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
                                 Apakah kamu yakin ingin menghapus pesan dari <br/>
-                                <span className="font-bold text-neutral-900">{deleteModal.msgName}</span>?
+                                <span className="font-bold text-neutral-700">{deleteModal.msgName}</span>?
                             </p>
                             
                             <div className="flex items-center gap-3">
@@ -120,7 +120,7 @@ export default function Message({ auth, messages = {}, filters = {} }) {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={handleSearch}
-                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0077D3] focus:border-transparent text-sm transition-all"
+                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-400 rounded-lg focus:outline-none focus:border-primary-700 text-sm transition-all"
                         />
                     </div>
                     <button className="flex items-center justify-between gap-3 px-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 transition-colors w-full md:w-auto shrink-0">
@@ -140,7 +140,7 @@ export default function Message({ auth, messages = {}, filters = {} }) {
                                 }`}
                             >
                                 <div className="flex flex-col min-w-0 flex-1">
-                                    <h3 className="text-[#0077D3] font-semibold text-[15px] truncate">
+                                    <h3 className="text-primary-700 font-semibold text-[15px] truncate">
                                         {msg.name}
                                     </h3>
                                     <span className="text-neutral-500 text-xs italic mb-2 truncate">

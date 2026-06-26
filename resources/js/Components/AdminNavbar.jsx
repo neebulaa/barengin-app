@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { usePage, Link } from "@inertiajs/react";
-import { FiMenu, FiLayout, FiCreditCard, FiLogOut } from "react-icons/fi";
+import { FiMenu, FiLogOut } from "react-icons/fi";
+import { MdHome } from "react-icons/md";
+import { HiOutlineDocumentText } from "react-icons/hi";
 
 export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
     // Ambil data user dari Inertia
@@ -29,14 +31,14 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                 {/* Tombol Hamburger Mobile */}
                 <button
                     onClick={() => setIsMobileOpen(true)}
-                    className="lg:hidden text-neutral-600 hover:text-[#0077D3] focus:outline-none transition-colors"
+                    className="lg:hidden text-neutral-600 hover:text-primary-700 focus:outline-none transition-colors"
                 >
                     <FiMenu size={24} />
                 </button>
 
                 {/* Title & Subtitle */}
                 <div className="flex flex-col">
-                    <h1 className="text-base sm:text-lg font-bold text-neutral-900 leading-tight">
+                    <h1 className="text-base sm:text-lg font-bold text-neutral-700 leading-tight">
                         {title}
                     </h1>
                     <p className="text-xs sm:text-sm text-neutral-500">
@@ -47,47 +49,47 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
 
             {/* Bagian Kanan Navbar (User Profile) */}
             <div className="flex items-center gap-4 relative" ref={dropdownRef}>
-                <button 
+                <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center gap-2 focus:outline-none group"
+                    className="flex items-center gap-2 focus:outline-none"
                 >
                     <img
                         src={user?.public_profile_image ?? "/assets/default-profile.png"}
                         alt={user?.name ?? "Admin Profile"}
-                        className="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-[#0077D3] shadow-sm object-cover transition-all"
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-200 shadow-sm cursor-pointer"
                     />
                 </button>
 
                 {/* --- DROPDOWN MENU PROFILE --- */}
                 {isProfileOpen && (
-                    <div className="absolute right-0 top-12 mt-2 w-52 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 z-50 overflow-hidden animate-fade-in-up">
+                    <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-xl shadow-lg border border-neutral-100 z-50 overflow-hidden animate-fade-in-up">
                         <Link
-                            href="/admin" 
-                            className="flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-[#0077D3] transition-colors border-b border-neutral-100"
+                            href="/"
+                            className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-neutral-200"
                             onClick={() => setIsProfileOpen(false)}
                         >
-                            <FiLayout className="w-5 h-5 mr-3 text-neutral-500" />
-                            Dashboard
+                            <MdHome className="w-5 h-5 text-current shrink-0" />
+                            <span>Home</span>
                         </Link>
-                        
+
                         <Link
-                            href="/profile" // Sesuaikan dengan route profile history kamu
-                            className="flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-[#0077D3] transition-colors border-b border-neutral-100"
+                            href="/profile-history"
+                            className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-neutral-200"
                             onClick={() => setIsProfileOpen(false)}
                         >
-                            <FiCreditCard className="w-5 h-5 mr-3 text-neutral-500" />
-                            Profile History
+                            <HiOutlineDocumentText className="w-5 h-5 text-current shrink-0" />
+                            <span>Profile History</span>
                         </Link>
-                        
+
                         {/* Logout menggunakan POST method sesuai bawaan Laravel Breeze/Jetstream */}
                         <Link
-                            href="/logout" 
+                            href="/logout"
                             method="post"
                             as="button"
-                            className="w-full flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer"
                         >
-                            <FiLogOut className="w-5 h-5 mr-3 text-neutral-500" />
-                            Logout
+                            <FiLogOut className="w-5 h-5 text-current shrink-0" />
+                            <span>Logout</span>
                         </Link>
                     </div>
                 )}
