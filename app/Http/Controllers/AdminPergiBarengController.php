@@ -33,7 +33,8 @@ class AdminPergiBarengController extends Controller
     {
         $trips = PergiBareng::with(['pergi_bareng_participants', 'pergi_bareng_requests'])
             ->where('initiator_id', Auth::id())
-            ->latest()
+            ->orderByDesc('created_at') // "Terbaru" = waktu dibuat, bukan tanggal trip
+            ->orderByDesc('id')         // tie-break agar yang terbaru dibuat selalu di atas
             ->get()
             ->map(function ($trip) {
                 $joined = (int) $trip->pergi_bareng_participants->sum('quantity');
