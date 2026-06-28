@@ -11,9 +11,10 @@ import ChatListItem from "./Partials/ChatListItem";
 import Bubble from "./Partials/BubbleChat";
 import Avatar from "./Partials/Avatar";
 import NewChatModal from "./Partials/NewChatModal";
+import GroupMembersModal from "./Partials/GroupMembersModal";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
-import { FiArrowLeft, FiFilter, FiPaperclip, FiSend } from "react-icons/fi";
+import { FiArrowLeft, FiChevronRight, FiFilter, FiPaperclip, FiSend } from "react-icons/fi";
 
 import axios from "axios";
 
@@ -62,6 +63,15 @@ export default function ChatShow({
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
     const [openNewChat, setOpenNewChat] = useState(false);
+    const [openMembers, setOpenMembers] = useState(false);
+
+    const [participants, setParticipants] = useState(
+        conversation?.participants ?? [],
+    );
+    useEffect(() => {
+        setParticipants(conversation?.participants ?? []);
+        setOpenMembers(false);
+    }, [conversation?.id]);
 
     const [sidebarConversations, setSidebarConversations] = useState(conversations ?? []);
     useEffect(() => setSidebarConversations(conversations ?? []), [conversations]);
@@ -400,14 +410,29 @@ export default function ChatShow({
 
                             <Avatar src={headerAvatar} alt={headerTitle} />
 
-                            <div className="min-w-0">
-                                <div className="truncate text-lg font-semibold text-neutral-700">
-                                    {headerTitle}
-                                </div>
-                                <div className="text-sm text-neutral-500">
-                                    {conversation?.is_group ? (
-                                        `${conversation?.participants?.length ?? 0} Anggota`
-                                    ) : (
+                            {conversation?.is_group ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setOpenMembers(true)}
+                                    className="group flex min-w-0 items-center gap-2 rounded-xl px-2 py-1 -ml-2 text-left transition hover:bg-neutral-100"
+                                    title="Lihat anggota grup"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="truncate text-lg font-semibold text-neutral-700">
+                                            {headerTitle}
+                                        </div>
+                                        <div className="text-sm text-neutral-500">
+                                            {`${participants?.length ?? 0} Anggota`}
+                                        </div>
+                                    </div>
+                                    <FiChevronRight className="h-5 w-5 shrink-0 text-neutral-400 transition group-hover:text-neutral-600" />
+                                </button>
+                            ) : (
+                                <div className="min-w-0">
+                                    <div className="truncate text-lg font-semibold text-neutral-700">
+                                        {headerTitle}
+                                    </div>
+                                    <div className="text-sm text-neutral-500">
                                         <span className="inline-flex items-center gap-2">
                                             <span
                                                 className={cn(
@@ -417,13 +442,13 @@ export default function ChatShow({
                                             />
                                             {showOnline ? "Online" : "Offline"}
                                         </span>
-                                    )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         <div className="h-[calc(100vh-96px-84px-96px)] overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
-                            <div className="space-y-8">
+                            <div className="space-y-2">
                                 {(localMessages ?? []).map((m) => {
                                     const isMine = Number(m.sender_id) === Number(authUser?.id);
                                     const isRead =
@@ -440,6 +465,8 @@ export default function ChatShow({
                                             time={formatTime(m.created_at)}
                                             readText={isRead ? "dibaca" : ""}
                                             avatar={m.sender?.avatar}
+                                            isGroup={conversation?.is_group}
+                                            senderName={m.sender?.name}
                                             attachmentUrl={m.attachment_url}
                                             attachmentType={m.attachment_type}
                                             attachmentName={m.attachment_name}
@@ -491,6 +518,20 @@ export default function ChatShow({
                 </div>
             </Container>
             <NewChatModal open={openNewChat} onClose={() => setOpenNewChat(false)} />
+            <GroupMembersModal
+                open={openMembers}
+                onClose={() => setOpenMembers(false)}
+                conversationId={conversation?.id}
+                members={participants}
+                ownerId={conversation?.owner_id}
+                isOwner={!!conversation?.is_owner}
+                authUserId={authUser?.id}
+                onRemoved={(userId) =>
+                    setParticipants((prev) =>
+                        prev.filter((p) => Number(p.id) !== Number(userId)),
+                    )
+                }
+            />
         </>
     );
 }

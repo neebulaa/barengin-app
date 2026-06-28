@@ -42,8 +42,8 @@ class ChatController extends Controller
 
         $conversation->load([
             'participants:id,full_name,profile_image',
-            'trip:id,name',
-            'pergi_bareng:id,name,img_name',
+            'trip:id,name,guider_id',
+            'pergi_bareng:id,name,img_name,initiator_id',
         ]);
 
         $peer = $conversation->participants->firstWhere('id', '!=', $user->id);
@@ -54,6 +54,10 @@ class ChatController extends Controller
         $title = $conversation->is_group
             ? ($conversation->trip?->name ?? $conversation->pergi_bareng?->name ?? 'Group')
             : optional($conversation->participants->firstWhere('id', '!=', $user->id))->full_name;
+
+        $ownerId = $conversation->is_group
+            ? ($conversation->trip?->guider_id ?? $conversation->pergi_bareng?->initiator_id)
+            : null;
 
         $messages = $conversation->messages()
             ->with('sender:id,full_name,profile_image')
@@ -90,6 +94,8 @@ class ChatController extends Controller
                 'title' => $title ?? 'Chat',
                 'avatar' => $headerAvatar,
                 'peer_last_read_at' => $peerLastReadAt,
+                'owner_id' => $ownerId ? (int) $ownerId : null,
+                'is_owner' => $ownerId !== null && (int) $ownerId === (int) $user->id,
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->full_name,
