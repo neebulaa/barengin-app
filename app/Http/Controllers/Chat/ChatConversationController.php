@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\PergiBareng;
 use App\Models\Trip;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -153,5 +154,32 @@ class ChatConversationController extends Controller
         }
         
         return redirect("/chat/{$conversationId}?tab=groups");
+    }
+
+    public function removeParticipant(Request $request, Conversation $conversation, User $user)
+    {
+        $me = $request->user();
+
+        abort_unless((bool) $conversation->is_group, 403, 'Hanya berlaku untuk grup.');
+
+        $conversation->loadMissing(['trip:id,guider_id', 'pergi_bareng:id,initiator_id']);
+
+        $ownerId = $conversation->trip?->guider_id ?? $conversation->pergi_bareng?->initiator_id;
+
+        abort_unless(
+            $ownerId !== null && (int) $ownerId === (int) $me->id,
+            403,
+            'Hanya pemilik grup yang dapat mengeluarkan anggota.'
+        );
+
+        abort_if(
+            (int) $user->id === (int) $ownerId,
+            422,
+            'Pemilik grup tidak dapat dikeluarkan.'
+        );
+
+        $conversation->participants()->detach($user->id);
+
+        return response()->json(['ok' => true]);
     }
 }

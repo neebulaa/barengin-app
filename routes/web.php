@@ -153,7 +153,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
     Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
     Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
-
+    Route::delete('/chat/{conversation}/participants/{user}', [ChatConversationController::class, 'removeParticipant'])->whereNumber('conversation')->whereNumber('user')->name('chat.participants.remove');
+    
     Route::get('/chat/exp', function(){
         return inertia('Chat/Index2');
     })->name('chat.exp');
