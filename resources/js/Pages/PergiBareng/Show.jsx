@@ -114,7 +114,7 @@ export default function Show({ trip }) {
             
             <div className="bg-white border-b border-neutral-200 py-4">
                 <Container>
-                    <Link href="/pergi-bareng" className="inline-flex items-center text-2xl font-bold text-neutral-900 hover:text-primary-700 mb-2 gap-3 transition">
+                    <Link href="/pergi-bareng" className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition">
                         <FaChevronLeft className="text-xl" /> Kembali ke Daftar
                     </Link>
                 </Container>
@@ -129,7 +129,7 @@ export default function Show({ trip }) {
                         <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden flex flex-col md:flex-row">
                             <div className="p-6 flex-1 flex flex-col justify-between">
                                 <div>
-                                    <h1 className="text-2xl font-bold text-neutral-900 mb-4">{trip.title}</h1>
+                                    <h1 className="text-2xl font-bold text-neutral-700 mb-4">{trip.title}</h1>
                                     <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-600 mb-6">
                                         <div className="flex items-center gap-1.5"><FaCalendarAlt className="text-primary-600"/> {trip.date}</div>
                                         <div className="flex items-center gap-1.5"><FaRegClock className="text-primary-600"/> {trip.time}</div>
@@ -141,7 +141,7 @@ export default function Show({ trip }) {
                                 <div className="flex items-center gap-4">
                                     <img src={trip.organizer.avatar} alt={trip.organizer.name} className="w-12 h-12 rounded-full object-cover border border-neutral-200" />
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-1 font-semibold text-neutral-900">
+                                        <div className="flex items-center gap-1 font-semibold text-neutral-700">
                                             {trip.organizer.name} {trip.organizer.verified && <FaCheckCircle className="text-primary-500 text-sm"/>}
                                         </div>
                                         <div className="text-xs text-neutral-500 flex items-center gap-1">
@@ -371,7 +371,7 @@ export default function Show({ trip }) {
                                         {/* Counter kursi */}
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
-                                                <p className="font-bold text-neutral-900 text-sm">Jumlah kursi</p>
+                                                <p className="font-bold text-neutral-700 text-sm">Jumlah kursi</p>
                                                 <p className="text-xs text-neutral-500">Tersisa {remaining} kuota lagi</p>
                                             </div>
                                             <div className="flex items-center gap-4">

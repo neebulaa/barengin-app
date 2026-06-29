@@ -122,11 +122,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile-history/image', [ProfileHistoryController::class, 'removeProfileImage'])->name('profile-history.image.remove');
 });
 
-Route ::get('/pergi-bareng',function(){
-    return inertia('PergiBareng/Index');
-})->name('pergi-bareng');
-
-// Group Route untuk Pergi Bareng
+// Group Route untuk Pergi Bareng (publik: daftar & detail)
 Route::prefix('pergi-bareng')->group(function () {
     Route::get('/', [PergiBarengController::class, 'index'])->name('pergi-bareng.index');
     Route::get('/{id}', [PergiBarengController::class, 'show'])->name('pergi-bareng.show');
@@ -138,8 +134,6 @@ Route::prefix('pergi-bareng')->group(function () {
     });
 });
 
-
-Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
 
 // Midtrans webhook (server-to-server, tanpa auth & CSRF)
 Route::post('/midtrans/notification', [MidtransController::class, 'notification'])->name('midtrans.notification');

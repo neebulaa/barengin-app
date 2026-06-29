@@ -31,7 +31,7 @@ export default function Pagination({
     const pages = getPageNumbers();
 
     return (
-        <div className={`flex items-center justify-center gap-2 md:gap-3 mt-8 ${className}`}>
+        <div className={`flex items-center justify-center gap-2 md:gap-3 ${className}`}>
             
             {/* --- Tombol Prev --- */}
             <button

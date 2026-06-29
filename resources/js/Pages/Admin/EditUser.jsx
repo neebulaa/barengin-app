@@ -1,25 +1,13 @@
 import React, { useState } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import Input from "@/Components/Input";
 import { FiChevronLeft, FiAlertTriangle } from "react-icons/fi";
 import { FaKey } from "react-icons/fa6"; // Menggunakan FaKey untuk icon verify
 
 export default function EditUser({ user }) {
-    // Karena user data dari backend mungkin null saat pertama render (kalau lupa dipassing),
-    // kita beri fallback default agar tidak error.
-    const safeUser = user || {
-        id: "",
-        full_name: "Kaleb Lister",
-        username: "kaleb.lister",
-        email: "kaleblister@gmail.com",
-        bio: "Everything is good until you eat santan",
-        phone: "+62 89694636303",
-        birth_date: "18/03/2006",
-        profile_image: "/assets/default-profile.png",
-        is_guider: false,
-        is_admin: false,
-        is_verified: false,
-    };
+    // Guard ringan agar tidak error bila prop user belum tersedia (tanpa data palsu).
+    const safeUser = user ?? {};
 
     // Inertia useForm untuk menghandle data yang BISA diubah (Roles & Verification)
     const { data, setData, put, processing } = useForm({
@@ -166,62 +154,37 @@ export default function EditUser({ user }) {
                 <div className="space-y-5 mb-8">
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-neutral-700">Full Name</label>
-                        <input
-                            type="text"
-                            value={safeUser.full_name}
-                            disabled
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                        />
+                        <Input type="text" value={safeUser.full_name ?? ""} disabled />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-neutral-700">Username</label>
-                        <input
-                            type="text"
-                            value={safeUser.username}
-                            disabled
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                        />
+                        <Input type="text" value={safeUser.username ?? ""} disabled />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-neutral-700">Email</label>
-                        <input
-                            type="email"
-                            value={safeUser.email}
-                            disabled
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                        />
+                        <Input type="email" value={safeUser.email ?? ""} disabled />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-neutral-700">Bio</label>
                         <textarea
-                            value={safeUser.bio}
+                            value={safeUser.bio ?? ""}
                             disabled
                             rows="3"
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500 cursor-not-allowed resize-none"
+                            className="w-full px-4 py-3 rounded-xl border border-neutral-400 bg-white text-neutral-700 placeholder:text-neutral-500 resize-none disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70 focus:border-primary-700 focus:outline-none"
                         />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm font-semibold text-neutral-700">Nomor Telepon</label>
-                            <input
-                                type="text"
-                                value={safeUser.phone}
-                                disabled
-                                className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                            />
+                            <Input type="text" value={safeUser.phone ?? ""} disabled />
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm font-semibold text-neutral-700">Tanggal Lahir</label>
-                            <input
-                                type="text"
-                                value={safeUser.birth_date}
-                                disabled
-                                className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                            />
+                            <Input type="text" value={safeUser.birth_date ?? ""} disabled />
                         </div>
                     </div>
                 </div>

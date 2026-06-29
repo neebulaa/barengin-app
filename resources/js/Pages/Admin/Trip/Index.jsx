@@ -13,14 +13,24 @@ const STATUS_STYLES = {
 
 export default function Index({ trips = [] }) {
     const [search, setSearch] = useState("");
+    const [sortBy, setSortBy] = useState("latest");
     const [openMenu, setOpenMenu] = useState(null);
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
     const [publishModal, setPublishModal] = useState({ open: false, id: null, name: "" });
 
+    // Urutan status untuk sort "Status": draft → terjadwal → berlangsung → selesai
+    const STATUS_ORDER = { draft: 0, created: 1, ongoing: 2, done: 3 };
+
     const rows = useMemo(() => {
         const q = search.toLowerCase();
-        return trips.filter((t) => t.name?.toLowerCase().includes(q) || t.location?.toLowerCase().includes(q));
-    }, [trips, search]);
+        let list = trips.filter((t) => t.name?.toLowerCase().includes(q) || t.location?.toLowerCase().includes(q));
+
+        if (sortBy === "seats") list = [...list].sort((a, b) => b.joined - a.joined);
+        else if (sortBy === "status") list = [...list].sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
+        // "latest" -> sudah diurutkan dari server (created_at desc)
+
+        return list;
+    }, [trips, search, sortBy]);
 
     const confirmDelete = () => {
         router.delete(`/admin/trip/${deleteModal.id}`, {
@@ -63,9 +73,26 @@ export default function Index({ trips = [] }) {
                         <input type="text" placeholder="Cari trip..." value={search} onChange={(e) => setSearch(e.target.value)}
                             className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all" />
                     </div>
-                    <Button isButtonLink href="/admin/trip/create" size="sm" className="gap-2 whitespace-nowrap">
-                        Buat Perjalanan <FiPlus />
-                    </Button>
+
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+                                className="appearance-none w-40 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all">
+                                <option value="latest">Terbaru</option>
+                                <option value="seats">Kursi Terisi</option>
+                                <option value="status">Status</option>
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <Button isButtonLink href="/admin/trip/create" size="sm" className="gap-2 whitespace-nowrap">
+                            Buat Perjalanan <FiPlus />
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="divide-y divide-neutral-100">

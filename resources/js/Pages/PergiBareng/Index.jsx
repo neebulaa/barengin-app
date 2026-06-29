@@ -54,7 +54,7 @@ export default function Index({ trips = {}, filters = {} }) {
 
             <Container className="py-12 mt-8">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                    <h2 className="text-2xl font-bold text-neutral-900">
+                    <h2 className="text-2xl font-bold text-neutral-700">
                         Cari Teman Bareng Anda
                     </h2>
 

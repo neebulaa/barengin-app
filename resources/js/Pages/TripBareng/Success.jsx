@@ -23,7 +23,7 @@ export default function Success({ order }) {
                 </div>
 
                 {/* 2. Judul */}
-                <h1 className="text-3xl font-bold text-neutral-900 mb-2 text-center">Pembayaran Berhasil</h1>
+                <h1 className="text-3xl font-bold text-neutral-700 mb-2 text-center">Pembayaran Berhasil</h1>
                 <p className="text-lg text-neutral-600 mb-10 text-center">Yeay, Pembayaran Kamu berhasil</p>
 
                 {/* 3. Kartu Transaksi */}
@@ -34,7 +34,7 @@ export default function Success({ order }) {
                         <div className="flex justify-between items-start mb-8">
                             <div>
                                 <p className="text-sm text-neutral-500 mb-1">Transaction ID</p>
-                                <p className="text-xl font-bold text-neutral-900 tracking-wide">{order.transaction_id}</p>
+                                <p className="text-xl font-bold text-neutral-700 tracking-wide">{order.transaction_id}</p>
                             </div>
                             <div className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-sm font-bold">
                                 Terbayar
@@ -51,14 +51,14 @@ export default function Success({ order }) {
                                     onError={(e) => e.target.src = "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?q=80&w=2071&auto=format&fit=crop"}
                                 />
                                 <div>
-                                    <h3 className="text-lg font-bold text-neutral-900">{order.trip_title}</h3>
+                                    <h3 className="text-lg font-bold text-neutral-700">{order.trip_title}</h3>
                                     <div className="flex items-center gap-2 text-sm text-neutral-500 mt-1 font-medium">
                                         <FaRegCalendarAlt />
                                         {order.date_range}
                                     </div>
                                 </div>
                             </div>
-                            <span className="text-xl font-bold text-neutral-900">{order.quantity}x</span>
+                            <span className="text-xl font-bold text-neutral-700">{order.quantity}x</span>
                         </div>
                     </div>
 

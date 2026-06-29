@@ -227,7 +227,7 @@ export default function Detail({ trip }) {
                     {/* LEFT */}
                     <div className="lg:col-span-2 space-y-10">
                         <section>
-                            <h2 className="text-2xl font-bold text-neutral-900 mb-4">
+                            <h2 className="text-2xl font-bold text-neutral-700 mb-4">
                                 Tentang {currentTrip.title}
                             </h2>
                             <div className="flex items-center gap-2 text-sm text-neutral-700 font-medium mb-5 bg-neutral-50 p-3.5 rounded-xl border border-neutral-200">
@@ -258,7 +258,7 @@ export default function Detail({ trip }) {
                                             )}
                                         </div>
                                         <div className="pb-10 w-full">
-                                            <h3 className="text-[17px] font-bold text-neutral-900 mb-1.5 group-hover:text-primary-700 transition-colors">
+                                            <h3 className="text-[17px] font-bold text-neutral-700 mb-1.5 group-hover:text-primary-700 transition-colors">
                                                 {item.title}
                                             </h3>
                                             <div className="flex items-center gap-2 text-sm text-neutral-500 mb-3 font-medium">
@@ -297,7 +297,7 @@ export default function Detail({ trip }) {
                         {/* MAP CARD — react-leaflet + Nominatim */}
                         <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
                             <div className="px-4 pt-4 pb-2">
-                                <h3 className="text-[15px] font-bold text-neutral-900">Lokasi Trip</h3>
+                                <h3 className="text-[15px] font-bold text-neutral-700">Lokasi Trip</h3>
                                 <p className="text-xs text-neutral-500 mt-0.5">{currentTrip.location}</p>
                             </div>
 
@@ -351,7 +351,7 @@ export default function Detail({ trip }) {
                                     <p className="text-[11px] text-neutral-500 font-medium mb-0.5">
                                         {currentTrip.host.label}
                                     </p>
-                                    <h4 className="font-bold text-neutral-900 leading-tight mb-0.5">
+                                    <h4 className="font-bold text-neutral-700 leading-tight mb-0.5">
                                         {currentTrip.host.name}
                                     </h4>
                                     <div className="text-xs font-medium">
@@ -368,7 +368,7 @@ export default function Detail({ trip }) {
 
                         {/* Pricing Card */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-200">
-                            <h3 className="text-[17px] font-bold text-neutral-900 mb-2">Total Harga</h3>
+                            <h3 className="text-[17px] font-bold text-neutral-700 mb-2">Total Harga</h3>
                             <div className="flex items-end gap-1 mb-6">
                                 <span className="text-3xl font-bold text-primary-600">
                                     Rp {currentTrip.price.toLocaleString("id-ID")}
@@ -411,12 +411,12 @@ export default function Detail({ trip }) {
                 <Container className="py-4 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="hidden md:block">
                         <p className="text-sm text-neutral-500 mb-0.5 font-medium">Pesan perjalanan anda sekarang</p>
-                        <h3 className="text-lg font-bold text-neutral-900">{currentTrip.title}</h3>
+                        <h3 className="text-lg font-bold text-neutral-700">{currentTrip.title}</h3>
                     </div>
                     <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-5 md:gap-8">
                         <div className="text-right">
                             <p className="text-[13px] text-neutral-500 mb-0.5 font-medium">Mulai dari</p>
-                            <p className="text-xl font-bold text-neutral-900">
+                            <p className="text-xl font-bold text-neutral-700">
                                 Rp {currentTrip.price.toLocaleString("id-ID")}{" "}
                                 <span className="text-sm font-medium text-neutral-500">/ orang</span>
                             </p>

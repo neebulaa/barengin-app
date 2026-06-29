@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Button from "@/Components/Button";
+import LocationInput from "@/Components/LocationInput";
 import { FiPlus, FiX, FiUploadCloud, FiTrash2, FiImage } from "react-icons/fi";
 
 const inputClass =
@@ -81,7 +82,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                         <div className="mb-4">
                             <label className={labelClass}>Lokasi / Destinasi</label>
-                            <input type="text" value={data.location} onChange={(e) => setData("location", e.target.value)}
+                            <LocationInput value={data.location} onChange={(v) => setData("location", v)}
                                 placeholder="Contoh: Malang, Jawa Timur" className={inputClass} />
                             {err("location")}
                         </div>

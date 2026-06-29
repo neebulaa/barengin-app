@@ -94,7 +94,7 @@ export default function TripCard({ trip }) {
             <div className="p-5">
                 {/* Judul & Lokasi */}
                 <div className="mb-4 space-y-1">
-                    <h3 className="text-lg font-bold text-neutral-900 line-clamp-1">
+                    <h3 className="text-lg font-bold text-neutral-700 line-clamp-1">
                         {title}
                     </h3>
                     <div className="flex items-center gap-1.5 text-sm text-neutral-500 font-medium">
@@ -152,7 +152,7 @@ export default function TripCard({ trip }) {
                             <span className="truncate">Rating Trip</span>
                         </div>
                         <div className="flex items-center gap-1 mt-0.5 text-[11px] font-medium text-neutral-500">
-                        <span className="text-neutral-900 font-bold">
+                        <span className="text-neutral-700 font-bold">
                             {guide_rating}
                         </span>
                         <span>({guide_reviews} ulasan)</span>
@@ -175,7 +175,7 @@ export default function TripCard({ trip }) {
 
                         <div className="min-w-0 max-w-[140px] sm:max-w-[160px]">
                             {/* NAMA */}
-                            <div className="flex items-center gap-1 text-sm font-bold text-neutral-900 min-w-0">
+                            <div className="flex items-center gap-1 text-sm font-bold text-neutral-700 min-w-0">
                                 <span className="truncate">{guide}</span>
                                 <MdVerified className="text-blue-500 shrink-0 size-4" />
                             </div>
@@ -188,7 +188,7 @@ export default function TripCard({ trip }) {
                             {/* RATING */}
                             <div className="flex items-center gap-1 mt-0.5 text-[11px] font-medium text-neutral-500 min-w-0">
                                 <FaStar className="text-yellow-400 size-3 shrink-0" />
-                                <span className="text-neutral-900 font-bold shrink-0">
+                                <span className="text-neutral-700 font-bold shrink-0">
                                     {guide_rating}
                                 </span>
                                 <span className="truncate">({guide_reviews} ulasan)</span>

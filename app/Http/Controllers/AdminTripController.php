@@ -24,7 +24,8 @@ class AdminTripController extends Controller
 
         $trips = Trip::with('detail_trips')
             ->where('guider_id', Auth::id())
-            ->latest()
+            ->orderByDesc('created_at') // "Terbaru" = waktu dibuat
+            ->orderByDesc('id')         // tie-break agar yang terbaru selalu di atas
             ->get()
             ->map(function ($trip) {
                 $joined = (int) DB::table('trip_orders')

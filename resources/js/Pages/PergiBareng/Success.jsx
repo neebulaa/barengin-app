@@ -20,7 +20,7 @@ export default function Success({ trip }) {
                     <FaCheck className="text-3xl" />
                 </div>
 
-                <h1 className="text-3xl font-bold text-neutral-900 mb-2">Berhasil Bergabung</h1>
+                <h1 className="text-3xl font-bold text-neutral-700 mb-2">Berhasil Bergabung</h1>
                 <p className="text-neutral-600 mb-8">Yeay, Kamu berhasil bergabung</p>
 
                 {/* Card Summary */}
@@ -28,7 +28,7 @@ export default function Success({ trip }) {
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             <p className="text-xs text-neutral-500">Pergi Bareng ID</p>
-                            <p className="font-bold text-neutral-900">{trip.trip_id}</p>
+                            <p className="font-bold text-neutral-700">{trip.trip_id}</p>
                         </div>
                         <span className="bg-success-100 text-success-700 text-xs font-semibold px-2 py-1 rounded">Tergabung</span>
                     </div>
@@ -36,7 +36,7 @@ export default function Success({ trip }) {
                     <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-xl border border-neutral-100">
                         <img src="/assets/terminal-cibubur.jpg" className="w-14 h-14 rounded-lg object-cover" alt="Trip" />
                         <div className="flex-1">
-                            <h4 className="font-bold text-sm text-neutral-900">{trip.title}</h4>
+                            <h4 className="font-bold text-sm text-neutral-700">{trip.title}</h4>
                             <p className="text-xs text-neutral-500 flex items-center gap-1 mt-1">
                                 <FaCalendarAlt /> {trip.date}
                             </p>

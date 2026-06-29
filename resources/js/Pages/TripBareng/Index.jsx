@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Head, router } from "@inertiajs/react";
 import TripCard from "@/Components/TripCard";
 import Container from "@/Components/Container";
@@ -7,47 +7,33 @@ import Pagination from "@/Components/Pagination";
 import Select from "@/Components/Select";
 import MainLayout from "@/Layouts/MainLayout";
 
-export default function Index({ trips, all_trips }) {
+export default function Index({ trips, all_trips, filters = {} }) {
     const [activeTab, setActiveTab] = useState("all");
-    const [sortBy, setSortBy]       = useState("");
+    const [sortBy, setSortBy]       = useState(filters?.sort ?? "");
 
     const tripItems = trips?.data || [];
 
-    // ── Sorting dilakukan di frontend (data sudah ada di tripItems) ──
-    const sortedTrips = useMemo(() => {
-        if (!sortBy) return tripItems;
-
-        return [...tripItems].sort((a, b) => {
-            switch (sortBy) {
-                case "rating":
-                    // Rating tertinggi → terendah
-                    return (b.rating ?? 0) - (a.rating ?? 0);
-
-                case "price_asc":
-                    // Harga termurah → termahal
-                    return (a.price ?? 0) - (b.price ?? 0);
-
-                case "price_desc":
-                    // Harga termahal → termurah
-                    return (b.price ?? 0) - (a.price ?? 0);
-
-                case "newest":
-                    // Terbaru → terlama (berdasarkan id, makin besar makin baru)
-                    return (b.id ?? 0) - (a.id ?? 0);
-
-                default:
-                    return 0;
-            }
-        });
-    }, [tripItems, sortBy]);
-
-    const handlePageChange = (newPage) => {
+    // ── Navigasi ke backend dengan mempertahankan pencarian + urutan ──
+    const visit = (params) => {
         router.get(
             window.location.pathname,
-            { page: newPage },
-            { preserveState: true, preserveScroll: true }
+            {
+                tujuan: filters?.tujuan || undefined,
+                start_date: filters?.start_date || undefined,
+                end_date: filters?.end_date || undefined,
+                ...params,
+            },
+            { preserveState: true, preserveScroll: true, replace: true }
         );
     };
+
+    const handleSort = (e) => {
+        const value = e.target.value;
+        setSortBy(value);
+        visit({ sort: value || undefined, page: 1 }); // reset ke halaman 1
+    };
+
+    const handlePageChange = (newPage) => visit({ sort: sortBy || undefined, page: newPage });
 
     return (
         <div className="min-h-screen bg-neutral-50 pb-16 md:pb-24">
@@ -88,11 +74,11 @@ export default function Index({ trips, all_trips }) {
                 {/* Header & Sort */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-neutral-900">
+                        <h2 className="text-2xl md:text-3xl font-bold text-neutral-700">
                             Cari Trip Terbaikmu
                         </h2>
                         <p className="text-sm text-neutral-500 mt-1">
-                            {sortedTrips.length} trip tersedia
+                            {trips?.total ?? tripItems.length} trip tersedia
                         </p>
                     </div>
 
@@ -100,7 +86,7 @@ export default function Index({ trips, all_trips }) {
                     <Select
                         label=""
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
+                        onChange={handleSort}
                         className="w-48"
                         selectClassName="h-10 bg-white"
                     >
@@ -112,10 +98,10 @@ export default function Index({ trips, all_trips }) {
                     </Select>
                 </div>
 
-                {sortedTrips.length > 0 ? (
+                {tripItems.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                            {sortedTrips.map((trip) => (
+                            {tripItems.map((trip) => (
                                 <TripCard key={trip.id} trip={trip} />
                             ))}
                         </div>

@@ -199,7 +199,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
                 <div className="mb-8">
                     <Link
                         href={`/trip-bareng/${trip.id}`}
-                        className="inline-flex items-center text-2xl font-bold text-neutral-900 hover:text-primary-700 mb-2 gap-3 transition"
+                        className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition"
                     >
                         <FaChevronLeft className="text-xl" />
                         Checkout Trip
@@ -222,7 +222,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                     onError={(e) => (e.target.src = "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?q=80&w=2071&auto=format&fit=crop")}
                                 />
                                 <div>
-                                    <h3 className="text-lg font-bold text-neutral-900 mb-1">{trip.title}</h3>
+                                    <h3 className="text-lg font-bold text-neutral-700 mb-1">{trip.title}</h3>
                                     <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2 font-medium">
                                         <FaUserFriends className="text-neutral-400" />
                                         {trip.joined_count} / {trip.capacity} orang telah bergabung
@@ -236,7 +236,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
 
                             <div className="flex items-center justify-between pt-6">
                                 <div>
-                                    <h4 className="font-bold text-neutral-900">Total partisipan</h4>
+                                    <h4 className="font-bold text-neutral-700">Total partisipan</h4>
                                     <p className="text-sm text-neutral-500">Hanya tersisa {trip.remaining_quota} kuota lagi</p>
                                 </div>
                                 <div className="flex items-center gap-4">
@@ -271,7 +271,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                 }`}
                             >
                                 <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-lg font-bold text-neutral-900">Info Partisipan {idx + 1}</h3>
+                                    <h3 className="text-lg font-bold text-neutral-700">Info Partisipan {idx + 1}</h3>
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${idx % 2 === 0 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
                                         Person {idx + 1}
                                     </span>
@@ -338,27 +338,27 @@ export default function Checkout({ trip, midtrans_client_key }) {
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 sticky top-24">
                             <div className="flex items-center gap-2 mb-6">
                                 <MdOutlineShoppingBag className="text-xl text-neutral-800" />
-                                <h3 className="text-lg font-bold text-neutral-900">Detail Pembayaran</h3>
+                                <h3 className="text-lg font-bold text-neutral-700">Detail Pembayaran</h3>
                             </div>
 
                             <div className="space-y-4 text-sm text-neutral-600 border-b border-neutral-100 pb-6 mb-6">
                                 <div className="flex justify-between items-center">
                                     <span>Subtotal ({quantity} orang)</span>
-                                    <span className="font-semibold text-neutral-900">Rp {Number(subtotal).toLocaleString("id-ID")}</span>
+                                    <span className="font-semibold text-neutral-700">Rp {Number(subtotal).toLocaleString("id-ID")}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span>Biaya Layanan</span>
-                                    <span className="font-semibold text-neutral-900">Rp {Number(serviceFee).toLocaleString("id-ID")}</span>
+                                    <span className="font-semibold text-neutral-700">Rp {Number(serviceFee).toLocaleString("id-ID")}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span>Biaya Asuransi Trip</span>
-                                    <span className="font-semibold text-neutral-900">Rp {Number(insuranceFee).toLocaleString("id-ID")}</span>
+                                    <span className="font-semibold text-neutral-700">Rp {Number(insuranceFee).toLocaleString("id-ID")}</span>
                                 </div>
                             </div>
 
                             <div className="flex justify-between items-center mb-6">
-                                <span className="font-bold text-neutral-900">Total Pembayaran</span>
-                                <span className="text-lg font-bold text-neutral-900">Rp {Number(total).toLocaleString("id-ID")}</span>
+                                <span className="font-bold text-neutral-700">Total Pembayaran</span>
+                                <span className="text-lg font-bold text-neutral-700">Rp {Number(total).toLocaleString("id-ID")}</span>
                             </div>
 
                             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 mb-6">

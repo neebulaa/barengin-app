@@ -18,6 +18,7 @@ class TripsController extends Controller
         $tujuan    = trim((string) $request->query('tujuan', ''));
         $startDate = $request->query('start_date');
         $endDate   = $request->query('end_date');
+        $sort      = (string) $request->query('sort', '');
 
         $query = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
@@ -38,8 +39,26 @@ class TripsController extends Controller
             $query->whereDate('trips.end_date', '<=', $endDate);
         }
 
+        // Sorting di sisi server agar konsisten di seluruh halaman (bukan hanya per halaman)
+        switch ($sort) {
+            case 'rating':
+                $query->orderByDesc('trips.rating');
+                break;
+            case 'price_asc':
+                $query->orderBy('trips.price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderByDesc('trips.price');
+                break;
+            case 'newest':
+                $query->orderByDesc('trips.created_at')->orderByDesc('trips.id');
+                break;
+            default:
+                $query->orderByDesc('trips.created_at');
+                break;
+        }
+
         $tripsPaginated = $query
-            ->orderBy('trips.created_at', 'desc')
             ->paginate(9)
             ->withQueryString();
 
@@ -108,6 +127,7 @@ class TripsController extends Controller
                 'tujuan'     => $tujuan,
                 'start_date' => $startDate,
                 'end_date'   => $endDate,
+                'sort'       => $sort,
             ],
         ]);
     }

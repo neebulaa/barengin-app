@@ -17,7 +17,7 @@ export default function RequestSent({ trip }) {
                     <FaRegClock className="text-3xl" />
                 </div>
 
-                <h1 className="text-3xl font-bold text-neutral-900 mb-2">Permintaan Terkirim</h1>
+                <h1 className="text-3xl font-bold text-neutral-700 mb-2">Permintaan Terkirim</h1>
                 <p className="text-neutral-600 mb-8 text-center max-w-md">
                     Permintaanmu sudah dikirim ke penyelenggara. Kamu akan tergabung setelah disetujui.
                 </p>
@@ -27,7 +27,7 @@ export default function RequestSent({ trip }) {
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             <p className="text-xs text-neutral-500">Pergi Bareng ID</p>
-                            <p className="font-bold text-neutral-900">{trip.trip_id}</p>
+                            <p className="font-bold text-neutral-700">{trip.trip_id}</p>
                         </div>
                         <span className="bg-warning-100 text-warning-700 text-xs font-semibold px-2 py-1 rounded">
                             Menunggu Persetujuan
@@ -42,7 +42,7 @@ export default function RequestSent({ trip }) {
                             onError={(e) => (e.target.src = "/assets/pergi-bareng/PergiBarengHeader.avif")}
                         />
                         <div className="flex-1">
-                            <h4 className="font-bold text-sm text-neutral-900">{trip.title}</h4>
+                            <h4 className="font-bold text-sm text-neutral-700">{trip.title}</h4>
                             <p className="text-xs text-neutral-500 flex items-center gap-1 mt-1">
                                 <FaCalendarAlt /> {trip.date}
                             </p>

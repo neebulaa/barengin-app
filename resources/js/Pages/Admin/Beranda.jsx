@@ -2,6 +2,7 @@ import React from "react";
 import { Head, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import TripCard from "@/Components/TripCard";
+import Pagination from "@/Components/Pagination";
 import { FiUsers, FiDownload } from "react-icons/fi";
 import { FaSuitcase, FaCar } from "react-icons/fa6";
 import { MdOutlineShoppingBag } from "react-icons/md";
@@ -129,26 +130,15 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
                     </table>
                 </div>
 
-                <div className="flex items-center justify-between gap-4 bg-neutral-50 p-4 border-t border-neutral-100">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-neutral-50 p-4 border-t border-neutral-100">
                     <span className="text-xs text-neutral-500 font-medium">
                         Menampilkan {logs?.from ?? 0}–{logs?.to ?? 0} dari {logs?.total ?? 0} data
                     </span>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => goPage(currentPage - 1)}
-                            disabled={currentPage <= 1}
-                            className="px-4 py-2 rounded-lg border border-neutral-200 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            Sebelumnya
-                        </button>
-                        <button
-                            onClick={() => goPage(currentPage + 1)}
-                            disabled={currentPage >= lastPage}
-                            className="px-4 py-2 rounded-lg border border-neutral-200 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            Selanjutnya
-                        </button>
-                    </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={lastPage}
+                        onPageChange={goPage}
+                    />
                 </div>
             </div>
         </div>

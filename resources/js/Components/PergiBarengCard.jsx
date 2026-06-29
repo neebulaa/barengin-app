@@ -111,7 +111,7 @@ export default function PergiBarengCard({ data }) {
             <div className="p-5">
                 {/* Judul & Lokasi */}
                 <div className="mb-4 space-y-1">
-                    <h3 className="text-lg font-bold text-neutral-900 line-clamp-1">
+                    <h3 className="text-lg font-bold text-neutral-700 line-clamp-1">
                         {title}
                     </h3>
                     <div className="flex items-center gap-1.5 text-sm text-neutral-500 font-medium">
@@ -150,7 +150,7 @@ export default function PergiBarengCard({ data }) {
 
                         <div className="min-w-0 max-w-[140px] sm:max-w-[160px]">
                             {/* NAMA */}
-                            <div className="flex items-center gap-1 text-sm font-bold text-neutral-900 min-w-0">
+                            <div className="flex items-center gap-1 text-sm font-bold text-neutral-700 min-w-0">
                                 <span className="truncate">{user.name}</span>
                                 {user.verified && (
                                     <MdVerified className="size-4 shrink-0 text-blue-500" />
@@ -160,7 +160,7 @@ export default function PergiBarengCard({ data }) {
                             {/* RATING */}
                             <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-neutral-500 min-w-0">
                                 <FaStar className="size-3 shrink-0 text-yellow-400" />
-                                <span className="shrink-0 font-bold text-neutral-900">
+                                <span className="shrink-0 font-bold text-neutral-700">
                                     {user.rating}
                                 </span>
                                 <span className="truncate">

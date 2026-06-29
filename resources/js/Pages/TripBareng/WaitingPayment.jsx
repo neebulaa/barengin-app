@@ -48,7 +48,7 @@ export default function WaitingPayment({ paymentData }) {
                     <div className="mb-8">
                         <Link 
                             href={`/trip-bareng/${paymentData.trip_id}/checkout`} 
-                            className="inline-flex items-center text-2xl font-bold text-neutral-900 hover:text-primary-700 mb-2 gap-3 transition"
+                            className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition"
                         >
                             <FaChevronLeft className="text-xl" />
                             Menunggu Pembayaran
@@ -68,8 +68,8 @@ export default function WaitingPayment({ paymentData }) {
 
                     {/* Card Total Pembayaran */}
                     <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-neutral-200 flex justify-between items-center">
-                        <span className="text-lg font-bold text-neutral-900">Total Pembayaran</span>
-                        <span className="text-xl font-bold text-neutral-900">Rp {paymentData.total_amount.toLocaleString("id-ID")}</span>
+                        <span className="text-lg font-bold text-neutral-700">Total Pembayaran</span>
+                        <span className="text-xl font-bold text-neutral-700">Rp {paymentData.total_amount.toLocaleString("id-ID")}</span>
                     </div>
 
                     {/* Card Virtual Account */}
@@ -80,7 +80,7 @@ export default function WaitingPayment({ paymentData }) {
                             <div className="flex items-center gap-1 font-bold italic text-blue-800 text-2xl tracking-tighter">
                                 <span className="text-[#00529C]">BCA</span>
                             </div>
-                            <span className="text-lg font-medium text-neutral-900">{paymentData.bank_name}</span>
+                            <span className="text-lg font-medium text-neutral-700">{paymentData.bank_name}</span>
                         </div>
 
                         <hr className="border-neutral-200 my-6" />

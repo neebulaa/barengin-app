@@ -94,7 +94,7 @@ export default function Join({ trip }) {
 
             <Container className="py-8 max-w-5xl">
                 <div className="mb-6">
-                    <Link href={`/pergi-bareng/${trip.id}`} className="inline-flex items-center text-2xl font-bold text-neutral-900 hover:text-primary-700 gap-3 transition">
+                    <Link href={`/pergi-bareng/${trip.id}`} className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 gap-3 transition">
                         <FaChevronLeft /> Detail Parjalanan
                     </Link>
                     <p className="text-sm text-neutral-500 mt-1 ml-6">Masukan data partisipan demi keamanan anda</p>
@@ -107,7 +107,7 @@ export default function Join({ trip }) {
                             <div className="flex items-center gap-4 mb-4">
                                 <img src="/assets/terminal-cibubur.jpg" className="w-16 h-16 rounded-xl object-cover" alt="Trip" />
                                 <div>
-                                    <h3 className="font-bold text-neutral-900">{trip.title}</h3>
+                                    <h3 className="font-bold text-neutral-700">{trip.title}</h3>
                                     <p className="text-sm text-primary-600 flex items-center gap-1 mt-1">
                                         <FaUserFriends /> {trip.joined} / {trip.capacity} telah bergabung
                                     </p>
@@ -143,7 +143,7 @@ export default function Join({ trip }) {
                             {Array.from({ length: count }).map((_, i) => (
                                 <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-6 relative overflow-hidden">
                                     <div className="flex items-center justify-between mb-5">
-                                        <h4 className="font-bold text-neutral-900">Info Partisipan {i + 1}</h4>
+                                        <h4 className="font-bold text-neutral-700">Info Partisipan {i + 1}</h4>
                                         <span className="text-xs font-semibold bg-success-50 text-success-700 px-3 py-1 rounded-md">Person {i + 1}</span>
                                     </div>
                                     
