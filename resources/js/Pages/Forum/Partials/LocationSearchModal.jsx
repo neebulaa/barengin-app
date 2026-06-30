@@ -153,8 +153,8 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
                     {loading ? (
                         <div className="text-sm text-neutral-500 px-1 py-2">
                             {showingPopular
-                                ? "Loading popular locations..."
-                                : "Searching..."}
+                                ? "Memuat lokasi populer..."
+                                : "Mencari..."}
                         </div>
                     ) : null}
 

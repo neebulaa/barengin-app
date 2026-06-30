@@ -58,7 +58,7 @@ export default function ManagementUser({ users = [] }) {
             const userRoles = [];
             if (user.is_admin) userRoles.push("Admin");
             if (user.is_guider) userRoles.push("Guider");
-            if (userRoles.length === 0) userRoles.push("User Biasa");
+            if (userRoles.length === 0) userRoles.push("Pengguna Biasa");
 
             return {
                 id: user.id,
@@ -146,13 +146,13 @@ export default function ManagementUser({ users = [] }) {
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden flex flex-col relative">
-            <Head title="Manajemen User" />
+            <Head title="Manajemen Pengguna" />
 
             <ConfirmModal
                 open={deleteModal.isOpen}
                 onClose={closeDeleteModal}
                 onConfirm={confirmDelete}
-                title="Hapus User?"
+                title="Hapus Pengguna?"
                 description={<>Apakah kamu yakin ingin menghapus <span className="font-semibold text-neutral-700">{deleteModal.userName}</span>?</>}
             />
 
@@ -175,10 +175,10 @@ export default function ManagementUser({ users = [] }) {
                             onChange={(e) => setFilterRole(e.target.value)}
                             className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer appearance-none transition-all"
                         >
-                            <option value="">Filter By (Semua)</option>
+                            <option value="">Filter (Semua)</option>
                             <option value="Guider">Guider</option>
                             <option value="Admin">Admin</option>
-                            <option value="User Biasa">User Biasa</option>
+                            <option value="Pengguna Biasa">Pengguna Biasa</option>
                         </select>
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,10 +195,10 @@ export default function ManagementUser({ users = [] }) {
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
                             <tr className="bg-neutral-100 border-y border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-3 px-5">NAME</th>
+                                <th className="py-3 px-5">NAMA</th>
                                 <th className="py-3 px-5">EMAIL</th>
-                                <th className="py-3 px-5">ROLES</th>
-                                <th className="py-3 px-5 text-center">ACTION</th>
+                                <th className="py-3 px-5">PERAN</th>
+                                <th className="py-3 px-5 text-center">AKSI</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
@@ -236,7 +236,7 @@ export default function ManagementUser({ users = [] }) {
                                                 <button
                                                     onClick={() => openDeleteModal(user.id, user.name)}
                                                     className="p-2 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-                                                    title="Hapus User"
+                                                    title="Hapus Pengguna"
                                                 >
                                                     <FiTrash2 size={16} />
                                                 </button>
@@ -245,7 +245,7 @@ export default function ManagementUser({ users = [] }) {
                                                 <Link
                                                     href={`/admin/management-user/${user.id}/edit-role`}
                                                     className="p-2 bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 rounded-lg transition-colors inline-flex items-center justify-center"
-                                                    title="Edit Role User"
+                                                    title="Edit Peran Pengguna"
                                                 >
                                                     <FiEdit2 size={16} />
                                                 </Link>
@@ -321,7 +321,7 @@ export default function ManagementUser({ users = [] }) {
 
             <div className="bg-neutral-100 p-4 border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="text-xs text-neutral-500 font-medium text-center md:text-left">
-                    Showing {paginatedUsers.length} of {filteredUsers.length} entries
+                    Menampilkan {paginatedUsers.length} dari {filteredUsers.length} data
                 </div>
                 <Pagination
                     currentPage={currentPage}
@@ -337,8 +337,8 @@ export default function ManagementUser({ users = [] }) {
 ManagementUser.layout = (page) => (
     <AdminLayout title="Dasbor - Admin" subtitle="Selamat datang, Admin!">
         <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-700">Manajemen User</h1>
-            <p className="text-neutral-500 text-sm">Tempat dimana admin mengatur semua user dalam Barengin.</p>
+            <h1 className="text-2xl font-bold text-neutral-700">Manajemen Pengguna</h1>
+            <p className="text-neutral-500 text-sm">Tempat admin mengatur semua pengguna dalam Barengin.</p>
         </div>
         {page}
     </AdminLayout>

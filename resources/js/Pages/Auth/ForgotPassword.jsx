@@ -63,7 +63,7 @@ export default function ForgotPassword() {
                                 disabled={processing}
                             >
                                 {processing
-                                    ? "Loading..."
+                                    ? "Memproses..."
                                     : "Kirim link reset password"}
                             </Button>
 

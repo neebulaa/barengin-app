@@ -551,7 +551,7 @@ export default function Profile({
                                 rounded
                                 className="w-full justify-center"
                             >
-                                {isFollowing ? "Unfollow" : "Follow"}
+                                {isFollowing ? "Berhenti Ikuti" : "Ikuti"}
                             </Button>
                         ) : null}
 

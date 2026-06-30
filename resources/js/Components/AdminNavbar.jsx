@@ -69,7 +69,7 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                             onClick={() => setIsProfileOpen(false)}
                         >
                             <MdHome className="w-5 h-5 text-current shrink-0" />
-                            <span>Home</span>
+                            <span>Beranda</span>
                         </Link>
 
                         <Link
@@ -78,7 +78,7 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                             onClick={() => setIsProfileOpen(false)}
                         >
                             <HiOutlineDocumentText className="w-5 h-5 text-current shrink-0" />
-                            <span>Profile History</span>
+                            <span>Riwayat Profil</span>
                         </Link>
 
                         {/* Logout menggunakan POST method sesuai bawaan Laravel Breeze/Jetstream */}
@@ -89,7 +89,7 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                             className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer"
                         >
                             <FiLogOut className="w-5 h-5 text-current shrink-0" />
-                            <span>Logout</span>
+                            <span>Keluar</span>
                         </Link>
                     </div>
                 )}

@@ -465,7 +465,7 @@ export default function CreatePostModal({
                                                         }
                                                     }}
                                                     className="w-full outline-none text-sm"
-                                                    placeholder="Add tags (e.g. Budget Trip)"
+                                                    placeholder="Tambah tag (cth. Trip Hemat)"
                                                 />
                                                 <button
                                                     type="button"

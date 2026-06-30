@@ -42,10 +42,10 @@ export default function Pagination({
                         ? "text-neutral-300 cursor-not-allowed"
                         : "text-neutral-600 hover:text-primary-700 active:scale-95"
                 }`}
-                aria-label="Previous page"
+                aria-label="Halaman sebelumnya"
             >
                 <FaChevronLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Prev</span>
+                <span className="hidden sm:inline">Sebelumnya</span>
             </button>
 
             {/* --- Angka Halaman --- */}
@@ -92,9 +92,9 @@ export default function Pagination({
                         ? "text-neutral-300 cursor-not-allowed"
                         : "text-neutral-600 hover:text-primary-700 active:scale-95"
                 }`}
-                aria-label="Next page"
+                aria-label="Halaman selanjutnya"
             >
-                <span className="hidden sm:inline">Next</span>
+                <span className="hidden sm:inline">Selanjutnya</span>
                 <FaChevronRight className="w-3.5 h-3.5" />
             </button>
 

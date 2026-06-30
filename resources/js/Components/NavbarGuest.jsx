@@ -53,7 +53,7 @@ export default function NavbarGuest() {
                     />
                     {/* <NavLink href="/jastip">Jastip</NavLink> */}
                     <NavLink href="/forum">Forum</NavLink>
-                    <NavLink href="/leaderboard">Leaderboard</NavLink>
+                    <NavLink href="/leaderboard">Peringkat</NavLink>
                 </nav>
 
                 <div className="hidden md:flex items-center space-x-4">
@@ -144,7 +144,7 @@ export default function NavbarGuest() {
                             Forum
                         </NavLinkMobile>
                         <NavLinkMobile href="/leaderboard" onClick={closeAll}>
-                            Leaderboard
+                            Peringkat
                         </NavLinkMobile>
                     </div>
 

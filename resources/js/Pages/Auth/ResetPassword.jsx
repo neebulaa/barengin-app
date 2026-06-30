@@ -127,7 +127,7 @@ export default function ResetPassword({ token, email }) {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Loading..." : "Ubah Password"}
+                                {processing ? "Memproses..." : "Ubah Password"}
                             </Button>
 
                             <div className="pt-2">

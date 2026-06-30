@@ -159,7 +159,7 @@ export default function Register() {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Loading..." : "Daftar"}
+                                {processing ? "Memproses..." : "Daftar"}
                             </Button>
 
                             <Button

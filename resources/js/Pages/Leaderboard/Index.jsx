@@ -178,12 +178,12 @@ export default function Leaderboard() {
         <Container className="py-12">
             {" "}
             {/* Latar belakang abu-abu sangat muda khas UI modern */}
-            <Head title="Leaderboard" />
+            <Head title="Peringkat" />
             <Container className="py-4">
                 {/* 1. Header Section */}
                 <div className="text-center mb-10">
                     <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-3">
-                        Leaderboard
+                        Peringkat
                     </h1>
                     <p className="text-neutral-600 text-sm md:text-base max-w-2xl mx-auto">
                         Lihat siapa yang memimpin dalam hal perjalanan dan
@@ -287,14 +287,14 @@ export default function Leaderboard() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-[#F4F7FB] border-b border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-4 px-6">RANK</th>
+                                <th className="py-4 px-6">PERINGKAT</th>
                                 <th className="py-4 px-6">{columnTwoTitle}</th>
                                 <th className="py-4 px-6">
                                     {columnThreeTitle}
                                 </th>
                                 <th className="py-4 px-6">RATING</th>
                                 <th className="py-4 px-6 text-center">
-                                    ACTION
+                                    AKSI
                                 </th>
                             </tr>
                         </thead>

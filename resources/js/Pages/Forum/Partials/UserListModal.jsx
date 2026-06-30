@@ -26,9 +26,9 @@ export default function UserListModal({
     const [followOverride, setFollowOverride] = useState({}); // { [userId]: boolean }
 
     const title = useMemo(() => {
-        if (mode === "followers") return "Followers";
-        if (mode === "following") return "Following";
-        return "Search People";
+        if (mode === "followers") return "Pengikut";
+        if (mode === "following") return "Mengikuti";
+        return "Cari Orang";
     }, [mode]);
 
     const endpoint = useMemo(() => {
@@ -226,8 +226,8 @@ export default function UserListModal({
                                                             }}
                                                         >
                                                             {isFollowing
-                                                                ? "Unfollow"
-                                                                : "Follow"}
+                                                                ? "Berhenti Ikuti"
+                                                                : "Ikuti"}
                                                         </Button>
                                                     </div>
                                                 ) : null}

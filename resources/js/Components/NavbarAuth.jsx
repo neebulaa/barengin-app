@@ -87,7 +87,7 @@ export default function NavbarAuth() {
 
                     {/* <NavLink href="/jastip">Jastip</NavLink> */}
                     <NavLink href="/forum">Forum</NavLink>
-                    <NavLink href="/leaderboard">Leaderboard</NavLink>
+                    <NavLink href="/leaderboard">Peringkat</NavLink>
                 </nav>
 
                 <div className="hidden md:flex items-center space-x-3">
@@ -106,17 +106,17 @@ export default function NavbarAuth() {
                     <NavDropdown
                         items={[
                             {
-                                label: "Dashboard",
+                                label: "Dasbor",
                                 href: dashboardHref,
                                 icon: MdDashboard,
                             },
                             {
-                                label: "Profile History",
+                                label: "Riwayat Profil",
                                 href: "/profile-history",
                                 icon: HiOutlineDocumentText,
                             },
                             {
-                                label: "Logout",
+                                label: "Keluar",
                                 href: "/logout",
                                 icon: FiLogOut,
                                 as: "button",
@@ -195,7 +195,7 @@ export default function NavbarAuth() {
                                         className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
                                     />
                                     <span className="truncate">
-                                        {user?.name || "User"}
+                                        {user?.name || "Pengguna"}
                                     </span>
                                 </span>
                             }
@@ -211,7 +211,7 @@ export default function NavbarAuth() {
                                 className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
                             >
                                 <MdDashboard className="w-5 h-5 mr-2 text-current" />
-                                Dashboard
+                                Dasbor
                             </Link>
 
                             <Link
@@ -220,7 +220,7 @@ export default function NavbarAuth() {
                                 className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
                             >
                                 <HiOutlineDocumentText className="w-5 h-5 mr-2 text-current" />
-                                Profile History
+                                Riwayat Profil
                             </Link>
 
                             <Link
@@ -231,7 +231,7 @@ export default function NavbarAuth() {
                                 className="w-full text-left px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center cursor-pointer"
                             >
                                 <FiLogOut className="w-5 h-5 mr-2 text-current" />
-                                Logout
+                                Keluar
                             </Link>
                         </NavDropdownMobile>
                     </div>
@@ -269,7 +269,7 @@ export default function NavbarAuth() {
                             Forum
                         </NavLinkMobile>
                         <NavLinkMobile href="/leaderboard" onClick={closeAll}>
-                            Leaderboard
+                            Peringkat
                         </NavLinkMobile>
                     </div>
 

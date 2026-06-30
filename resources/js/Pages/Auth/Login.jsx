@@ -47,7 +47,7 @@ export default function Login() {
                             <Input
                                 id="login"
                                 type="text"
-                                label="Username or Email"
+                                label="Username atau Email"
                                 value={data.login}
                                 onChange={(e) =>
                                     setData("login", e.target.value)
@@ -112,7 +112,7 @@ export default function Login() {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Loading..." : "Masuk"}
+                                {processing ? "Memproses..." : "Masuk"}
                             </Button>
 
                             <Button

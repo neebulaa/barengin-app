@@ -54,7 +54,7 @@ export default function EditUser({ user }) {
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden min-h-[500px] relative pb-10">
-            <Head title="Edit User" />
+            <Head title="Edit Pengguna" />
 
             {/* ==========================================
                 MODAL POPUP: VERIFY & UNVERIFY
@@ -77,12 +77,12 @@ export default function EditUser({ user }) {
 
                                 <div>
                                     <h3 className="text-lg font-bold text-neutral-700 mb-1">
-                                        {modalType === "verify" ? "Verify User" : "Unverify User"}
+                                        {modalType === "verify" ? "Verifikasi Pengguna" : "Batalkan Verifikasi"}
                                     </h3>
                                     <p className="text-neutral-500 text-sm leading-relaxed">
                                         {modalType === "verify"
-                                            ? "Confirm verification to mark this user as trusted. Verified users may receive enhanced access and credibility within the app."
-                                            : "Are you sure you want to unverify this user? This will remove their trusted status and any associated privileges."}
+                                            ? "Konfirmasi verifikasi untuk menandai pengguna ini sebagai tepercaya. Pengguna terverifikasi mendapatkan akses dan kredibilitas lebih di dalam aplikasi."
+                                            : "Apakah Anda yakin ingin membatalkan verifikasi user ini? Tindakan ini akan menghapus status tepercaya beserta hak akses terkait."}
                                     </p>
                                 </div>
                             </div>
@@ -94,7 +94,7 @@ export default function EditUser({ user }) {
                                     onClick={closeModal}
                                     className="px-5 py-2.5 rounded-xl border border-neutral-200 bg-white text-neutral-700 font-semibold hover:bg-neutral-50 transition-colors"
                                 >
-                                    Cancel
+                                    Batal
                                 </button>
                                 <button
                                     type="button"
@@ -105,7 +105,7 @@ export default function EditUser({ user }) {
                                             : "bg-red-600 hover:bg-red-700"
                                     }`}
                                 >
-                                    {modalType === "verify" ? "Verify User" : "Unverify User"}
+                                    {modalType === "verify" ? "Verifikasi Pengguna" : "Batalkan Verifikasi"}
                                 </button>
                             </div>
                         </div>
@@ -124,7 +124,7 @@ export default function EditUser({ user }) {
                     <FiChevronLeft size={24} />
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold text-neutral-700">Edit User</h2>
+                    <h2 className="text-2xl font-bold text-neutral-700">Edit Pengguna</h2>
                     <p className="text-neutral-500 text-sm">Ubah data user aplikasi Barengin</p>
                 </div>
             </div>
@@ -142,10 +142,10 @@ export default function EditUser({ user }) {
                         onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
                     />
                     <div>
-                        <h4 className="font-semibold text-neutral-700 mb-1">Profile Picture</h4>
-                        <p className="text-xs text-neutral-500 mb-2">JPG, GIF or PNG. Max Size of 5mb</p>
+                        <h4 className="font-semibold text-neutral-700 mb-1">Foto Profil</h4>
+                        <p className="text-xs text-neutral-500 mb-2">JPG, GIF, atau PNG. Ukuran maksimal 5mb</p>
                         <button type="button" className="text-primary-700 text-sm font-semibold hover:underline">
-                            Remove Image
+                            Hapus Gambar
                         </button>
                     </div>
                 </div>
@@ -153,7 +153,7 @@ export default function EditUser({ user }) {
                 {/* --- READ ONLY FIELDS (Data Diri) --- */}
                 <div className="space-y-5 mb-8">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">Full Name</label>
+                        <label className="text-sm font-semibold text-neutral-700">Nama Lengkap</label>
                         <Input type="text" value={safeUser.full_name ?? ""} disabled />
                     </div>
 
@@ -191,14 +191,14 @@ export default function EditUser({ user }) {
 
                 {/* --- EDITABLE FIELDS (Roles) --- */}
                 <div className="mb-8">
-                    <label className="text-sm font-semibold text-neutral-700 block mb-3">Roles</label>
+                    <label className="text-sm font-semibold text-neutral-700 block mb-3">Peran</label>
                     <div className="border border-neutral-200 rounded-2xl p-4 flex flex-col gap-3">
 
                         {/* Guider Checkbox Card */}
                         <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_guider ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
                                 <div className="font-bold text-neutral-700 text-sm mb-0.5">Guider</div>
-                                <div className="text-xs text-neutral-500">User bisa mengoperasikan trip bareng</div>
+                                <div className="text-xs text-neutral-500">Pengguna bisa mengoperasikan trip bareng</div>
                             </div>
                             <input
                                 type="checkbox"
@@ -212,7 +212,7 @@ export default function EditUser({ user }) {
                         <label className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${data.is_admin ? "border-primary-700 bg-blue-50/30" : "border-neutral-200 hover:bg-neutral-50"}`}>
                             <div>
                                 <div className="font-bold text-neutral-700 text-sm mb-0.5">Admin</div>
-                                <div className="text-xs text-neutral-500">User bisa mempunyai akses admin</div>
+                                <div className="text-xs text-neutral-500">Pengguna bisa mempunyai akses admin</div>
                             </div>
                             <input
                                 type="checkbox"
@@ -227,7 +227,7 @@ export default function EditUser({ user }) {
 
                 {/* --- USER VERIFICATION TOGGLE --- */}
                 <div className="mb-10">
-                    <label className="text-sm font-semibold text-neutral-700 block mb-3">User Verification</label>
+                    <label className="text-sm font-semibold text-neutral-700 block mb-3">Verifikasi Pengguna</label>
                     <div className="flex items-center gap-3">
                         {/* Custom Tailwind Switch */}
                         <button
@@ -244,7 +244,7 @@ export default function EditUser({ user }) {
                             />
                         </button>
                         <span className="text-sm font-medium text-primary-700 cursor-pointer" onClick={handleToggleClick}>
-                            {data.verified ? "Click to unverify user" : "Click to verify user"}
+                            {data.verified ? "Klik untuk batalkan verifikasi" : "Klik untuk verifikasi pengguna"}
                         </span>
                     </div>
                 </div>
@@ -255,7 +255,7 @@ export default function EditUser({ user }) {
                     disabled={processing}
                     className="px-8 py-3 bg-primary-700 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                 >
-                    Save User
+                    Simpan Perubahan
                 </button>
             </form>
         </div>

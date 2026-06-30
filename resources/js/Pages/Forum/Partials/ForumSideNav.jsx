@@ -86,20 +86,20 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiHome />}
                         href="/forum"
-                        label="Home"
+                        label="Beranda"
                         active={activeKey === "home"}
                     />
 
                     <NavIconButton
                         icon={<FiSearch />}
-                        label="Find People"
+                        label="Cari Orang"
                         active={activeKey === "search"}
                         onClick={() => onFindPeople?.()}
                     />
 
                     <NavIconButton
                         icon={<FiPlus />}
-                        label="Create"
+                        label="Buat"
                         active={activeKey === "create"}
                         onClick={() => onCreatePost?.()}
                     />
@@ -107,7 +107,7 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiUser />}
                         href="/forum/profile"
-                        label="Profile"
+                        label="Profil"
                         active={activeKey === "profile"}
                     />
                 </div>
@@ -119,20 +119,20 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiHome />}
                         href="/forum"
-                        label="Home"
+                        label="Beranda"
                         active={activeKey === "home"}
                     />
 
                     <NavIconButton
                         icon={<FiSearch />}
-                        label="Find People"
+                        label="Cari Orang"
                         active={activeKey === "search"}
                         onClick={() => onFindPeople?.()}
                     />
 
                     <NavIconButton
                         icon={<FiPlus />}
-                        label="Create"
+                        label="Buat"
                         active={activeKey === "create"}
                         onClick={() => onCreatePost?.()}
                     />
@@ -140,7 +140,7 @@ export default function ForumSideNav({
                     <NavIconLink
                         icon={<FiUser />}
                         href="/forum/profile"
-                        label="Profile"
+                        label="Profil"
                         active={activeKey === "profile"}
                     />
                 </div>

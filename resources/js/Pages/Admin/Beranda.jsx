@@ -54,7 +54,7 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
 
             {/* Statistik */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={<FiUsers />} label="Total Users" value={stats.users} />
+                <StatCard icon={<FiUsers />} label="Total Pengguna" value={stats.users} />
                 <StatCard icon={<FaSuitcase />} label="Total Trips" value={stats.trips} />
                 <StatCard icon={<MdOutlineShoppingBag />} label="Total Jastip" value={stats.jastip} />
                 <StatCard icon={<FaCar />} label="Total Pergi Bareng" value={stats.pergi_bareng} />

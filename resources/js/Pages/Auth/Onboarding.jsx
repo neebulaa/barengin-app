@@ -106,7 +106,7 @@ export default function Onboarding({ user }) {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Loading..." : "Lanjut"}
+                                {processing ? "Memproses..." : "Lanjut"}
                             </Button>
 
                             <Button

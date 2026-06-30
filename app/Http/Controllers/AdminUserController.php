@@ -41,7 +41,7 @@ class AdminUserController extends Controller
 
         ActivityLog::record('Mengubah izin pengguna: ' . $user->full_name);
 
-        return redirect()->route('management-user')->with('success_message', 'User berhasil diupdate!');
+        return redirect()->route('management-user')->with('success_message', 'Pengguna berhasil diperbarui!');
     }
 
     // 4. Hapus user
@@ -52,6 +52,6 @@ class AdminUserController extends Controller
 
         ActivityLog::record('Menghapus pengguna: ' . ($user?->full_name ?? "#$id"));
         
-        return redirect()->back()->with('success_message', 'User berhasil dihapus!');
+        return redirect()->back()->with('success_message', 'Pengguna berhasil dihapus!');
     }
 }

@@ -249,7 +249,7 @@ export default function Show({ trip }) {
                                             className="ml-2"
                                             onClick={handleToggleFollow}
                                         >
-                                            {following ? "Mengikuti" : "Follow"}
+                                            {following ? "Mengikuti" : "Ikuti"}
                                         </Button>
                                     )}
                                 </div>
@@ -270,7 +270,7 @@ export default function Show({ trip }) {
                                             </div>
                                         </div>
                                         {p.username && (
-                                            <Button isButtonLink href={`/forum/users/${p.username}`} size="xs" variant="outline" className="ml-2">View Profile</Button>
+                                            <Button isButtonLink href={`/forum/users/${p.username}`} size="xs" variant="outline" className="ml-2">Lihat Profil</Button>
                                         )}
                                     </div>
                                 ))}
