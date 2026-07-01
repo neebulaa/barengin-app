@@ -5,10 +5,12 @@ import Button from "@/Components/Button";
 import Input from "@/Components/Input";
 import Textarea from "@/Components/Textarea";
 import SectionHeading from "../Partials/SectionHeading";
+import { useTranslation } from "@/lib/useTranslation";
 import { FaLocationDot, FaPhone, FaEnvelope } from "react-icons/fa6";
 import { FaFacebookF, FaLinkedinIn, FaYoutube, FaInstagram } from "react-icons/fa";
 
 export default function ContactSection() {
+    const { t } = useTranslation();
     // Menggunakan form handler dari Inertia
     const { data, setData, post, processing, reset, errors } = useForm({
         name: "",
@@ -34,7 +36,7 @@ export default function ContactSection() {
     return (
         <section className="py-12 pt-4">
             <Container>
-                <SectionHeading label="Hubungi Kami" align="right" className="mb-12" />
+                <SectionHeading label={t("home.contact.label")} align="right" className="mb-12" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
                     {/* ... (Bagian gambar Mobile tetap sama) ... */}
@@ -48,17 +50,17 @@ export default function ContactSection() {
 
                     <div>
                         <h2 className="text-3xl font-medium mb-4 text-neutral-700 max-w-md leading-normal">
-                            Tuliskan saran <span className="text-neutral-500">maupun permintaan sekarang</span>
+                            {t("home.contact.heading_1")} <span className="text-neutral-500">{t("home.contact.heading_2")}</span>
                         </h2>
                         <p className="text-sm text-neutral-700 mb-6">
-                            Ada pertanyaan atau saran buat liburanmu? Yuk, hubungi kami di sini dan mari buat perjalananmu lebih seru bareng-bareng!
+                            {t("home.contact.subtitle")}
                         </p>
 
                         <form className="space-y-4" onSubmit={handleSubmit}>
                             <div>
                                 <Input
-                                    label="Nama"
-                                    placeholder="Nama Lengkap Anda"
+                                    label={t("home.contact.form.name")}
+                                    placeholder={t("home.contact.form.name_ph")}
                                     value={data.name}
                                     onChange={(e) => setData('name', e.target.value)}
                                 />
@@ -67,9 +69,9 @@ export default function ContactSection() {
 
                             <div>
                                 <Input
-                                    label="Email"
+                                    label={t("home.contact.form.email")}
                                     type="email"
-                                    placeholder="Kita akan kembali pada Anda disini"
+                                    placeholder={t("home.contact.form.email_ph")}
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
                                 />
@@ -78,8 +80,8 @@ export default function ContactSection() {
 
                             <div>
                                 <Textarea
-                                    label="Pesan"
-                                    placeholder="Tuliskan bagaimana saran ataupun bantuan yang anda inginkan"
+                                    label={t("home.contact.form.message")}
+                                    placeholder={t("home.contact.form.message_ph")}
                                     rows={4}
                                     value={data.body}
                                     onChange={(e) => setData('body', e.target.value)}
@@ -92,7 +94,7 @@ export default function ContactSection() {
                                 className="md:w-fit px-12 py-3 mt-2 rounded-lg w-full"
                                 disabled={processing} // Disable tombol saat loading
                             >
-                                {processing ? "Mengirim..." : "Kirim Pesan"}
+                                {processing ? t("home.contact.form.sending") : t("home.contact.form.submit")}
                             </Button>
                         </form>
                     </div>
@@ -104,14 +106,14 @@ export default function ContactSection() {
                         {/* Alamat & Sosmed */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
-                                <h4 className="font-medium mb-2 text-neutral-700">Kunjungi kami sekarang</h4>
+                                <h4 className="font-medium mb-2 text-neutral-700">{t("home.contact.visit")}</h4>
                                 <p className="text-sm text-neutral-700 flex items-start gap-2">
                                     <FaLocationDot className="mt-1 text-lg shrink-0 text-neutral-600" size={15} />
                                     Jl. Pakuan No.3, Sumur Batu, Kec. Babakan Madang, Kabupaten Bogor, Jawa Barat 16810, Indonesia
                                 </p>
                             </div>
                             <div>
-                                <h4 className="font-medium mb-2 text-neutral-700">Bicara kepada kami</h4>
+                                <h4 className="font-medium mb-2 text-neutral-700">{t("home.contact.talk")}</h4>
                                 <p className="text-sm text-neutral-700 flex items-center gap-2 mb-2">
                                     <FaPhone className="text-lg shrink-0 text-neutral-600" size={15} />
                                     +628123123123

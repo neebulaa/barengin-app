@@ -39,6 +39,25 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => fn () => $request->user(),
             ],
+            // Lokalisasi: bahasa aktif, kamus terjemahan, & daftar bahasa yang tersedia
+            'locale' => fn () => app()->getLocale(),
+            'translations' => function () {
+                $path = base_path('lang/' . app()->getLocale() . '.json');
+
+                return file_exists($path)
+                    ? (json_decode(file_get_contents($path), true) ?: [])
+                    : [];
+            },
+            'languages' => function () {
+                try {
+                    return \App\Models\Language::where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->get(['code', 'name', 'native_name'])
+                        ->toArray();
+                } catch (\Throwable $e) {
+                    return [];
+                }
+            },
             // Normalisasi flash dari berbagai pola controller -> {type, message}
             'flash' => function () use ($request) {
                 $s = $request->session();

@@ -59,6 +59,7 @@ class ProfileHistoryController extends Controller
         return [
             'id'             => $user->id,
             'full_name'      => $user->full_name,
+            'verified'       => (bool) $user->is_verified,
             'username'       => $user->username,
             'email'          => $user->email,
             'phone'          => $user->phone,

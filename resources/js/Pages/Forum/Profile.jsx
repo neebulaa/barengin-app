@@ -7,6 +7,7 @@ import PostCard from "@/Pages/Forum/Partials/PostCard";
 import Button from "@/Components/Button";
 import { FiHeart } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
+import { MdVerified } from "react-icons/md";
 import UserListModal from "@/Pages/Forum/Partials/UserListModal";
 
 function formatRelativeTime(iso) {
@@ -494,8 +495,14 @@ export default function Profile({
                 <div>
                     <div className="flex flex-col xs:flex-row gap-4 items-center md:justify-between">
                         <div className="order-[1]">
-                            <h1 className="text-3xl xs:text-4xl font-semibold text-neutral-900">
-                                {profileUser.full_name}
+                            <h1 className="flex items-center justify-center xs:justify-start gap-1.5 text-3xl xs:text-4xl font-semibold text-neutral-900">
+                                <span>{profileUser.full_name}</span>
+                                {profileUser.verified && (
+                                    <MdVerified
+                                        className="size-6 xs:size-7 shrink-0 text-primary-600"
+                                        title="Akun terverifikasi"
+                                    />
+                                )}
                             </h1>
                             <div className="mt-1 text-neutral-500 text-center xs:text-left">
                                 @{profileUser.username}

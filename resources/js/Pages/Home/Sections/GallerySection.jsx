@@ -3,10 +3,12 @@ import { router } from "@inertiajs/react";
 import Container from "@/Components/Container";
 import SectionHeading from "../Partials/SectionHeading";
 import GalleryGrid from "../Partials/GalleryGrid";
+import { useTranslation } from "@/lib/useTranslation";
 
 const FALLBACK_IMAGE = "/assets/home/gallery.jpg";
 
 export default function GallerySection({ galleryImages = [] }) {
+    const { t } = useTranslation();
     // Susunan span per tile (mobile grid-cols-6, desktop grid-cols-12)
     const spanClasses = [
         "col-span-3 md:col-span-3",
@@ -32,31 +34,28 @@ export default function GallerySection({ galleryImages = [] }) {
         <section className="py-12 text-center mt-8 pt-4">
             <Container>
                 <SectionHeading
-                    label="Galeri"
+                    label={t("home.gallery.label")}
                     align="center"
                     className="mb-12"
                 />
 
                 <h2 className="text-3xl font-medium mb-10 text-neutral-700 leading-normal">
-                    Temukan Bentang Alam,{" "}
+                    {t("home.gallery.heading_1")}{" "}
                     <span className="text-neutral-500">
-                        Budaya, dan
-                        <br /> Momen-Momen dalam Foto
+                        {t("home.gallery.heading_2")}
                     </span>
                 </h2>
 
                 <div className="mb-8">
                     <GalleryGrid
                         items={items}
-                        ctaLabel="Lihat Lebih Banyak"
+                        ctaLabel={t("home.gallery.cta")}
                         onCtaClick={() => router.visit("/forum")}
                     />
                 </div>
 
                 <p className="text-sm text-neutral-700 max-w-2xl mx-auto">
-                    Masuki dunia melalui galeri kurasi kami, yang mengabadikan
-                    keindahan, budaya, dan momen tak terlupakan dari perjalanan
-                    kami di seluruh negeri.
+                    {t("home.gallery.desc")}
                 </p>
             </Container>
         </section>

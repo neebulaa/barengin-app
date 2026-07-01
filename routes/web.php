@@ -25,7 +25,10 @@ use App\Http\Controllers\AdminPergiBarengController;
 use App\Http\Controllers\AdminTripController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\AdminLanguageController;
 use App\Models\PostImage;
+use App\Models\Trip;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -43,12 +46,42 @@ Route::get('/', function () {
         ->values()
         ->all();
 
+    // Trip populer (sudah dipublish) dari database, diurutkan rating tertinggi
+    $popularTrips = Trip::where('status', '!=', 'draft')
+        ->orderByDesc('rating')
+        ->limit(4)
+        ->get()
+        ->map(function ($trip) {
+            $start = \Carbon\Carbon::parse($trip->start_date);
+            $end = \Carbon\Carbon::parse($trip->end_date);
+            $nights = (int) $start->diffInDays($end);
+            $days = $nights + 1;
+
+            $img = $trip->image;
+            $image = ! $img
+                ? '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg'
+                : ((str_starts_with($img, 'http') || str_starts_with($img, '/')) ? $img : '/storage/' . $img);
+
+            return [
+                'id'       => $trip->id,
+                'title'    => $trip->location ?: $trip->name,
+                'duration' => $days . ' Hari, ' . $nights . ' Malam',
+                'rating'   => number_format((float) $trip->rating, 1, ',', '.'),
+                'image'    => $image,
+            ];
+        })
+        ->all();
+
     return inertia('Home/Index', [
         'galleryImages' => $galleryImages,
+        'popularTrips'  => $popularTrips,
     ]);
     })->name('home');
 
 Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.store');
+
+// Ganti bahasa (tersedia untuk tamu maupun user)
+Route::post('/locale/{code}', [LocaleController::class, 'update'])->name('locale.update');
     
     /*
     |--------------------------------------------------------------------------
@@ -209,6 +242,9 @@ Route::prefix('admin')->group(function () {
 
         Route::get('/message', [AdminMessageController::class, 'index'])->name('admin.message.index');
         Route::delete('/message/{id}', [AdminMessageController::class, 'destroy'])->name('admin.message.destroy');
+
+        Route::get('/languages', [AdminLanguageController::class, 'index'])->name('admin.languages.index');
+        Route::post('/languages/{language}/toggle', [AdminLanguageController::class, 'toggle'])->name('admin.languages.toggle');
     });
 
     // Manajemen Trip (pemandu/guider)

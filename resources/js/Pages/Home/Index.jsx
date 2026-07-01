@@ -8,37 +8,7 @@ import JastipSection from "./Sections/JastipSection";
 import GallerySection from "./Sections/GallerySection";
 import ContactSection from "./Sections/ContactSection";
 
-export default function Home({ galleryImages = [] }) {
-    const popularTrips = [
-        {
-            id: 1,
-            title: "Malang, Jawa Timur",
-            duration: "3 Hari, 2 Malam",
-            rating: "4,9",
-            image: "/assets/home/trip-card-image.jpg",
-        },
-        {
-            id: 2,
-            title: "Pati, Jawa Tengah",
-            duration: "3 Hari, 2 Malam",
-            rating: "4,9",
-            image: "/assets/home/trip-card-image.jpg",
-        },
-        {
-            id: 3,
-            title: "Bali",
-            duration: "3 Hari, 2 Malam",
-            rating: "4,9",
-            image: "/assets/home/trip-card-image.jpg",
-        },
-        {
-            id: 4,
-            title: "Pontianak, Kalbar",
-            duration: "3 Hari, 2 Malam",
-            rating: "4,8",
-            image: "/assets/home/trip-card-image.jpg",
-        },
-    ];
+export default function Home({ galleryImages = [], popularTrips = [] }) {
 
     const jastipProducts = [
         {

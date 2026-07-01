@@ -11,6 +11,7 @@ import {
     FiUsers,
     FiMessageSquare,
     FiShoppingCart,
+    FiGlobe,
 } from "react-icons/fi";
 import { FaSuitcase, FaCar } from "react-icons/fa6";
 
@@ -54,6 +55,7 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen
             items: [
                 { name: "Beranda Admin", icon: <FiHome />, href: "/admin" },
                 { name: "Manajemen Pengguna", icon: <FiUsers />, href: "/admin/management-user" },
+                { name: "Manajemen Bahasa", icon: <FiGlobe />, href: "/admin/languages" },
                 { name: "Pesan", icon: <FiMessageSquare />, href: "/admin/message" },
             ],
         },

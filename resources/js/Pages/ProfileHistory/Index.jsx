@@ -264,6 +264,7 @@ function TabSection({ paginator, pageParam, onPageChange, empty, children }) {
             {children}
             {paginator.last_page > 1 && (
                 <Pagination
+                    className="mt-8"
                     currentPage={paginator.current_page}
                     totalPages={paginator.last_page}
                     onPageChange={(page) => onPageChange(pageParam, page)}

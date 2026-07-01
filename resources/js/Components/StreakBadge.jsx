@@ -9,7 +9,7 @@ export default function StreakBadge({ count = 0, className = "" }) {
         <span
             title={
                 active
-                    ? `Nyala ${count} hari beruntun — jaga terus!`
+                    ? `Nyala ${count} hari beruntun - jaga terus!`
                     : "Mulai Nyala-mu dengan login setiap hari!"
             }
             aria-label={`Nyala ${count} hari`}

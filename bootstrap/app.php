@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
          $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
             HandleInertiaRequests::class,
             \App\Http\Middleware\UpdateStreak::class,
         ]);

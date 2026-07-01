@@ -6,16 +6,32 @@ import NavLink from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
 import StreakBadge from "@/Components/StreakBadge.jsx";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
+import { useTranslation } from "@/lib/useTranslation";
 
 import { FaRoute, FaCarSide, FaPaperPlane } from "react-icons/fa";
 import { MdDashboard } from "react-icons/md";
 import { HiOutlineDocumentText } from "react-icons/hi";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiGlobe } from "react-icons/fi";
 import Container from "@/Components/Container.jsx";
 
 export default function NavbarAuth() {
     const { props } = usePage();
     const user = props?.auth?.user;
+    const { t, locale } = useTranslation();
+
+    // Opsi ganti bahasa (untuk bahasa selain yang sedang aktif) — dimasukkan ke
+    // dropdown profil agar navbar tidak terlalu ramai.
+    const languageItems = (props?.languages || [])
+        .filter((l) => l.code !== locale)
+        .map((l) => ({
+            key: `lang-${l.code}`,
+            label: l.native_name || l.name,
+            href: `/locale/${l.code}`,
+            as: "button",
+            method: "post",
+            icon: FiGlobe,
+        }));
 
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -26,8 +42,8 @@ export default function NavbarAuth() {
         useState(false);
 
     const dropdownItems = [
-        { label: "Trip Bareng", href: "/trip-bareng", icon: FaRoute },
-        { label: "Pergi Bareng", href: "/pergi-bareng", icon: FaCarSide },
+        { label: t("nav.trip_bareng"), href: "/trip-bareng", icon: FaRoute },
+        { label: t("nav.pergi_bareng"), href: "/pergi-bareng", icon: FaCarSide },
     ];
 
     const avatarUrl = user?.public_profile_image ||
@@ -59,7 +75,7 @@ export default function NavbarAuth() {
 
     return (
         <header className="bg-white border-b border-neutral-200 shadow-sm relative z-50">
-            <Container className="flex justify-between items-center">
+            <Container className="relative flex justify-between items-center">
                 <Link
                     href="/"
                     className="flex items-center gap-2"
@@ -72,11 +88,11 @@ export default function NavbarAuth() {
                     />
                 </Link>
 
-                <nav className="hidden md:flex space-x-6 items-center text-neutral-700">
-                    <NavLink href="/">Beranda</NavLink>
+                <nav className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 space-x-6 items-center text-neutral-700">
+                    <NavLink href="/">{t("nav.home")}</NavLink>
 
                     <NavDropdown
-                        label="Jalan Bareng"
+                        label={t("nav.jalan_bareng")}
                         items={dropdownItems}
                         isOpen={isDesktopDropdownOpen}
                         onToggle={() => setIsDesktopDropdownOpen((v) => !v)}
@@ -87,8 +103,8 @@ export default function NavbarAuth() {
                     />
 
                     {/* <NavLink href="/jastip">Jastip</NavLink> */}
-                    <NavLink href="/forum">Forum</NavLink>
-                    <NavLink href="/leaderboard">Peringkat</NavLink>
+                    <NavLink href="/forum">{t("nav.forum")}</NavLink>
+                    <NavLink href="/leaderboard">{t("nav.leaderboard")}</NavLink>
                 </nav>
 
                 <div className="hidden md:flex items-center space-x-3">
@@ -109,23 +125,24 @@ export default function NavbarAuth() {
                         className="gap-2"
                     >
                         <FaPaperPlane className="w-4 h-4" />
-                        Chat
+                        {t("nav.chat")}
                     </Button>
 
                     <NavDropdown
                         items={[
                             {
-                                label: "Dasbor",
+                                label: t("nav.dashboard"),
                                 href: dashboardHref,
                                 icon: MdDashboard,
                             },
                             {
-                                label: "Riwayat Profil",
+                                label: t("nav.profile_history"),
                                 href: "/profile-history",
                                 icon: HiOutlineDocumentText,
                             },
+                            ...languageItems,
                             {
-                                label: "Keluar",
+                                label: t("nav.logout"),
                                 href: "/logout",
                                 icon: FiLogOut,
                                 as: "button",
@@ -228,7 +245,7 @@ export default function NavbarAuth() {
                                 className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
                             >
                                 <MdDashboard className="w-5 h-5 mr-2 text-current" />
-                                Dasbor
+                                {t("nav.dashboard")}
                             </Link>
 
                             <Link
@@ -237,7 +254,7 @@ export default function NavbarAuth() {
                                 className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
                             >
                                 <HiOutlineDocumentText className="w-5 h-5 mr-2 text-current" />
-                                Riwayat Profil
+                                {t("nav.profile_history")}
                             </Link>
 
                             <Link
@@ -248,18 +265,18 @@ export default function NavbarAuth() {
                                 className="w-full text-left px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center cursor-pointer"
                             >
                                 <FiLogOut className="w-5 h-5 mr-2 text-current" />
-                                Keluar
+                                {t("nav.logout")}
                             </Link>
                         </NavDropdownMobile>
                     </div>
 
                     <div className="px-4 pt-2 pb-4 space-y-1">
                         <NavLinkMobile href="/" onClick={closeAll}>
-                            Beranda
+                            {t("nav.home")}
                         </NavLinkMobile>
 
                         <NavDropdownMobile
-                            label="Jalan Bareng"
+                            label={t("nav.jalan_bareng")}
                             isOpen={isMobileDropdownOpen}
                             onToggle={() => setIsMobileDropdownOpen((v) => !v)}
                             buttonClassName="text-neutral-600"
@@ -283,14 +300,18 @@ export default function NavbarAuth() {
                             Jastip
                         </NavLinkMobile>
                         <NavLinkMobile href="/forum" onClick={closeAll}>
-                            Forum
+                            {t("nav.forum")}
                         </NavLinkMobile>
                         <NavLinkMobile href="/leaderboard" onClick={closeAll}>
-                            Peringkat
+                            {t("nav.leaderboard")}
                         </NavLinkMobile>
                     </div>
 
                     <div className="pt-4 pb-6 border-t border-neutral-200 px-4 space-y-3">
+                        <div className="flex justify-center">
+                            <LanguageSwitcher />
+                        </div>
+
                         <Button
                             isButtonLink
                             href="/chat"
@@ -300,7 +321,7 @@ export default function NavbarAuth() {
                             onClick={closeAll}
                         >
                             <FaPaperPlane className="w-4 h-4" />
-                            Chat
+                            {t("nav.chat")}
                         </Button>
                     </div>
                 </div>

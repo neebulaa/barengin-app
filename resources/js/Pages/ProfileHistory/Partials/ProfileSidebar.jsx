@@ -1,4 +1,5 @@
 import { FaEnvelope, FaPhoneAlt, FaRegCalendarAlt, FaFire } from "react-icons/fa";
+import { MdVerified } from "react-icons/md";
 import { usePage } from "@inertiajs/react";
 import Button from "@/Components/Button";
 import AvatarEditor from "./AvatarEditor";
@@ -13,8 +14,14 @@ export default function ProfileSidebar({ profile, onEdit }) {
             <AvatarEditor profile={profile} />
 
             <div className="mt-6">
-                <h1 className="text-3xl font-bold text-neutral-900">
-                    {profile.full_name}
+                <h1 className="flex items-center gap-1.5 text-3xl font-bold text-neutral-900">
+                    <span>{profile.full_name}</span>
+                    {profile.verified && (
+                        <MdVerified
+                            className="size-6 shrink-0 text-primary-600"
+                            title="Akun terverifikasi"
+                        />
+                    )}
                 </h1>
                 <p className="mt-1 text-neutral-500">
                     {profile.username}
@@ -62,15 +69,15 @@ export default function ProfileSidebar({ profile, onEdit }) {
                     <p className="text-xs font-semibold uppercase tracking-wide text-orange-700/80">
                         Nyala Harian
                     </p>
-                    <p className="text-lg font-bold leading-tight text-neutral-900">
+                    <p className="text-lg font-bold leading-tight text-neutral-700 mt-1">
                         {streak} hari{" "}
                         <span className="text-sm font-medium text-neutral-500">
                             beruntun
                         </span>
                     </p>
-                    <p className="mt-0.5 text-xs text-neutral-500">
+                    <p className="mt-1 text-xs text-neutral-500">
                         Rekor terbaikmu:{" "}
-                        <span className="font-semibold text-neutral-700">
+                        <span className="font-semibold text-neutral-600">
                             {streakBest} hari
                         </span>
                     </p>

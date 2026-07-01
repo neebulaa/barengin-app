@@ -240,6 +240,7 @@ class ForumProfileController extends Controller
                     'username' => $profileUser->username,
                     'bio' => $profileUser->bio,
                     'public_profile_image' => $profileUser->public_profile_image,
+                    'verified' => (bool) $profileUser->is_verified,
                 ],
                 'counts' => [
                     'followers' => $followersCount,
@@ -408,6 +409,7 @@ class ForumProfileController extends Controller
                     'username' => $profileUser->username,
                     'bio' => $profileUser->bio,
                     'public_profile_image' => $profileUser->public_profile_image,
+                    'verified' => (bool) $profileUser->is_verified,
                 ],
                 'counts' => [
                     'followers' => $followersCount,
@@ -460,6 +462,7 @@ class ForumProfileController extends Controller
                 'username' => $profileUser->username,
                 'bio' => $profileUser->bio,
                 'public_profile_image' => $profileUser->public_profile_image,
+                'verified' => (bool) $profileUser->is_verified,
             ],
             'counts' => [
                 'followers' => $followersCount,

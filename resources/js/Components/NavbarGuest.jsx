@@ -5,17 +5,20 @@ import NavDropdown from "@/Components/NavDropdown.jsx";
 import NavLink from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
+import { useTranslation } from "@/lib/useTranslation";
 import { FaRoute, FaCarSide } from "react-icons/fa";
 import Container from "@/Components/Container.jsx";
 
 export default function NavbarGuest() {
+    const { t } = useTranslation();
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const dropdownItems = [
-        { label: "Trip Bareng", href: "/trip-bareng", icon: FaRoute },
-        { label: "Pergi Bareng", href: "/pergi-bareng", icon: FaCarSide },
+        { label: t("nav.trip_bareng"), href: "/trip-bareng", icon: FaRoute },
+        { label: t("nav.pergi_bareng"), href: "/pergi-bareng", icon: FaCarSide },
     ];
 
     const closeAll = () => {
@@ -26,7 +29,7 @@ export default function NavbarGuest() {
 
     return (
         <header className="bg-white border-b border-neutral-200 shadow-sm relative z-50">
-            <Container className="flex justify-between items-center">
+            <Container className="relative flex justify-between items-center">
                 <Link
                     href="/"
                     className="flex items-center gap-2"
@@ -39,10 +42,10 @@ export default function NavbarGuest() {
                     />
                 </Link>
 
-                <nav className="hidden md:flex space-x-6 items-center text-neutral-700">
-                    <NavLink href="/">Beranda</NavLink>
+                <nav className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 space-x-6 items-center text-neutral-700">
+                    <NavLink href="/">{t("nav.home")}</NavLink>
                     <NavDropdown
-                        label="Jalan Bareng"
+                        label={t("nav.jalan_bareng")}
                         items={dropdownItems}
                         isOpen={isDesktopDropdownOpen}
                         onToggle={() => setIsDesktopDropdownOpen((v) => !v)}
@@ -52,12 +55,13 @@ export default function NavbarGuest() {
                         withDividers
                     />
                     {/* <NavLink href="/jastip">Jastip</NavLink> */}
-                    <NavLink href="/forum">Forum</NavLink>
-                    <NavLink href="/leaderboard">Peringkat</NavLink>
+                    <NavLink href="/forum">{t("nav.forum")}</NavLink>
+                    <NavLink href="/leaderboard">{t("nav.leaderboard")}</NavLink>
                 </nav>
 
                 <div className="hidden md:flex items-center space-x-4">
-                    <NavLink href="/login">Masuk</NavLink>
+                    <LanguageSwitcher />
+                    <NavLink href="/login">{t("nav.login")}</NavLink>
                     <Button
                         isButtonLink
                         href="/register"
@@ -65,7 +69,7 @@ export default function NavbarGuest() {
                         variant="solid"
                         size="sm"
                     >
-                        Daftar
+                        {t("nav.register")}
                     </Button>
                 </div>
 
@@ -114,11 +118,11 @@ export default function NavbarGuest() {
                 <div className="md:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">
                     <div className="px-4 pt-2 pb-4 space-y-1">
                         <NavLinkMobile href="/" onClick={closeAll}>
-                            Beranda
+                            {t("nav.home")}
                         </NavLinkMobile>
 
                         <NavDropdownMobile
-                            label="Jalan Bareng"
+                            label={t("nav.jalan_bareng")}
                             isOpen={isMobileDropdownOpen}
                             onToggle={() => setIsMobileDropdownOpen((v) => !v)}
                         >
@@ -141,14 +145,18 @@ export default function NavbarGuest() {
                             Jastip
                         </NavLinkMobile>
                         <NavLinkMobile href="/forum" onClick={closeAll}>
-                            Forum
+                            {t("nav.forum")}
                         </NavLinkMobile>
                         <NavLinkMobile href="/leaderboard" onClick={closeAll}>
-                            Peringkat
+                            {t("nav.leaderboard")}
                         </NavLinkMobile>
                     </div>
 
                     <div className="pt-4 pb-6 border-t border-neutral-200 px-4 space-y-3">
+                        <div className="flex justify-center">
+                            <LanguageSwitcher />
+                        </div>
+
                         <Button
                             isButtonLink
                             href="/login"
@@ -157,7 +165,7 @@ export default function NavbarGuest() {
                             className="w-full"
                             onClick={closeAll}
                         >
-                            Masuk
+                            {t("nav.login")}
                         </Button>
                         <Button
                             isButtonLink
@@ -167,7 +175,7 @@ export default function NavbarGuest() {
                             className="w-full"
                             onClick={closeAll}
                         >
-                            Daftar
+                            {t("nav.register")}
                         </Button>
                     </div>
                 </div>
