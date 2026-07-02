@@ -11,8 +11,10 @@ import {
 } from "react-icons/fa6";
 
 import { FaCrown } from "react-icons/fa";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function Leaderboard() {
+    const { t } = useTranslation();
     // State untuk melacak tab yang sedang aktif ("trip" atau "jastip")
     const [activeTab, setActiveTab] = useState("trip");
 
@@ -168,9 +170,9 @@ export default function Leaderboard() {
     const currentOtherRanks =
         activeTab === "trip" ? tripOtherRanks : jastipOtherRanks;
 
-    const columnTwoTitle = activeTab === "trip" ? "GUIDER" : "JASTIPER";
+    const columnTwoTitle = activeTab === "trip" ? t("lb.col_guider") : t("lb.col_jastiper");
     const columnThreeTitle =
-        activeTab === "trip" ? "TOTAL TRIP" : "TOTAL JASTIP";
+        activeTab === "trip" ? t("lb.col_total_trip") : t("lb.col_total_jastip");
     const itemLabel = activeTab === "trip" ? "Trip" : "Jastip";
     const IconItem = activeTab === "trip" ? FaSuitcase : FaBagShopping;
 
@@ -178,16 +180,15 @@ export default function Leaderboard() {
         <Container className="py-12">
             {" "}
             {/* Latar belakang abu-abu sangat muda khas UI modern */}
-            <Head title="Peringkat" />
+            <Head title={t("nav.leaderboard")} />
             <Container className="py-4">
                 {/* 1. Header Section */}
                 <div className="text-center mb-10">
                     <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-3">
-                        Peringkat
+                        {t("nav.leaderboard")}
                     </h1>
                     <p className="text-neutral-600 text-sm md:text-base max-w-2xl mx-auto">
-                        Lihat siapa yang memimpin dalam hal perjalanan dan
-                        membawa pulang barang-barang terbaik.
+                        {t("lb.subtitle")}
                     </p>
                 </div>
 
@@ -198,7 +199,7 @@ export default function Leaderboard() {
                         <FaMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                         <input
                             type="text"
-                            placeholder="Cari topik favoritmu..."
+                            placeholder={t("lb.search_ph")}
                             className="w-full pl-11 pr-4 py-3 rounded-full border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none shadow-sm transition"
                         />
                     </div>
@@ -213,7 +214,7 @@ export default function Leaderboard() {
                                     : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
                             }`}
                         >
-                            Open Trip
+                            {t("lb.tab_open_trip")}
                         </button>
                         <button
                             onClick={() => setActiveTab("jastip")}
@@ -223,7 +224,7 @@ export default function Leaderboard() {
                                     : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
                             }`}
                         >
-                            Jastip
+                            {t("search.tab_jastip")}
                         </button>
                     </div>
                 </div>
@@ -274,7 +275,7 @@ export default function Leaderboard() {
                         </div>
 
                         <Button type="primary" size="sm" className="w-full">
-                            Ikuti
+                            {t("lb.follow")}
                         </Button>
                     </div>
                 ))}
@@ -287,14 +288,14 @@ export default function Leaderboard() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-[#F4F7FB] border-b border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-4 px-6">PERINGKAT</th>
+                                <th className="py-4 px-6">{t("lb.col_rank")}</th>
                                 <th className="py-4 px-6">{columnTwoTitle}</th>
                                 <th className="py-4 px-6">
                                     {columnThreeTitle}
                                 </th>
-                                <th className="py-4 px-6">RATING</th>
+                                <th className="py-4 px-6">{t("lb.col_rating")}</th>
                                 <th className="py-4 px-6 text-center">
-                                    AKSI
+                                    {t("lb.col_action")}
                                 </th>
                             </tr>
                         </thead>
@@ -342,8 +343,8 @@ export default function Leaderboard() {
                                             className="w-28 text-xs py-2"
                                         >
                                             {item.rank === "# 05"
-                                                ? "Mengikuti"
-                                                : "Ikuti"}
+                                                ? t("lb.following")
+                                                : t("lb.follow")}
                                         </Button>
                                     </td>
                                 </tr>
@@ -360,7 +361,7 @@ export default function Leaderboard() {
                             10
                         </div>
                         <span className="text-neutral-900 font-bold text-sm">
-                            Posisi Saat Ini 🚀
+                            {t("lb.current_position")} 🚀
                         </span>
                     </div>
                 </div>

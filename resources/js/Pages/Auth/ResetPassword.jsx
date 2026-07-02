@@ -4,8 +4,10 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function ResetPassword({ token, email }) {
+    const { t } = useTranslation();
     const [hidePassword, setHidePassword] = useState(true);
     const [hidePasswordConfirm, setHidePasswordConfirm] = useState(true);
 
@@ -36,13 +38,11 @@ export default function ResetPassword({ token, email }) {
                         </Link>
 
                         <h1 className="mt-4 text-center text-xl font-semibold tracking-tight text-neutral-700">
-                            Ubah Passwordmu
+                            {t("auth.reset.title")}
                         </h1>
 
                         <p className="mt-2 text-center text-sm text-neutral-600">
-                            Pastikan minimal terdiri dari 15 karakter atau
-                            minimal 8 karakter yang termasuk angka dan huruf
-                            kecil.
+                            {t("auth.reset.subtitle")}
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
@@ -53,12 +53,12 @@ export default function ResetPassword({ token, email }) {
                             <Input
                                 id="password"
                                 type={hidePassword ? "password" : "text"}
-                                label="Password Baru"
+                                label={t("auth.reset.new_password")}
                                 value={data.password}
                                 onChange={(e) =>
                                     setData("password", e.target.value)
                                 }
-                                placeholder="Password Baru"
+                                placeholder={t("auth.reset.new_password")}
                                 error={errors.password}
                                 size="md"
                                 rightAddon={
@@ -86,7 +86,7 @@ export default function ResetPassword({ token, email }) {
                             <Input
                                 id="password_confirmation"
                                 type={hidePasswordConfirm ? "password" : "text"}
-                                label="Konfirmasi Password Baru"
+                                label={t("auth.reset.confirm")}
                                 value={data.password_confirmation}
                                 onChange={(e) =>
                                     setData(
@@ -94,7 +94,7 @@ export default function ResetPassword({ token, email }) {
                                         e.target.value,
                                     )
                                 }
-                                placeholder="Konfirmasi Password Baru"
+                                placeholder={t("auth.reset.confirm")}
                                 error={errors.password_confirmation}
                                 size="md"
                                 rightAddon={
@@ -127,7 +127,7 @@ export default function ResetPassword({ token, email }) {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Memproses..." : "Ubah Password"}
+                                {processing ? t("common.processing") : t("auth.reset.submit")}
                             </Button>
 
                             <div className="pt-2">
@@ -138,7 +138,7 @@ export default function ResetPassword({ token, email }) {
                                     <span className="text-lg leading-none">
                                         ←
                                     </span>
-                                    Kembali Login
+                                    {t("auth.back_login")}
                                 </Link>
                             </div>
                         </form>
@@ -156,12 +156,10 @@ export default function ResetPassword({ token, email }) {
 
                     <div className="absolute bottom-12 left-12 right-12 text-white">
                         <h2 className="text-3xl font-semibold leading-tight xl:text-4xl max-w-[680px]">
-                            Jalan Jalan sejenak, biar hati ikut pulang
+                            {t("auth.hero.title")}
                         </h2>
                         <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95">
-                            Rasakan serunya petualangan tanpa batas dengan
-                            berbagai pilihan destinasi dan aktivitas, mulai dari
-                            alam bebas hingga wisata kota yang penuh warna.
+                            {t("auth.hero.subtitle")}
                         </p>
                     </div>
                 </div>

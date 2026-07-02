@@ -47,7 +47,7 @@ export default function LanguageSwitcher({ className = "" }) {
             </button>
 
             {open && (
-                <div className="absolute right-0 mt-2 w-44 rounded-xl border border-neutral-100 bg-white shadow-lg overflow-hidden z-50 animate-fade-in-up">
+                <div className="absolute right-0 mt-2 min-w-[13rem] w-max max-w-[20rem] rounded-xl border border-neutral-100 bg-white shadow-lg overflow-hidden z-50 animate-fade-in-up">
                     {languages.map((lang) => {
                         const activeLang = lang.code === locale;
                         return (
@@ -55,19 +55,19 @@ export default function LanguageSwitcher({ className = "" }) {
                                 key={lang.code}
                                 type="button"
                                 onClick={() => change(lang.code)}
-                                className={`flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                                className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-sm whitespace-nowrap transition-colors ${
                                     activeLang
                                         ? "bg-primary-50 text-primary-700 font-semibold"
                                         : "text-neutral-700 hover:bg-neutral-50"
                                 }`}
                             >
                                 <span className="flex items-center gap-2">
-                                    <span className="text-xs font-bold uppercase text-neutral-400 w-5">
+                                    <span className="w-6 shrink-0 text-xs font-bold uppercase text-neutral-400">
                                         {lang.code}
                                     </span>
-                                    {lang.native_name || lang.name}
+                                    <span>{lang.native_name || lang.name}</span>
                                 </span>
-                                {activeLang && <FiCheck className="h-4 w-4" />}
+                                {activeLang && <FiCheck className="h-4 w-4 shrink-0" />}
                             </button>
                         );
                     })}

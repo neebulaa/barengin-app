@@ -3,9 +3,11 @@ import { router, usePage } from "@inertiajs/react";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
 import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
+import { useTranslation } from "@/lib/useTranslation";
 import { FaPlaneDeparture, FaSearch } from "react-icons/fa";
 
 export default function TripSearchForm({ naked = true }) {
+    const { t } = useTranslation();
     const { filters = {} } = usePage().props;
 
     const [tujuan, setTujuan] = useState(filters.tujuan || "");
@@ -33,7 +35,7 @@ export default function TripSearchForm({ naked = true }) {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end animate-fade-in">
                 <div className="md:col-span-4">
                     <PlaceAutocomplete
-                        label="Tujuan"
+                        label={t("search.destination")}
                         placeholder="Jakarta"
                         leftIcon={<FaPlaneDeparture />}
                         value={tujuan}
@@ -44,7 +46,7 @@ export default function TripSearchForm({ naked = true }) {
 
                 <div className="md:col-span-3">
                     <Input
-                        label="Tanggal Mulai"
+                        label={t("search.start_date")}
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
@@ -53,7 +55,7 @@ export default function TripSearchForm({ naked = true }) {
 
                 <div className="md:col-span-3">
                     <Input
-                        label="Tanggal Selesai"
+                        label={t("search.end_date")}
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
@@ -67,7 +69,7 @@ export default function TripSearchForm({ naked = true }) {
                         className="w-full h-12 flex items-center justify-center gap-2"
                     >
                         <FaSearch />
-                        Cari
+                        {t("search.cari")}
                     </Button>
                 </div>
             </div>

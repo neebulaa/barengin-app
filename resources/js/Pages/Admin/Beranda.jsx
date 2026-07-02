@@ -3,6 +3,7 @@ import { Head, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import TripCard from "@/Components/TripCard";
 import Pagination from "@/Components/Pagination";
+import { useTranslation } from "@/lib/useTranslation";
 import { FiUsers, FiDownload } from "react-icons/fi";
 import { FaSuitcase, FaCar } from "react-icons/fa6";
 import { MdOutlineShoppingBag } from "react-icons/md";
@@ -28,6 +29,7 @@ const AVATAR_BG = [
 ];
 
 export default function Beranda({ stats, latestTrips = [], logs }) {
+    const { t } = useTranslation();
     const data = logs?.data ?? [];
     const currentPage = logs?.current_page ?? 1;
     const lastPage = logs?.last_page ?? 1;
@@ -46,24 +48,24 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
             <Head title="Beranda Admin" />
 
             <div>
-                <h1 className="text-2xl font-bold text-neutral-700">Beranda Admin</h1>
+                <h1 className="text-2xl font-bold text-neutral-700">{t("admin.home.title")}</h1>
                 <p className="text-neutral-500 text-sm">
-                    Lihat siapa yang memimpin dalam hal perjalanan dan membawa pulang barang-barang terbaik.
+                    {t("admin.home.subtitle")}
                 </p>
             </div>
 
             {/* Statistik */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={<FiUsers />} label="Total Pengguna" value={stats.users} />
-                <StatCard icon={<FaSuitcase />} label="Total Trips" value={stats.trips} />
-                <StatCard icon={<MdOutlineShoppingBag />} label="Total Jastip" value={stats.jastip} />
-                <StatCard icon={<FaCar />} label="Total Pergi Bareng" value={stats.pergi_bareng} />
+                <StatCard icon={<FiUsers />} label={t("admin.home.total_users")} value={stats.users} />
+                <StatCard icon={<FaSuitcase />} label={t("admin.home.total_trips")} value={stats.trips} />
+                <StatCard icon={<MdOutlineShoppingBag />} label={t("admin.home.total_jastip")} value={stats.jastip} />
+                <StatCard icon={<FaCar />} label={t("admin.home.total_pergi")} value={stats.pergi_bareng} />
             </div>
 
             {/* Trip terbaru */}
             <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-neutral-700 mb-4">
-                    {latestTrips.length} Trip Terbaru Dibuat
+                    {latestTrips.length} {t("admin.home.latest_trips_suffix")}
                 </h2>
                 {latestTrips.length > 0 ? (
                     <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-slim">
@@ -74,19 +76,19 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-sm text-neutral-400 py-8 text-center">Belum ada trip dibuat.</p>
+                    <p className="text-sm text-neutral-400 py-8 text-center">{t("admin.home.no_trips")}</p>
                 )}
             </div>
 
             {/* Log kegiatan */}
             <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between p-5 border-b border-neutral-100">
-                    <h2 className="text-lg font-semibold text-neutral-700">Log Kegiatan</h2>
+                    <h2 className="text-lg font-semibold text-neutral-700">{t("admin.home.activity_log")}</h2>
                     <a
                         href="/admin/logs/export"
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-200 text-sm font-semibold text-neutral-600 hover:bg-neutral-50 transition"
                     >
-                        <FiDownload size={15} /> Ekspor Log
+                        <FiDownload size={15} /> {t("admin.home.export_log")}
                     </a>
                 </div>
 
@@ -94,10 +96,10 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
                     <table className="w-full text-left border-collapse min-w-[720px]">
                         <thead>
                             <tr className="bg-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-3 px-5">Waktu</th>
-                                <th className="py-3 px-5">Aktor</th>
-                                <th className="py-3 px-5">Aksi</th>
-                                <th className="py-3 px-5">Alamat IP</th>
+                                <th className="py-3 px-5">{t("admin.home.col_time")}</th>
+                                <th className="py-3 px-5">{t("admin.home.col_actor")}</th>
+                                <th className="py-3 px-5">{t("admin.home.col_action")}</th>
+                                <th className="py-3 px-5">{t("admin.home.col_ip")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
@@ -123,7 +125,7 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="4" className="py-12 text-center text-neutral-500 text-sm">Belum ada log kegiatan.</td>
+                                    <td colSpan="4" className="py-12 text-center text-neutral-500 text-sm">{t("admin.home.no_logs")}</td>
                                 </tr>
                             )}
                         </tbody>
@@ -132,7 +134,7 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
 
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-neutral-50 p-4 border-t border-neutral-100">
                     <span className="text-xs text-neutral-500 font-medium">
-                        Menampilkan {logs?.from ?? 0}–{logs?.to ?? 0} dari {logs?.total ?? 0} data
+                        {t("common.showing")} {logs?.from ?? 0}–{logs?.to ?? 0} {t("common.of")} {logs?.total ?? 0} {t("common.data")}
                     </span>
                     <Pagination
                         currentPage={currentPage}

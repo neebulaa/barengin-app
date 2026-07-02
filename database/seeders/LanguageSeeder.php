@@ -18,5 +18,10 @@ class LanguageSeeder extends Seeder
             ['code' => 'en'],
             ['name' => 'English', 'native_name' => 'English', 'is_active' => true, 'is_default' => false, 'sort_order' => 2]
         );
+
+        Language::updateOrCreate(
+            ['code' => 'ms'],
+            ['name' => 'Malaysia', 'native_name' => 'Bahasa Melayu', 'is_active' => true, 'is_default' => false, 'sort_order' => 3]
+        );
     }
 }

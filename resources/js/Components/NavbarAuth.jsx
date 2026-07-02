@@ -62,20 +62,22 @@ export default function NavbarAuth() {
 
     return (
         <header className="bg-white border-b border-neutral-200 shadow-sm relative z-50">
-            <Container className="relative flex justify-between items-center">
-                <Link
-                    href="/"
-                    className="flex items-center gap-2"
-                    onClick={closeAll}
-                >
-                    <img
-                        src="/assets/barengin_logows.png"
-                        className="h-15 w-auto"
-                        alt="Barengin"
-                    />
-                </Link>
+            <Container className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0 flex items-center">
+                    <Link
+                        href="/"
+                        className="flex items-center gap-2"
+                        onClick={closeAll}
+                    >
+                        <img
+                            src="/assets/barengin_logows.png"
+                            className="h-15 w-auto"
+                            alt="Barengin"
+                        />
+                    </Link>
+                </div>
 
-                <nav className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 space-x-6 items-center text-neutral-700">
+                <nav className="hidden md:flex shrink-0 space-x-5 lg:space-x-6 items-center text-neutral-700 whitespace-nowrap">
                     <NavLink href="/">{t("nav.home")}</NavLink>
 
                     <NavDropdown
@@ -94,7 +96,8 @@ export default function NavbarAuth() {
                     <NavLink href="/leaderboard">{t("nav.leaderboard")}</NavLink>
                 </nav>
 
-                <div className="hidden md:flex items-center space-x-3">
+                <div className="flex-1 flex items-center justify-end">
+                <div className="hidden md:flex items-center gap-2 lg:gap-3">
                     <LanguageSwitcher />
 
                     <Link
@@ -201,6 +204,7 @@ export default function NavbarAuth() {
                             </svg>
                         )}
                     </button>
+                </div>
                 </div>
             </Container>
 

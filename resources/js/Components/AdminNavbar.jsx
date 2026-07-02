@@ -3,6 +3,8 @@ import { usePage, Link } from "@inertiajs/react";
 import { FiMenu, FiLogOut } from "react-icons/fi";
 import { MdHome } from "react-icons/md";
 import { HiOutlineDocumentText } from "react-icons/hi";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
+import StreakBadge from "@/Components/StreakBadge.jsx";
 
 export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
     // Ambil data user dari Inertia
@@ -47,8 +49,14 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                 </div>
             </div>
 
-            {/* Bagian Kanan Navbar (User Profile) */}
-            <div className="flex items-center gap-4 relative" ref={dropdownRef}>
+            {/* Bagian Kanan Navbar (Bahasa, Streak, User Profile) */}
+            <div className="flex items-center gap-2 sm:gap-3 relative" ref={dropdownRef}>
+                <LanguageSwitcher className="hidden sm:block" />
+
+                <Link href="/profile-history" aria-label="Streak Nyala">
+                    <StreakBadge count={user?.streak_count ?? 0} />
+                </Link>
+
                 <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                     className="flex items-center gap-2 focus:outline-none"

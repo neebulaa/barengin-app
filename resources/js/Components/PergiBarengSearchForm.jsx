@@ -9,8 +9,10 @@ import {
     FaUser,
     FaSearch,
 } from "react-icons/fa";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function PergiSearchForm({ naked = true }) {
+    const { t } = useTranslation();
     const { filters = {} } = usePage().props;
 
     const [dari, setDari] = useState(filters.dari || "");
@@ -43,7 +45,7 @@ export default function PergiSearchForm({ naked = true }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-16 gap-4 items-end animate-fade-in">
                 <div className="lg:col-span-3">
                     <PlaceAutocomplete
-                        label="Dari mana"
+                        label={t("search.from")}
                         placeholder="Jln Sentul, Bogor Selatan"
                         leftIcon={<FaMapMarkerAlt />}
                         value={dari}
@@ -53,7 +55,7 @@ export default function PergiSearchForm({ naked = true }) {
 
                 <div className="lg:col-span-3">
                     <PlaceAutocomplete
-                        label="Ke mana"
+                        label={t("search.to")}
                         placeholder="Bandar Soekarno Hatta"
                         leftIcon={<FaPlane />}
                         value={ke}
@@ -63,7 +65,7 @@ export default function PergiSearchForm({ naked = true }) {
 
                 <div className="lg:col-span-3">
                     <Input
-                        label="Tanggal Pergi"
+                        label={t("search.depart_date")}
                         type="date"
                         value={tanggal}
                         onChange={(e) => setTanggal(e.target.value)}
@@ -72,7 +74,7 @@ export default function PergiSearchForm({ naked = true }) {
 
                 <div className="lg:col-span-3">
                     <Input
-                        label="Waktu Kumpul"
+                        label={t("search.meet_time")}
                         type="time"
                         value={waktu}
                         onChange={(e) => setWaktu(e.target.value)}
@@ -81,7 +83,7 @@ export default function PergiSearchForm({ naked = true }) {
 
                 <div className="lg:col-span-2">
                     <Input
-                        label="Jumlah Orang"
+                        label={t("search.people")}
                         type="number"
                         min={1}
                         placeholder="1"
@@ -98,7 +100,7 @@ export default function PergiSearchForm({ naked = true }) {
                         className="w-full h-12 flex items-center justify-center gap-2"
                     >
                         <FaSearch />
-                        Cari
+                        {t("search.cari")}
                     </Button>
                 </div>
             </div>

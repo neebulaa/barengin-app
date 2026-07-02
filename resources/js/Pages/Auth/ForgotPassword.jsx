@@ -3,8 +3,10 @@ import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import { FaArrowLeft } from "react-icons/fa";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function ForgotPassword() {
+    const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         email: "",
     });
@@ -34,24 +36,23 @@ export default function ForgotPassword() {
                         </Link>
 
                         <h1 className="mt-4 text-center text-xl font-semibold tracking-tight text-neutral-700">
-                            Lupa Password?
+                            {t("auth.forgot.title")}
                         </h1>
 
                         <p className="mt-2 text-center text-sm text-neutral-600">
-                            Jangan khawatir, kami akan mengirimkanmu sebuah link
-                            untuk mereset passwordmu.
+                            {t("auth.forgot.subtitle")}
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
                             <Input
                                 id="email"
                                 type="email"
-                                label="Email"
+                                label={t("auth.register.email")}
                                 value={data.email}
                                 onChange={(e) =>
                                     setData("email", e.target.value)
                                 }
-                                placeholder="Masukan Email"
+                                placeholder={t("auth.register.email_ph")}
                                 error={errors.email}
                                 size="md"
                             />
@@ -63,8 +64,8 @@ export default function ForgotPassword() {
                                 disabled={processing}
                             >
                                 {processing
-                                    ? "Memproses..."
-                                    : "Kirim link reset password"}
+                                    ? t("common.processing")
+                                    : t("auth.forgot.submit")}
                             </Button>
 
                             {/* bottom actions */}
@@ -74,7 +75,7 @@ export default function ForgotPassword() {
                                     className="inline-flex items-center gap-2 text-sm font-medium text-neutral-700 hover:text-neutral-900"
                                 >
                                     <FaArrowLeft />
-                                    Kembali Login
+                                    {t("auth.back_login")}
                                 </Link>
 
                                 <Button
@@ -85,7 +86,7 @@ export default function ForgotPassword() {
                                     onClick={resend}
                                     disabled={processing}
                                 >
-                                    Kirim Ulang
+                                    {t("auth.forgot.resend")}
                                 </Button>
                             </div>
                         </form>
@@ -103,12 +104,10 @@ export default function ForgotPassword() {
 
                     <div className="absolute bottom-12 left-12 right-12 text-white">
                         <h2 className="text-3xl font-semibold leading-tight xl:text-4xl max-w-[680px]">
-                            Jalan Jalan sejenak, biar hati ikut pulang
+                            {t("auth.hero.title")}
                         </h2>
                         <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95">
-                            Rasakan serunya petualangan tanpa batas dengan
-                            berbagai pilihan destinasi dan aktivitas, mulai dari
-                            alam bebas hingga wisata kota yang penuh warna.
+                            {t("auth.hero.subtitle")}
                         </p>
                     </div>
                 </div>

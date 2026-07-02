@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, usePage } from "@inertiajs/react";
+import { useTranslation } from "@/lib/useTranslation";
 import {
     FiX,
     FiChevronLeft,
@@ -18,45 +19,46 @@ import { FaSuitcase, FaCar } from "react-icons/fa6";
 export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
     const { url, props } = usePage();
     const user = props.auth?.user;
+    const { t } = useTranslation();
 
     // Data Menu Navigasi. `requires` = flag user yang dibutuhkan (null = semua user).
     const navMenus = [
         {
-            group: "PEMANDU TRIP",
+            group: t("admin.nav.group.trip_guide"),
             short: "TRP",
             requires: "is_guider",
             items: [
-                { name: "Managemen Trip", icon: <FaSuitcase />, href: "/admin/trip" },
-                { name: "Analitik Trip", icon: <FiPieChart />, href: "/admin/trip/analytics" },
+                { name: t("admin.nav.trip_mgmt"), icon: <FaSuitcase />, href: "/admin/trip" },
+                { name: t("admin.nav.trip_analytics"), icon: <FiPieChart />, href: "/admin/trip/analytics" },
             ],
         },
         {
-            group: "JASTIPER",
+            group: t("admin.nav.group.jastiper"),
             short: "JST",
             requires: null,
             items: [
-                { name: "Manajemen Jastip", icon: <FiShoppingCart />, href: "/admin/jastip" },
-                { name: "Analitik Jastip", icon: <FiBarChart2 />, href: "/admin/jastip/analytics" },
+                { name: t("admin.nav.jastip_mgmt"), icon: <FiShoppingCart />, href: "/admin/jastip" },
+                { name: t("admin.nav.jastip_analytics"), icon: <FiBarChart2 />, href: "/admin/jastip/analytics" },
             ],
         },
         {
-            group: "PERGI BARENG",
+            group: t("admin.nav.group.pergi_bareng"),
             short: "PBR",
             requires: null,
             items: [
-                { name: "Managemen Pergi Bareng", icon: <FaCar />, href: "/admin/pergi-bareng" },
-                { name: "Analitik Pergi Bareng", icon: <FiTrendingUp />, href: "/admin/pergi-bareng/analytics" },
+                { name: t("admin.nav.pergi_mgmt"), icon: <FaCar />, href: "/admin/pergi-bareng" },
+                { name: t("admin.nav.pergi_analytics"), icon: <FiTrendingUp />, href: "/admin/pergi-bareng/analytics" },
             ],
         },
         {
-            group: "ADMIN",
+            group: t("admin.nav.group.admin"),
             short: "ADM",
             requires: "is_admin",
             items: [
-                { name: "Beranda Admin", icon: <FiHome />, href: "/admin" },
-                { name: "Manajemen Pengguna", icon: <FiUsers />, href: "/admin/management-user" },
-                { name: "Manajemen Bahasa", icon: <FiGlobe />, href: "/admin/languages" },
-                { name: "Pesan", icon: <FiMessageSquare />, href: "/admin/message" },
+                { name: t("admin.nav.home"), icon: <FiHome />, href: "/admin" },
+                { name: t("admin.nav.users"), icon: <FiUsers />, href: "/admin/management-user" },
+                { name: t("admin.nav.languages"), icon: <FiGlobe />, href: "/admin/languages" },
+                { name: t("admin.nav.messages"), icon: <FiMessageSquare />, href: "/admin/message" },
             ],
         },
     ];

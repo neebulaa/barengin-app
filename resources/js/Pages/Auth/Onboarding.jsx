@@ -4,8 +4,10 @@ import Button from "@/Components/Button.jsx";
 import Input from "@/Components/Input.jsx";
 import Select from "@/Components/Select.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function Onboarding({ user }) {
+    const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         full_name: user?.full_name || "",
         phone: "",
@@ -38,23 +40,23 @@ export default function Onboarding({ user }) {
                         </a>
 
                         <h1 className="mt-4 text-center text-xl font-semibold tracking-tight text-neutral-700">
-                            Mau dikenal orang lebih lagi?
+                            {t("auth.onboard.title")}
                         </h1>
 
                         <p className="mt-1 pb-8 text-center text-sm text-neutral-600 border-b border-neutral-400">
-                            Isi profilmu sekarang juga
+                            {t("auth.onboard.subtitle")}
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
                             <Input
                                 id="full_name"
                                 type="text"
-                                label="Nama Lengkap"
+                                label={t("auth.onboard.full_name")}
                                 value={data.full_name}
                                 onChange={(e) =>
                                     setData("full_name", e.target.value)
                                 }
-                                placeholder="Masukan Nama Lengkap"
+                                placeholder={t("auth.onboard.full_name_ph")}
                                 error={errors.full_name}
                                 size="md"
                             />
@@ -63,7 +65,7 @@ export default function Onboarding({ user }) {
                                 id="phone"
                                 type="text"
                                 inputMode="numeric"
-                                label="No HP"
+                                label={t("auth.onboard.phone")}
                                 leftAddon="+62"
                                 value={data.phone}
                                 onChange={(e) =>
@@ -75,22 +77,22 @@ export default function Onboarding({ user }) {
 
                             <Select
                                 id="gender"
-                                label="Jenis Kelamin"
+                                label={t("auth.onboard.gender")}
                                 value={data.gender}
                                 onChange={(e) =>
                                     setData("gender", e.target.value)
                                 }
                                 error={errors.gender}
                             >
-                                <option value="">Pilih Jenis Kelamin</option>
-                                <option value="male">Laki-laki</option>
-                                <option value="female">Perempuan</option>
+                                <option value="">{t("auth.onboard.gender_select")}</option>
+                                <option value="male">{t("auth.onboard.male")}</option>
+                                <option value="female">{t("auth.onboard.female")}</option>
                             </Select>
 
                             <Input
                                 id="birth_date"
                                 type="date"
-                                label="Tanggal Lahir"
+                                label={t("auth.onboard.birth_date")}
                                 value={data.birth_date}
                                 onChange={(e) =>
                                     setData("birth_date", e.target.value)
@@ -106,7 +108,7 @@ export default function Onboarding({ user }) {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Memproses..." : "Lanjut"}
+                                {processing ? t("common.processing") : t("auth.onboard.continue")}
                             </Button>
 
                             <Button
@@ -116,7 +118,7 @@ export default function Onboarding({ user }) {
                                 onClick={skip}
                                 disabled={processing}
                             >
-                                Lewati
+                                {t("auth.onboard.skip")}
                             </Button>
                         </form>
                     </div>
@@ -133,12 +135,10 @@ export default function Onboarding({ user }) {
 
                     <div className="absolute bottom-12 left-12 right-12 text-white">
                         <h2 className="text-3xl font-semibold leading-tight xl:text-4xl max-w-[680px]">
-                            Jalan Jalan sejenak, biar hati ikut pulang
+                            {t("auth.hero.title")}
                         </h2>
                         <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95">
-                            Rasakan serunya petualangan tanpa batas dengan
-                            berbagai pilihan destinasi dan aktivitas, mulai dari
-                            alam bebas hingga wisata kota yang penuh warna.
+                            {t("auth.hero.subtitle")}
                         </p>
                     </div>
                 </div>

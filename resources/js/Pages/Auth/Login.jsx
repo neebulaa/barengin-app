@@ -6,8 +6,10 @@ import MainLayout from "@/Layouts/MainLayout.jsx";
 import Input from "@/Components/Input.jsx";
 import Checkbox from "@/Components/Checkbox.jsx";
 import { FcGoogle } from "react-icons/fc";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function Login() {
+    const { t } = useTranslation();
     const [hidePassword, setHidePassword] = useState(true);
 
     const { data, setData, post, processing, errors } = useForm({
@@ -36,23 +38,23 @@ export default function Login() {
                         </Link>
 
                         <h1 className="mt-2 text-center text-xl font-semibold tracking-tight text-neutral-700">
-                            Selamat Datang
+                            {t("auth.login.title")}
                         </h1>
 
                         <p className="mt-1 pb-8 text-center text-sm text-neutral-600 border-b border-neutral-400">
-                            Login akun anda dan jelajahi hiburan di dunia
+                            {t("auth.login.subtitle")}
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
                             <Input
                                 id="login"
                                 type="text"
-                                label="Username atau Email"
+                                label={t("auth.login.login_label")}
                                 value={data.login}
                                 onChange={(e) =>
                                     setData("login", e.target.value)
                                 }
-                                placeholder="Masukan Username atau Email"
+                                placeholder={t("auth.login.login_ph")}
                                 error={errors.login}
                                 size="md"
                             />
@@ -60,12 +62,12 @@ export default function Login() {
                             <Input
                                 id="password"
                                 type={hidePassword ? "password" : "text"}
-                                label="Password"
+                                label={t("auth.login.password")}
                                 value={data.password}
                                 onChange={(e) =>
                                     setData("password", e.target.value)
                                 }
-                                placeholder="Masukan Password"
+                                placeholder={t("auth.login.password_ph")}
                                 error={errors.password}
                                 size="md"
                                 rightAddon={
@@ -95,14 +97,14 @@ export default function Login() {
                                     id="remember"
                                     checked={data.remember}
                                     onChange={(v) => setData("remember", v)}
-                                    label="Ingat saya"
+                                    label={t("auth.remember")}
                                 />
 
                                 <Link
                                     href="/forgot-password"
                                     className="text-sm font-semibold text-primary-700 underline hover:opacity-80"
                                 >
-                                    Lupa Password
+                                    {t("auth.login.forgot")}
                                 </Link>
                             </div>
 
@@ -112,7 +114,7 @@ export default function Login() {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Memproses..." : "Masuk"}
+                                {processing ? t("common.processing") : t("auth.login.submit")}
                             </Button>
 
                             <Button
@@ -126,16 +128,16 @@ export default function Login() {
                                 disabled={processing}
                             >
                                 <FcGoogle size={20}/>
-                                Masuk dengan Google
+                                {t("auth.google")}
                             </Button>
 
                             <p className="pt-2 text-center text-sm text-neutral-700">
-                                Belum mempunyai akun?{" "}
+                                {t("auth.login.no_account")}{" "}
                                 <Link
                                     href="/register"
                                     className="font-semibold underline hover:opacity-80"
                                 >
-                                    Daftar
+                                    {t("nav.register")}
                                 </Link>
                             </p>
                         </form>
@@ -153,12 +155,10 @@ export default function Login() {
 
                     <div className="absolute bottom-12 left-12 right-12 text-white">
                         <h2 className="text-3xl font-semibold leading-tight xl:text-4xl max-w-[680px]">
-                            Jalan Jalan sejenak, biar hati ikut pulang
+                            {t("auth.hero.title")}
                         </h2>
                         <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95">
-                            Rasakan serunya petualangan tanpa batas dengan
-                            berbagai pilihan destinasi dan aktivitas, mulai dari
-                            alam bebas hingga wisata kota yang penuh warna.
+                            {t("auth.hero.subtitle")}
                         </p>
                     </div>
                 </div>

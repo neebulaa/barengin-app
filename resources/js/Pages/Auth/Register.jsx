@@ -6,8 +6,10 @@ import Input from "@/Components/Input.jsx";
 import MainLayout from "@/Layouts/MainLayout.jsx";
 import Checkbox from "@/Components/Checkbox.jsx";
 import { FcGoogle } from "react-icons/fc";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function Register() {
+    const { t } = useTranslation();
     const [hidePassword, setHidePassword] = useState(true);
     const [hidePasswordConfirm, setHidePasswordConfirm] = useState(true);
 
@@ -39,23 +41,23 @@ export default function Register() {
                         </Link>
 
                         <h1 className="mt-2 text-center text-xl font-semibold tracking-tight text-neutral-700">
-                            Daftar Akun
+                            {t("auth.register.title")}
                         </h1>
 
                         <p className="mt-1 pb-8 text-center text-sm text-neutral-600 border-b border-neutral-400">
-                            Buat akun anda dan jelajahi hiburan di dunia
+                            {t("auth.register.subtitle")}
                         </p>
 
                         <form onSubmit={submit} className="mt-8 space-y-4">
                             <Input
                                 id="username"
                                 type="text"
-                                label="Username"
+                                label={t("auth.register.username")}
                                 value={data.username}
                                 onChange={(e) =>
                                     setData("username", e.target.value)
                                 }
-                                placeholder="Masukan Username"
+                                placeholder={t("auth.register.username_ph")}
                                 error={errors.username}
                                 size="md"
                             />
@@ -63,12 +65,12 @@ export default function Register() {
                             <Input
                                 id="email"
                                 type="email"
-                                label="Email"
+                                label={t("auth.register.email")}
                                 value={data.email}
                                 onChange={(e) =>
                                     setData("email", e.target.value)
                                 }
-                                placeholder="Masukan Email"
+                                placeholder={t("auth.register.email_ph")}
                                 error={errors.email}
                                 size="md"
                             />
@@ -76,12 +78,12 @@ export default function Register() {
                             <Input
                                 id="password"
                                 type={hidePassword ? "password" : "text"}
-                                label="Password"
+                                label={t("auth.register.password")}
                                 value={data.password}
                                 onChange={(e) =>
                                     setData("password", e.target.value)
                                 }
-                                placeholder="Password"
+                                placeholder={t("auth.register.password_ph")}
                                 error={errors.password}
                                 size="md"
                                 rightAddon={
@@ -109,7 +111,7 @@ export default function Register() {
                             <Input
                                 id="password_confirmation"
                                 type={hidePasswordConfirm ? "password" : "text"}
-                                label="Konfirmasi Password"
+                                label={t("auth.register.confirm")}
                                 value={data.password_confirmation}
                                 onChange={(e) =>
                                     setData(
@@ -117,7 +119,7 @@ export default function Register() {
                                         e.target.value,
                                     )
                                 }
-                                placeholder="Password"
+                                placeholder={t("auth.register.password_ph")}
                                 error={errors.password_confirmation}
                                 size="md"
                                 rightAddon={
@@ -149,7 +151,7 @@ export default function Register() {
                                     id="remember"
                                     checked={data.remember}
                                     onChange={(v) => setData("remember", v)}
-                                    label="Ingat saya"
+                                    label={t("auth.remember")}
                                 />
                             </div>
 
@@ -159,7 +161,7 @@ export default function Register() {
                                 className="w-full mt-2"
                                 disabled={processing}
                             >
-                                {processing ? "Memproses..." : "Daftar"}
+                                {processing ? t("common.processing") : t("auth.register.submit")}
                             </Button>
 
                             <Button
@@ -173,16 +175,16 @@ export default function Register() {
                                 disabled={processing}
                             >
                                 <FcGoogle size={20} />
-                                Masuk dengan Google
+                                {t("auth.google")}
                             </Button>
 
                             <p className="pt-2 text-center text-sm text-neutral-700">
-                                Sudah mempunyai akun?{" "}
+                                {t("auth.register.have_account")}{" "}
                                 <Link
                                     href="/login"
                                     className="font-semibold underline hover:opacity-80"
                                 >
-                                    Masuk
+                                    {t("nav.login")}
                                 </Link>
                             </p>
                         </form>
@@ -200,12 +202,10 @@ export default function Register() {
 
                     <div className="absolute bottom-12 left-12 right-12 text-white">
                         <h2 className="text-3xl font-semibold leading-tight xl:text-4xl max-w-[680px]">
-                            Jalan Jalan sejenak, biar hati ikut pulang
+                            {t("auth.hero.title")}
                         </h2>
                         <p className="mt-4 max-w-[680px] text-base leading-relaxed text-white/95">
-                            Rasakan serunya petualangan tanpa batas dengan
-                            berbagai pilihan destinasi dan aktivitas, mulai dari
-                            alam bebas hingga wisata kota yang penuh warna.
+                            {t("auth.hero.subtitle")}
                         </p>
                     </div>
                 </div>

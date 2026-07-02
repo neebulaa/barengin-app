@@ -1,7 +1,9 @@
 import React from "react";
 import { FaSuitcaseRolling, FaUsers, FaShoppingCart } from "react-icons/fa";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function HeroTabs({ activeTab, setActiveTab }) {
+    const { t } = useTranslation();
     const base =
         "pb-3 flex items-center gap-2 transition border-b-2 text-sm font-medium cursor-pointer";
 
@@ -21,7 +23,7 @@ export default function HeroTabs({ activeTab, setActiveTab }) {
                 className={tabClass("trip")}
             >
                 <FaSuitcaseRolling className="text-base" />
-                Trip Bareng
+                {t("nav.trip_bareng")}
             </button>
 
             <button
@@ -30,7 +32,7 @@ export default function HeroTabs({ activeTab, setActiveTab }) {
                 className={tabClass("pergi")}
             >
                 <FaUsers className="text-base" />
-                Pergi Bareng
+                {t("nav.pergi_bareng")}
             </button>
 
             <button
@@ -39,7 +41,7 @@ export default function HeroTabs({ activeTab, setActiveTab }) {
                 className={tabClass("jastip")}
             >
                 <FaShoppingCart className="text-base" />
-                Jastip
+                {t("search.tab_jastip")}
             </button>
         </div>
     );
