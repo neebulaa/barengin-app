@@ -1,5 +1,6 @@
 import React from "react";
 import Container from "@/Components/Container";
+import { useTranslation } from "@/lib/useTranslation";
 import {
     FaFacebookF,
     FaLinkedinIn,
@@ -8,6 +9,7 @@ import {
 } from "react-icons/fa";
 
 export default function Footer() {
+    const { t } = useTranslation();
     const socials = [
         { label: "Facebook", href: "#", Icon: FaFacebookF },
         { label: "LinkedIn", href: "#", Icon: FaLinkedinIn },
@@ -26,13 +28,11 @@ export default function Footer() {
                 />
 
                 <h2 className="text-2xl font-semibold mt-4 text-neutral-900">
-                    Eksplor bersama Barengin
+                    {t("footer.tagline")}
                 </h2>
 
                 <p className="text-neutral-600 mt-4 max-w-2xl leading-relaxed">
-                    Mudik dan traveling bukan lagi soal perjalanan sendirian.
-                    Temukan teman searah, berbagi cerita, dan buat setiap
-                    kilometer terasa lebih seru bareng-bareng!
+                    {t("footer.desc")}
                 </p>
 
                 <div className="flex gap-4 mt-8">
@@ -56,9 +56,9 @@ export default function Footer() {
                         href="/privacy-policy"
                         className="hover:text-primary-100 transition mb-2 md:mb-0"
                     >
-                        Privacy and Policy
+                        {t("footer.privacy")}
                     </a>
-                    <span>@2025 Sevendeadlysins. All rights reserved.</span>
+                    <span>{t("footer.rights")}</span>
                 </Container>
             </div>
         </footer>

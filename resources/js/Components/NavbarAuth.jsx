@@ -12,26 +12,13 @@ import { useTranslation } from "@/lib/useTranslation";
 import { FaRoute, FaCarSide, FaPaperPlane } from "react-icons/fa";
 import { MdDashboard } from "react-icons/md";
 import { HiOutlineDocumentText } from "react-icons/hi";
-import { FiLogOut, FiGlobe } from "react-icons/fi";
+import { FiLogOut } from "react-icons/fi";
 import Container from "@/Components/Container.jsx";
 
 export default function NavbarAuth() {
     const { props } = usePage();
     const user = props?.auth?.user;
-    const { t, locale } = useTranslation();
-
-    // Opsi ganti bahasa (untuk bahasa selain yang sedang aktif) — dimasukkan ke
-    // dropdown profil agar navbar tidak terlalu ramai.
-    const languageItems = (props?.languages || [])
-        .filter((l) => l.code !== locale)
-        .map((l) => ({
-            key: `lang-${l.code}`,
-            label: l.native_name || l.name,
-            href: `/locale/${l.code}`,
-            as: "button",
-            method: "post",
-            icon: FiGlobe,
-        }));
+    const { t } = useTranslation();
 
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -108,6 +95,8 @@ export default function NavbarAuth() {
                 </nav>
 
                 <div className="hidden md:flex items-center space-x-3">
+                    <LanguageSwitcher />
+
                     <Link
                         href="/profile-history"
                         onClick={closeAll}
@@ -140,7 +129,6 @@ export default function NavbarAuth() {
                                 href: "/profile-history",
                                 icon: HiOutlineDocumentText,
                             },
-                            ...languageItems,
                             {
                                 label: t("nav.logout"),
                                 href: "/logout",
