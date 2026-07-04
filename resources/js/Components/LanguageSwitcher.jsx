@@ -4,10 +4,13 @@ import { FiGlobe, FiCheck, FiChevronDown } from "react-icons/fi";
 
 // Pemilih bahasa (globe dropdown). Membaca daftar bahasa aktif & locale saat ini
 // dari props Inertia, lalu POST /locale/{code} untuk mengganti bahasa.
-export default function LanguageSwitcher({ className = "" }) {
+// variant="pill"  -> tombol kecil (desktop navbar)
+// variant="block" -> tombol lebar penuh (menu mobile)
+export default function LanguageSwitcher({ className = "", variant = "pill" }) {
     const { props } = usePage();
     const languages = props?.languages || [];
     const locale = props?.locale || "id";
+    const isBlock = variant === "block";
 
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
@@ -32,22 +35,35 @@ export default function LanguageSwitcher({ className = "" }) {
     };
 
     return (
-        <div ref={rootRef} className={["relative", className].join(" ")}>
+        <div ref={rootRef} className={["relative", isBlock ? "w-full" : "", className].join(" ")}>
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                className={
+                    isBlock
+                        ? "flex w-full items-center gap-2 rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                        : "inline-flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                }
                 aria-haspopup="menu"
                 aria-expanded={open}
                 aria-label="Ganti bahasa"
             >
                 <FiGlobe className="h-4 w-4 text-neutral-500" />
                 <span className="uppercase">{locale}</span>
-                <FiChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${open ? "rotate-180" : ""}`} />
+                {isBlock && (
+                    <span className="ml-1 text-neutral-500 normal-case">
+                        {(languages.find((l) => l.code === locale)?.native_name) || ""}
+                    </span>
+                )}
+                <FiChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${isBlock ? "ml-auto" : ""} ${open ? "rotate-180" : ""}`} />
             </button>
 
             {open && (
-                <div className="absolute right-0 mt-2 min-w-[13rem] w-max max-w-[20rem] rounded-xl border border-neutral-100 bg-white shadow-lg overflow-hidden z-50 animate-fade-in-up">
+                <div className={`absolute mb-2 min-w-[13rem] rounded-xl border border-neutral-100 bg-white shadow-lg overflow-hidden z-50 animate-fade-in-up ${
+                    isBlock
+                        ? "bottom-full left-0 right-0 w-full"
+                        : "right-0 mt-2 w-max max-w-[20rem]"
+                }`}>
                     {languages.map((lang) => {
                         const activeLang = lang.code === locale;
                         return (

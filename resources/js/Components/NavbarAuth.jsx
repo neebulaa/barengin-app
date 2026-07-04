@@ -300,9 +300,7 @@ export default function NavbarAuth() {
                     </div>
 
                     <div className="pt-4 pb-6 border-t border-neutral-200 px-4 space-y-3">
-                        <div className="flex justify-center">
-                            <LanguageSwitcher />
-                        </div>
+                        <LanguageSwitcher variant="block" />
 
                         <Button
                             isButtonLink
