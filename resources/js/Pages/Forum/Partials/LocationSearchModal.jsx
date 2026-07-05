@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FiArrowLeft, FiSearch, FiTarget } from "react-icons/fi";
 import { toast } from "@/lib/toast";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function LocationSearchModal({ onBack, onSelectLocation }) {
+    const { t } = useTranslation();
     const [q, setQ] = useState("");
     const [loading, setLoading] = useState(false);
     const [geoLoading, setGeoLoading] = useState(false);
@@ -55,7 +57,7 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
 
     const handlePickCurrentLocation = async () => {
         if (!navigator.geolocation) {
-            toast.warning("Geolocation tidak didukung di perangkat/browser ini.");
+            toast.warning(t("forum.location.geo_unsupported"));
             return;
         }
 
@@ -82,15 +84,13 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
             const place = json?.data;
 
             if (!place?.id) {
-                toast.error("Gagal mendeteksi lokasi saat ini.");
+                toast.error(t("forum.location.geo_failed"));
                 return;
             }
 
             onSelectLocation?.(place);
         } catch {
-            toast.error(
-                "Tidak dapat mengakses lokasi Anda. Mohon izinkan akses lokasi.",
-            );
+            toast.error(t("forum.location.geo_denied"));
         } finally {
             setGeoLoading(false);
         }
@@ -106,13 +106,13 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
                     type="button"
                     onClick={onBack}
                     className="h-9 w-9 rounded-lg hover:bg-neutral-100 inline-flex items-center justify-center"
-                    aria-label="Back"
+                    aria-label={t("forum.location.back")}
                 >
                     <FiArrowLeft />
                 </button>
 
                 <div className="flex-1 text-center font-semibold">
-                    Search Location
+                    {t("forum.location.title")}
                 </div>
 
                 <div className="w-9" />
@@ -126,16 +126,16 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
                         className="w-full outline-none text-sm"
-                        placeholder="Cari Lokasi..."
+                        placeholder={t("forum.location.search_ph")}
                     />
 
                     <button
                         type="button"
                         className="h-9 w-9 rounded-lg hover:bg-neutral-100 inline-flex items-center justify-center disabled:opacity-50"
-                        aria-label="Use current location"
+                        aria-label={t("forum.location.use_current")}
                         onClick={handlePickCurrentLocation}
                         disabled={geoLoading}
-                        title="Use current location"
+                        title={t("forum.location.use_current")}
                     >
                         <FiTarget />
                     </button>
@@ -143,7 +143,7 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
 
                 {geoLoading ? (
                     <div className="mt-2 text-xs text-neutral-500">
-                        Detecting current location...
+                        {t("forum.location.detecting")}
                     </div>
                 ) : null}
             </div>
@@ -153,22 +153,22 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
                     {loading ? (
                         <div className="text-sm text-neutral-500 px-1 py-2">
                             {showingPopular
-                                ? "Memuat lokasi populer..."
-                                : "Mencari..."}
+                                ? t("forum.location.loading_popular")
+                                : t("forum.location.searching")}
                         </div>
                     ) : null}
 
                     {!loading && showingPopular && viewItems.length ? (
                         <div className="text-xs text-neutral-500 px-1 pb-2">
-                            Popular locations
+                            {t("forum.location.popular")}
                         </div>
                     ) : null}
 
                     {!loading && viewItems.length === 0 ? (
                         <div className="text-sm text-neutral-500 px-1 py-2">
                             {showingPopular
-                                ? "No popular locations yet."
-                                : "No locations found."}
+                                ? t("forum.location.no_popular")
+                                : t("forum.location.no_results")}
                         </div>
                     ) : null}
 
@@ -195,7 +195,7 @@ export default function LocationSearchModal({ onBack, onSelectLocation }) {
 
                                     {showCount ? (
                                         <div className="shrink-0 text-xs text-neutral-500">
-                                            {count}+ Post
+                                            {count}+ {t("forum.post")}
                                         </div>
                                     ) : null}
                                 </div>

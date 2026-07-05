@@ -32,7 +32,8 @@ class UsersSeeder extends Seeder
             'phone'     => '089234217890',
             'gender'    => 'male',
             'is_admin'  => false,
-            'is_guider' => false,        ]);
+            'is_guider' => true,        
+        ]);
 
         User::create([
             'full_name' => 'Lili Jastiper',

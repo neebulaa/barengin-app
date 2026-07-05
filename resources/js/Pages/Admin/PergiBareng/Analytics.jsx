@@ -1,6 +1,7 @@
 import React from "react";
 import { Head } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import AccountPerformanceCard from "@/Components/AccountPerformanceCard";
 import { useTranslation } from "@/lib/useTranslation";
 import { FaCar } from "react-icons/fa6";
 import { FiUsers, FiTrendingUp, FiPercent } from "react-icons/fi";
@@ -16,7 +17,7 @@ function StatCard({ icon, label, value }) {
     );
 }
 
-export default function Analytics({ stats, topRoutes = [] }) {
+export default function Analytics({ stats, topRoutes = [], rating }) {
     const { t } = useTranslation();
     return (
         <>
@@ -33,6 +34,8 @@ export default function Analytics({ stats, topRoutes = [] }) {
                     <StatCard icon={<FiUsers />} label={t("admin.pergi.analytics.stat_participants")} value={stats.total_participants} />
                     <StatCard icon={<FiPercent />} label={t("admin.pergi.analytics.stat_fill_rate")} value={`${stats.fill_rate}%`} />
                 </div>
+
+                <AccountPerformanceCard rating={rating} />
 
                 <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
                     <div className="p-5 border-b border-neutral-100">

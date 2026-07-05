@@ -96,6 +96,7 @@ class AdminPergiBarengController extends Controller
         return Inertia::render('Admin/PergiBareng/Analytics', [
             'stats' => $stats,
             'topRoutes' => $topRoutes,
+            'rating' => $this->accountRating(Auth::id(), 'pergi_bareng'),
         ]);
     }
 

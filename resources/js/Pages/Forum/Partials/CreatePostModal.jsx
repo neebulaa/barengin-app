@@ -14,8 +14,10 @@ import Toggle from "@/Components/Toggle";
 import Button from "@/Components/Button";
 import LocationSearchModal from "@/Pages/Forum/Partials/LocationSearchModal";
 import useLockBodyScroll from "@/Hooks/useLockBodyScroll";
+import { useTranslation } from "@/lib/useTranslation";
 
 function PreviewMedia({ images, onRemove }) {
+    const { t } = useTranslation();
     if (!images?.length) return null;
 
     const RemoveBtn = ({ id }) => (
@@ -23,7 +25,7 @@ function PreviewMedia({ images, onRemove }) {
             type="button"
             onClick={() => onRemove?.(id)}
             className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white inline-flex items-center justify-center hover:bg-black/70"
-            aria-label="Remove image"
+            aria-label={t("forum.create.remove_image")}
         >
             <FiX className="w-4 h-4" />
         </button>
@@ -87,6 +89,7 @@ export default function CreatePostModal({
     onSubmit,
     tags = [],
 }) {
+    const { t } = useTranslation();
     useLockBodyScroll(open);
     const [view, setView] = useState("editor"); // "editor" | "location"
     const [disableComments, setDisableComments] = useState(false);
@@ -299,7 +302,7 @@ export default function CreatePostModal({
                     {/* header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 shrink-0">
                         <div className="font-semibold">
-                            {view === "editor" ? "New Post" : "Location"}
+                            {view === "editor" ? t("forum.create.title") : t("forum.create.location_title")}
                         </div>
                         <button
                             type="button"
@@ -307,7 +310,7 @@ export default function CreatePostModal({
                             className="inline-flex items-center gap-2 text-neutral-700 hover:text-neutral-900"
                         >
                             <FiX />
-                            Cancel
+                            {t("common.cancel")}
                         </button>
                     </div>
 
@@ -326,7 +329,7 @@ export default function CreatePostModal({
 
                                     <div className="flex-1 min-w-0">
                                         <div className="font-semibold text-neutral-900">
-                                            {user?.full_name ?? "Anda"}
+                                            {user?.full_name ?? t("forum.create.you")}
                                         </div>
 
                                         {locationLabel ? (
@@ -348,7 +351,7 @@ export default function CreatePostModal({
                                                 "max-h-30 md:max-h-32 overflow-y-auto",
                                                 "py-1 text-sm",
                                             ].join(" ")}
-                                            data-placeholder="Apa yang Baru?"
+                                            data-placeholder={t("forum.whats_new")}
                                             onInput={() => {
                                                 syncHtmlFromDom();
                                                 syncFormatState();
@@ -465,7 +468,7 @@ export default function CreatePostModal({
                                                         }
                                                     }}
                                                     className="w-full outline-none text-sm"
-                                                    placeholder="Tambah tag (cth. Trip Hemat)"
+                                                    placeholder={t("forum.create.add_tag_ph")}
                                                 />
                                                 <button
                                                     type="button"
@@ -474,7 +477,7 @@ export default function CreatePostModal({
                                                     }
                                                     className="text-xs font-semibold text-primary-700 hover:opacity-80"
                                                 >
-                                                    Add
+                                                    {t("forum.create.tag_add")}
                                                 </button>
                                             </div>
 
@@ -523,7 +526,7 @@ export default function CreatePostModal({
                                                                 }
                                                                 className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-xs font-medium text-primary-700 border-t border-neutral-100"
                                                             >
-                                                                Create tag “#
+                                                                {t("forum.create.create_tag")} “#
                                                                 {normalizeTagName(
                                                                     tagQuery,
                                                                 )}
@@ -538,14 +541,14 @@ export default function CreatePostModal({
                                         {/* Toolbar */}
                                         <div className="mt-4 flex items-center gap-2 text-neutral-700">
                                             <IconButton
-                                                label="Upload Image"
+                                                label={t("forum.create.upload_image")}
                                                 onClick={handlePickImages}
                                             >
                                                 <FiImage className="text-xl" />
                                             </IconButton>
 
                                             <IconButton
-                                                label="Location"
+                                                label={t("forum.create.location_title")}
                                                 onClick={() => {
                                                     syncHtmlFromDom();
                                                     setTagBoxOpen(false);
@@ -556,7 +559,7 @@ export default function CreatePostModal({
                                             </IconButton>
 
                                             <IconButton
-                                                label="Italic"
+                                                label={t("forum.create.italic")}
                                                 onClick={() => exec("italic")}
                                                 className={
                                                     isItalic
@@ -568,7 +571,7 @@ export default function CreatePostModal({
                                             </IconButton>
 
                                             <IconButton
-                                                label="Bold"
+                                                label={t("forum.create.bold")}
                                                 onClick={() => exec("bold")}
                                                 className={
                                                     isBold
@@ -630,7 +633,7 @@ export default function CreatePostModal({
                                 name="disable-comments"
                                 checked={disableComments}
                                 onChange={(next) => setDisableComments(next)}
-                                label="Nonaktifkan Komentar"
+                                label={t("forum.create.disable_comments")}
                             />
 
                             <Button
@@ -682,7 +685,7 @@ export default function CreatePostModal({
                                         : "",
                                 ].join(" ")}
                             >
-                                Post
+                                {t("forum.post")}
                             </Button>
                         </div>
                     ) : null}

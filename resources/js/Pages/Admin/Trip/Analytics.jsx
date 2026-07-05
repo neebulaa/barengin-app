@@ -1,6 +1,7 @@
 import React from "react";
 import { Head } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import AccountPerformanceCard from "@/Components/AccountPerformanceCard";
 import { useTranslation } from "@/lib/useTranslation";
 import { FaSuitcase } from "react-icons/fa6";
 import { FiUsers, FiCheckCircle, FiDollarSign } from "react-icons/fi";
@@ -16,7 +17,7 @@ function StatCard({ icon, label, value }) {
     );
 }
 
-export default function Analytics({ stats }) {
+export default function Analytics({ stats, rating }) {
     const { t } = useTranslation();
     const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
     return (
@@ -33,9 +34,7 @@ export default function Analytics({ stats }) {
                     <StatCard icon={<FiUsers />} label={t("admin.trip.stat_participants")} value={stats.participants} />
                     <StatCard icon={<FiDollarSign />} label={t("admin.trip.stat_revenue")} value={rupiah(stats.revenue)} />
                 </div>
-                <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-8 text-center text-neutral-400 text-sm">
-                    {t("admin.trip.chart_placeholder")}
-                </div>
+                <AccountPerformanceCard rating={rating} />
             </div>
         </>
     );

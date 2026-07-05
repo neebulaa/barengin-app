@@ -230,6 +230,7 @@ class AdminTripController extends Controller
 
         return Inertia::render('Admin/Trip/Analytics', [
             'stats' => $stats,
+            'rating' => $this->accountRating(Auth::id(), 'jalan_bareng'),
         ]);
     }
 
