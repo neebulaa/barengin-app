@@ -108,11 +108,11 @@ class AdminDashboardController extends Controller
 
         $guiderRating = DB::table('user_ratings')
             ->where('rated_user_id', $trip->host_id)
-            ->where('type', 'jalan_bareng')
+            ->where('type', 'trip_bareng')
             ->avg('rating_amount');
         $guiderReviews = DB::table('user_ratings')
             ->where('rated_user_id', $trip->host_id)
-            ->where('type', 'jalan_bareng')
+            ->where('type', 'trip_bareng')
             ->count();
 
         $image = $trip->image;

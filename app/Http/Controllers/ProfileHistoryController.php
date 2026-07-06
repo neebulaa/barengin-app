@@ -419,10 +419,12 @@ class ProfileHistoryController extends Controller
 
             $guideRating = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
+                ->where('type', 'trip_bareng')
                 ->avg('rating_amount');
 
             $guideReviews = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
+                ->where('type', 'trip_bareng')
                 ->count();
 
             return [

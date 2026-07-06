@@ -28,6 +28,10 @@ return new class extends Migration
             $table->string('google_id')->nullable()->unique();
             $table->boolean('onboarding_completed')->default(false);
             $table->dateTime('last_seen_at')->nullable();
+            // Streak "Nyala" harian
+            $table->unsignedInteger('streak_count')->default(0);   // hari beruntun saat ini
+            $table->unsignedInteger('streak_best')->default(0);    // rekor hari beruntun
+            $table->date('streak_last_date')->nullable();          // tanggal aktivitas terakhir
             $table->rememberToken();
             $table->timestamps();
 

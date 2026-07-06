@@ -18,6 +18,8 @@ return new class extends Migration
             $table->decimal('total_amount', 15, 2);
             $table->enum('type', ['jastip', 'trip']);
             $table->string('payment_method');
+            // Token Snap Midtrans agar pembayaran bisa dibuka kembali dari Profile History
+            $table->text('snap_token')->nullable();
             $table->dateTime('expired_at');
             $table->timestamps();
         });

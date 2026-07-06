@@ -148,7 +148,7 @@ class TripSeeder extends Seeder
             DB::table('user_ratings')->insert([
                 'user_id' => $customerId,
                 'rated_user_id' => $guiderId,
-                'type' => 'jalan_bareng',
+                'type' => 'trip_bareng',
                 'rating_amount' => $faker->randomFloat(2, 4.0, 5.0),
                 'comment' => $faker->randomElement(['Guide sangat ramah dan seru!', 'Perjalanan aman dan menyenangkan.', 'Sangat direkomendasikan untuk trip bareng.', 'Itinerary jelas dan on-time.']),
                 'created_at' => now(),

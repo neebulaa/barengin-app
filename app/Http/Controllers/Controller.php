@@ -10,7 +10,7 @@ abstract class Controller
 {
     /**
      * Ringkasan rating akun (untuk kartu "Performa Akun" di halaman analitik).
-     * Mengambil dari tabel user_ratings sesuai tipe (mis. 'jalan_bareng' untuk
+     * Mengambil dari tabel user_ratings sesuai tipe (mis. 'trip_bareng' untuk
      * pemandu trip, 'pergi_bareng' untuk penyelenggara pergi bareng).
      *
      * @return array{average: float, count: int, breakdown: array<int,int>, reviews: array<int,array<string,mixed>>}

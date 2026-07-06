@@ -44,7 +44,7 @@ class ReviewController extends Controller
                 [
                     'user_id'       => $user->id,
                     'rated_user_id' => $trip->guider_id,
-                    'type'          => 'jalan_bareng',
+                    'type'          => 'trip_bareng',
                 ],
                 [
                     'rating_amount' => $validated['user_rating'],

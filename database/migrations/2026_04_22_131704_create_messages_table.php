@@ -16,6 +16,11 @@ return new class extends Migration
             $table->foreignId('conversation_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('sender_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             $table->text('message_text');
+            // Lampiran pesan (opsional)
+            $table->string('attachment_path')->nullable();
+            $table->string('attachment_type')->nullable();
+            $table->string('attachment_name')->nullable();
+            $table->unsignedBigInteger('attachment_size')->nullable();
             $table->timestamps();
         });
     }

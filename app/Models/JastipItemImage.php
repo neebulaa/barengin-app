@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class JastipItemImage extends Model
 {
+    public $timestamps = false;
+
     protected $fillable = [
         'jastip_item_id', 'image_name'
     ];

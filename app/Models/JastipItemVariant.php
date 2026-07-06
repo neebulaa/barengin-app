@@ -7,14 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 class JastipItemVariant extends Model
 {
     protected $fillable = [
-        'jastip_item_id', 'var_name', 'var_value', 'additioanl_price'
+        'jastip_item_id', 'var_name', 'var_value', 'additional_price',
     ];
 
-    public function jastip_item(){
+    protected function casts()
+    {
+        return [
+            'additional_price' => 'decimal:2',
+        ];
+    }
+
+    public function jastip_item()
+    {
         return $this->belongsTo(JastipItem::class);
     }
 
-    public function jastip_order_items(){
+    public function jastip_order_items()
+    {
         return $this->hasMany(JastipOrderItem::class);
     }
 }

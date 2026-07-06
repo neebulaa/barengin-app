@@ -86,15 +86,15 @@ class TripsController extends Controller
             // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
             $remaining = $trip->people_amount - $joined;
 
-            // Rating pemandu dari ulasan trip (type: jalan_bareng)
+            // Rating pemandu dari ulasan trip (type: trip_bareng)
             $guiderRating = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
-                ->where('type', 'jalan_bareng')
+                ->where('type', 'trip_bareng')
                 ->avg('rating_amount');
 
             $guiderReviews = DB::table('user_ratings')
                 ->where('rated_user_id', $trip->host_id)
-                ->where('type', 'jalan_bareng')
+                ->where('type', 'trip_bareng')
                 ->count();
 
             return [
@@ -161,10 +161,10 @@ class TripsController extends Controller
 
         $joined = $participants->count();
 
-        // 2. Ambil Rata-Rata Rating Guide (type: jalan_bareng)
+        // 2. Ambil Rata-Rata Rating Guide (type: trip_bareng)
         $guiderRating = DB::table('user_ratings')
             ->where('rated_user_id', $trip->host_id)
-            ->where('type', 'jalan_bareng')
+            ->where('type', 'trip_bareng')
             ->avg('rating_amount');
 
         $ratingText = $guiderRating ? number_format($guiderRating, 1) : 'Baru';

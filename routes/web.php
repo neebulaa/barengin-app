@@ -23,6 +23,7 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminMessageController;
 use App\Http\Controllers\AdminPergiBarengController;
 use App\Http\Controllers\AdminTripController;
+use App\Http\Controllers\AdminJastipController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LocaleController;
@@ -270,6 +271,18 @@ Route::prefix('admin')->group(function () {
         Route::get('/{id}/requests', [AdminPergiBarengController::class, 'requests'])->whereNumber('id')->name('requests');
         Route::post('/{id}/requests/{requestId}/approve', [AdminPergiBarengController::class, 'approve'])->whereNumber('id')->whereNumber('requestId')->name('requests.approve');
         Route::delete('/{id}/requests/{requestId}', [AdminPergiBarengController::class, 'reject'])->whereNumber('id')->whereNumber('requestId')->name('requests.reject');
+    });
+
+    // Manajemen Jastip (jastiper) — terbuka untuk semua user yang login
+    Route::middleware('auth')->prefix('jastip')->name('admin.jastip.')->group(function () {
+        Route::get('/', [AdminJastipController::class, 'index'])->name('index');
+        Route::get('/create', [AdminJastipController::class, 'create'])->name('create');
+        Route::get('/analytics', [AdminJastipController::class, 'analytics'])->name('analytics');
+        Route::post('/', [AdminJastipController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [AdminJastipController::class, 'edit'])->whereNumber('id')->name('edit');
+        Route::post('/{id}', [AdminJastipController::class, 'update'])->whereNumber('id')->name('update');
+        Route::post('/{id}/publish', [AdminJastipController::class, 'publish'])->whereNumber('id')->name('publish');
+        Route::delete('/{id}', [AdminJastipController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
 
 });
