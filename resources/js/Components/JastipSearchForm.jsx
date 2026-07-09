@@ -1,35 +1,87 @@
-import React from "react";
-import Input from "@/Components/Input";
+import React, { useState } from "react";
+import { router } from "@inertiajs/react";
 import Select from "@/Components/Select";
 import Button from "@/Components/Button";
+import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
+import { useGeoCity } from "@/lib/useGeoCity";
 import { useTranslation } from "@/lib/useTranslation";
-import { FaMapMarkerAlt, FaSearch } from "react-icons/fa";
+import { FaMapMarkerAlt, FaShoppingBag, FaSearch } from "react-icons/fa";
+
+// Kategori jastip (nama harus cocok dengan tabel jastip_categories → filter etalase).
+const CATEGORY_OPTIONS = [
+    "Makanan & Minuman",
+    "Fashion",
+    "Elektronik",
+    "Skincare & Kecantikan",
+    "Sepatu",
+    "Parfum",
+];
 
 export default function JastipSearchForm({ naked = false }) {
     const { t } = useTranslation();
+
+    const [toQ, setToQ] = useState("");     // #8: ambil dari mana (lokasi pengambilan)
+    const [fromQ, setFromQ] = useState(""); // mau jastip dari mana (lokasi pembelian)
+    const [category, setCategory] = useState("");
+    const [schedule, setSchedule] = useState("ongoing");
+
+    // #8: default "Ambil dari mana" ke lokasi user saat ini
+    useGeoCity(true, setToQ);
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        router.get(
+            "/jastip",
+            {
+                to_q: toQ || undefined,
+                from_q: fromQ || undefined,
+                categories: category ? [category] : undefined,
+                schedule: schedule || undefined,
+            },
+            { preserveScroll: true },
+        );
+    };
+
     return (
-        <div className={`w-full ${naked ? "bg-white rounded-2xl shadow-lg p-6" : ""}`}>
-            <div className="grid grid-cols-1 md:grid-cols-13 gap-4 items-end animate-fade-in">
-                <div className="md:col-span-5">
-                    <Input
-                        label={t("search.jastip_from")}
-                        placeholder="Jln Sentul, Bogor Selatan"
+        <form
+            onSubmit={handleSearch}
+            className={`w-full ${naked ? "bg-white rounded-2xl shadow-lg p-6" : ""}`}
+        >
+            <div className="grid grid-cols-1 md:grid-cols-14 gap-4 items-end animate-fade-in">
+                <div className="md:col-span-4">
+                    <PlaceAutocomplete
+                        label={t("search.jastip_pickup")}
+                        placeholder="Jakarta"
                         leftIcon={<FaMapMarkerAlt />}
+                        value={toQ}
+                        onChange={setToQ}
+                        prioritizeIndonesia
                     />
                 </div>
 
-                <div className="md:col-span-3">
-                    <Select label={t("search.jastip_category")} defaultValue="">
-                        <option value="">{t("search.cat_food")}</option>
-                        <option value="fashion">{t("search.cat_fashion")}</option>
-                        <option value="elektronik">{t("search.cat_electronic")}</option>
+                <div className="md:col-span-4">
+                    <PlaceAutocomplete
+                        label={t("search.jastip_from")}
+                        placeholder="Kuala Lumpur"
+                        leftIcon={<FaShoppingBag />}
+                        value={fromQ}
+                        onChange={setFromQ}
+                    />
+                </div>
+
+                <div className="md:col-span-2">
+                    <Select label={t("search.jastip_category")} value={category} onChange={(e) => setCategory(e.target.value)}>
+                        <option value="">{t("search.status_all")}</option>
+                        {CATEGORY_OPTIONS.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
                     </Select>
                 </div>
 
-                <div className="md:col-span-3">
-                    <Select label={t("search.status")} defaultValue="ongoing">
+                <div className="md:col-span-2">
+                    <Select label={t("search.status")} value={schedule} onChange={(e) => setSchedule(e.target.value)}>
+                        <option value="">{t("search.status_all")}</option>
                         <option value="ongoing">{t("search.status_ongoing")}</option>
-                        <option value="outgoing">{t("search.status_closed")}</option>
                         <option value="upcoming">{t("search.status_upcoming")}</option>
                     </Select>
                 </div>
@@ -45,6 +97,6 @@ export default function JastipSearchForm({ naked = false }) {
                     </Button>
                 </div>
             </div>
-        </div>
+        </form>
     );
 }

@@ -258,7 +258,6 @@ class ProfileHistoryController extends Controller
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->where('trip_orders.user_id', $user->id)
             ->where('trip_orders.order_status', 'paid')
-            ->where('trips.end_date', '<', now()) // hanya yang sudah selesai
             ->select(
                 'trips.id', 'trips.name', 'trips.image', 'trips.location',
                 'trips.start_date', 'trips.end_date',
@@ -273,6 +272,7 @@ class ProfileHistoryController extends Controller
                     ->exists();
 
                 $image = $this->resolveImage($t->image, $tripDefault);
+                $status = $this->jalanStatus($t->start_date, $t->end_date);
 
                 return [
                     'key'        => 'trip-' . $t->id,
@@ -282,7 +282,10 @@ class ProfileHistoryController extends Controller
                     'subtitle'   => $t->location ?? 'Indonesia',
                     'image'      => $image,
                     'date_label' => Carbon::parse($t->start_date)->format('d M Y') . ' - ' . Carbon::parse($t->end_date)->format('d M Y'),
-                    'sort_date'  => Carbon::parse($t->end_date)->timestamp,
+                    'sort_date'  => Carbon::parse($t->start_date)->timestamp,
+                    'status'     => $status,
+                    'can_review' => $status === 'finish',
+                    'group_chat_url' => '/chat/trip/' . $t->id . '/group',
                     'reviewed'   => $reviewed,
                     'user'       => [
                         'name'   => $t->guide_name,
@@ -307,7 +310,6 @@ class ProfileHistoryController extends Controller
             ->join('pergi_barengs', 'pergi_bareng_participants.pergi_bareng_id', '=', 'pergi_barengs.id')
             ->join('users', 'pergi_barengs.initiator_id', '=', 'users.id')
             ->where('pergi_bareng_participants.user_id', $user->id)
-            ->where('pergi_barengs.time_appointment', '<', now()) // hanya yang sudah lewat
             ->select(
                 'pergi_barengs.id', 'pergi_barengs.name', 'pergi_barengs.img_name',
                 'pergi_barengs.departure_loc', 'pergi_barengs.time_appointment',
@@ -323,6 +325,8 @@ class ProfileHistoryController extends Controller
                     ->exists();
 
                 $image = $this->resolveImage($p->img_name, $pbDefault);
+                // Pergi bareng = titik waktu tunggal: menunggu sebelum jam janji, selesai setelahnya.
+                $status = Carbon::now()->lt(Carbon::parse($p->time_appointment)) ? 'waiting' : 'finish';
 
                 return [
                     'key'        => 'pb-' . $p->id,
@@ -333,6 +337,9 @@ class ProfileHistoryController extends Controller
                     'image'      => $image,
                     'date_label' => Carbon::parse($p->time_appointment)->translatedFormat('d M Y - H:i'),
                     'sort_date'  => Carbon::parse($p->time_appointment)->timestamp,
+                    'status'     => $status,
+                    'can_review' => $status === 'finish',
+                    'group_chat_url' => '/chat/pergi-bareng/' . $p->id . '/group',
                     'reviewed'   => $reviewed,
                     'user'       => [
                         'name'   => $p->org_name,
@@ -387,6 +394,40 @@ class ProfileHistoryController extends Controller
 
         // pending / unpaid / null
         return 'waiting_payment';
+    }
+
+    /** Status jalan bareng: waiting (belum mulai) | ongoing (berlangsung) | finish (selesai). */
+    private function jalanStatus($start, $end): string
+    {
+        $now = Carbon::now();
+        if ($start && $now->lt(Carbon::parse($start))) {
+            return 'waiting';
+        }
+        if ($end && $now->gt(Carbon::parse($end))) {
+            return 'finish';
+        }
+        return 'ongoing';
+    }
+
+    /**
+     * Status pembelian jastip dari sisi pembeli:
+     *  order (masih waktu pesan) | buying (sedang dibelikan) |
+     *  ready_pickup (siap diambil) | closed (lewat batas pengambilan).
+     */
+    private function jastipPurchaseStatus($endDate, $pickupStart, $pickupEnd): string
+    {
+        $now = Carbon::now();
+        if ($endDate && $now->lte(Carbon::parse($endDate)->endOfDay())) {
+            return 'order';
+        }
+        if ($pickupStart && $now->lt(Carbon::parse($pickupStart)->startOfDay())) {
+            return 'buying';
+        }
+        if ($pickupEnd && $now->lte(Carbon::parse($pickupEnd)->endOfDay())) {
+            return 'ready_pickup';
+        }
+        // Tak ada jendela pengambilan terdefinisi & sudah lewat masa order
+        return $pickupEnd ? 'closed' : 'ready_pickup';
     }
 
     /**
@@ -584,6 +625,9 @@ class ProfileHistoryController extends Controller
                 'jastip_items.pickup_province',
                 'jastip_items.purchase_city',
                 'jastip_items.purchase_province',
+                'jastip_items.end_date',
+                'jastip_items.pickup_start_date',
+                'jastip_items.pickup_end_date',
                 'sellers.id as seller_id',
                 'sellers.full_name as seller_name',
                 'sellers.profile_image as seller_image',
@@ -607,6 +651,7 @@ class ProfileHistoryController extends Controller
 
                 $from = $r->purchase_city ?: $r->purchase_province;
                 $to   = $r->pickup_city ?: $r->pickup_province;
+                $status = $this->jastipPurchaseStatus($r->end_date, $r->pickup_start_date, $r->pickup_end_date);
 
                 return [
                     'key'        => 'jastip-' . $r->order_id . '-' . $r->seller_id,
@@ -617,6 +662,10 @@ class ProfileHistoryController extends Controller
                     'image'      => $image,
                     'date_label' => Carbon::parse($r->order_date)->translatedFormat('d M Y'),
                     'sort_date'  => Carbon::parse($r->order_date)->timestamp,
+                    'status'     => $status,
+                    // Beri ulasan hanya setelah barang siap diambil / selesai
+                    'can_review' => in_array($status, ['ready_pickup', 'closed'], true),
+                    'group_chat_url' => '/chat/jastip/' . $r->item_id . '/group',
                     'reviewed'   => $reviewed,
                     'user'       => [
                         'name'   => $r->seller_name,

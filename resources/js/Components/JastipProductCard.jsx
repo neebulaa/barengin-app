@@ -1,5 +1,5 @@
 import React from "react";
-import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers, FiEye } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
 const STATUS_STYLE = {
@@ -11,7 +11,7 @@ const STATUS_STYLE = {
 const FALLBACK_IMG = "/assets/default-image.png";
 
 // Kartu produk jastip. `manage` menampilkan aksi (edit/publish/hapus) saat hover.
-export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat }) {
+export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat, onViewDetail }) {
     const { t } = useTranslation();
 
     const pct = item.max_slot > 0 ? Math.min(100, (item.sold / item.max_slot) * 100) : 0;
@@ -34,6 +34,17 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
 
                 {manage && (
                     <div className="absolute left-2.5 top-2.5 flex gap-1.5 opacity-0 transition group-hover:opacity-100">
+                        {/* Lihat detail produk (etalase publik) */}
+                        {onViewDetail && (
+                            <button
+                                type="button"
+                                onClick={onViewDetail}
+                                title={t("jastip.action_view_detail")}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-neutral-600 shadow-sm hover:bg-white"
+                            >
+                                <FiEye size={15} />
+                            </button>
+                        )}
                         {/* #14: produk yang sudah dipublish tidak dapat diedit lagi */}
                         {item.is_draft && (
                             <button

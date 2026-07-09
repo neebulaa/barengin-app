@@ -169,7 +169,7 @@ export default function JastipForm({
                             </div>
                             <div>
                                 <label className={labelClass}>{t("jastip.form.pickup_address")}</label>
-                                <textarea rows={2} value={data.pickup_address || ""} onChange={(e) => setData("pickup_address", e.target.value)} placeholder={t("jastip.form.pickup_address_ph")} className={inputClass + " resize-none"} />
+                                <PlaceAutocomplete value={data.pickup_address || ""} onChange={(v) => setData("pickup_address", v)} placeholder={t("jastip.form.pickup_address_ph")} prioritizeIndonesia fullAddress />
                             </div>
                         </div>
                     </div>
@@ -193,7 +193,7 @@ export default function JastipForm({
                             </div>
                             <div>
                                 <label className={labelClass}>{t("jastip.form.purchase_address")}</label>
-                                <textarea rows={2} value={data.purchase_address || ""} onChange={(e) => setData("purchase_address", e.target.value)} placeholder={t("jastip.form.purchase_address_ph")} className={inputClass + " resize-none"} />
+                                <PlaceAutocomplete value={data.purchase_address || ""} onChange={(v) => setData("purchase_address", v)} placeholder={t("jastip.form.purchase_address_ph")} fullAddress />
                             </div>
                         </div>
                     </div>

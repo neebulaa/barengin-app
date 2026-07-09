@@ -1,374 +1,180 @@
 import React, { useState } from "react";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
-import {
-    FaMagnifyingGlass,
-    FaStar,
-    FaSuitcase,
-    FaBagShopping,
-} from "react-icons/fa6";
-
+import { FaStar, FaSuitcase, FaBagShopping, FaTrophy } from "react-icons/fa6";
 import { FaCrown } from "react-icons/fa";
 import { useTranslation } from "@/lib/useTranslation";
 
-export default function Leaderboard() {
+const BOARDS = [
+    { key: "purchase_trip", tab: "lb.tab_purchase_trip", metric: "lb.metric_purchase_trip", unit: "lb.unit_trip", rating: false, Icon: FaSuitcase },
+    { key: "purchase_jastip", tab: "lb.tab_purchase_jastip", metric: "lb.metric_purchase_jastip", unit: "lb.unit_jastip", rating: false, Icon: FaBagShopping },
+    { key: "best_guider", tab: "lb.tab_best_guider", metric: "lb.metric_created_trip", unit: "lb.unit_trip", rating: true, Icon: FaSuitcase },
+    { key: "best_jastiper", tab: "lb.tab_best_jastiper", metric: "lb.metric_created_jastip", unit: "lb.unit_jastip", rating: true, Icon: FaBagShopping },
+];
+
+const PODIUM_STYLE = {
+    1: { ring: "ring-yellow-400", badge: "bg-yellow-400 text-white", order: "order-2 md:-translate-y-5", size: "h-24 w-24" },
+    2: { ring: "ring-neutral-300", badge: "bg-neutral-400 text-white", order: "order-1", size: "h-20 w-20" },
+    3: { ring: "ring-amber-500", badge: "bg-amber-600 text-white", order: "order-3", size: "h-20 w-20" },
+};
+
+export default function Leaderboard({ boards = {} }) {
     const { t } = useTranslation();
-    // State untuk melacak tab yang sedang aktif ("trip" atau "jastip")
-    const [activeTab, setActiveTab] = useState("trip");
+    const [activeKey, setActiveKey] = useState("purchase_trip");
 
-    // ==========================================
-    // DUMMY DATA: OPEN TRIP
-    // ==========================================
-    const tripTopThree = [
-        {
-            id: 2,
-            rank: 2,
-            name: "Indah G",
-            rating: 4.9,
-            count: 140,
-            avatar: "/assets/default-profile.png",
-        },
-        {
-            id: 1,
-            rank: 1,
-            name: "Sarah J",
-            rating: 5.0,
-            count: 142,
-            avatar: "/assets/default-profile.png",
-        },
-        {
-            id: 3,
-            rank: 3,
-            name: "Linda V",
-            rating: 4.9,
-            count: 125,
-            avatar: "/assets/default-profile.png",
-        },
-    ];
+    const board = BOARDS.find((b) => b.key === activeKey);
+    const rows = boards[activeKey] || [];
+    const topThree = rows.slice(0, 3);
+    const rest = rows.slice(3);
+    const unit = t(board.unit);
 
-    const tripOtherRanks = [
-        {
-            rank: "# 04",
-            initials: "JD",
-            name: "John Doe",
-            count: 121,
-            rating: 4.9,
-            bg: "bg-blue-100 text-blue-600",
-        },
-        {
-            rank: "# 05",
-            initials: "SA",
-            name: "Selena Anderson",
-            count: 111,
-            rating: 4.9,
-            bg: "bg-gray-100 text-gray-600",
-        },
-        {
-            rank: "# 06",
-            initials: "EV",
-            name: "Elena Vance",
-            count: 89,
-            rating: 4.8,
-            bg: "bg-red-100 text-red-600",
-        },
-        {
-            rank: "# 07",
-            initials: "JD",
-            name: "John Doe",
-            count: 87,
-            rating: 4.8,
-            bg: "bg-blue-100 text-blue-600",
-        },
-        {
-            rank: "# 08",
-            initials: "MW",
-            name: "Marcus Wright",
-            count: 50,
-            rating: 4.8,
-            bg: "bg-purple-100 text-purple-600",
-        },
-    ];
+    // Urutan podium: rank 2 (kiri), rank 1 (tengah), rank 3 (kanan)
+    const podiumOrder = [topThree.find((r) => r.rank === 2), topThree.find((r) => r.rank === 1), topThree.find((r) => r.rank === 3)].filter(Boolean);
 
-    // ==========================================
-    // DUMMY DATA: JASTIP
-    // ==========================================
-    const jastipTopThree = [
-        {
-            id: 4,
-            rank: 2,
-            name: "Budi S",
-            rating: 4.8,
-            count: 210,
-            avatar: "/assets/default-profile.png",
-        },
-        {
-            id: 5,
-            rank: 1,
-            name: "Siska K",
-            rating: 5.0,
-            count: 305,
-            avatar: "/assets/default-profile.png",
-        },
-        {
-            id: 6,
-            rank: 3,
-            name: "Tono M",
-            rating: 4.7,
-            count: 180,
-            avatar: "/assets/default-profile.png",
-        },
-    ];
-
-    const jastipOtherRanks = [
-        {
-            rank: "# 04",
-            initials: "AW",
-            name: "Ayu Wandira",
-            count: 165,
-            rating: 4.7,
-            bg: "bg-pink-100 text-pink-600",
-        },
-        {
-            rank: "# 05",
-            initials: "DR",
-            name: "Doni R",
-            count: 140,
-            rating: 4.6,
-            bg: "bg-green-100 text-green-600",
-        },
-        {
-            rank: "# 06",
-            initials: "FJ",
-            name: "Fajar J",
-            count: 120,
-            rating: 4.6,
-            bg: "bg-yellow-100 text-yellow-600",
-        },
-        {
-            rank: "# 07",
-            initials: "RN",
-            name: "Rina N",
-            count: 95,
-            rating: 4.5,
-            bg: "bg-blue-100 text-blue-600",
-        },
-        {
-            rank: "# 08",
-            initials: "DS",
-            name: "Dimas S",
-            count: 80,
-            rating: 4.5,
-            bg: "bg-gray-100 text-gray-600",
-        },
-    ];
-
-    // Variabel penentu data mana yang akan dirender berdasarkan tab aktif
-    const currentTopThree =
-        activeTab === "trip" ? tripTopThree : jastipTopThree;
-    const currentOtherRanks =
-        activeTab === "trip" ? tripOtherRanks : jastipOtherRanks;
-
-    const columnTwoTitle = activeTab === "trip" ? t("lb.col_guider") : t("lb.col_jastiper");
-    const columnThreeTitle =
-        activeTab === "trip" ? t("lb.col_total_trip") : t("lb.col_total_jastip");
-    const itemLabel = activeTab === "trip" ? "Trip" : "Jastip";
-    const IconItem = activeTab === "trip" ? FaSuitcase : FaBagShopping;
+    const ProfileWrap = ({ user, className, children }) =>
+        user.username ? (
+            <Link href={`/forum/users/${user.username}`} className={className}>{children}</Link>
+        ) : (
+            <div className={className}>{children}</div>
+        );
 
     return (
-        <Container className="py-12">
-            {" "}
-            {/* Latar belakang abu-abu sangat muda khas UI modern */}
+        <Container className="py-10">
             <Head title={t("nav.leaderboard")} />
-            <Container className="py-4">
-                {/* 1. Header Section */}
-                <div className="text-center mb-10">
-                    <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-3">
-                        {t("nav.leaderboard")}
-                    </h1>
-                    <p className="text-neutral-600 text-sm md:text-base max-w-2xl mx-auto">
-                        {t("lb.subtitle")}
-                    </p>
-                </div>
 
-                {/* 2. Filter & Search Section */}
-                <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-20">
-                    {/* Search Bar */}
-                    <div className="relative w-full max-w-md">
-                        <FaMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                        <input
-                            type="text"
-                            placeholder={t("lb.search_ph")}
-                            className="w-full pl-11 pr-4 py-3 rounded-full border border-neutral-200 focus:ring-2 focus:ring-[#0077D3] focus:border-[#0077D3] outline-none shadow-sm transition"
-                        />
-                    </div>
+            {/* Header */}
+            <div className="mb-8 text-center">
+                <h1 className="mb-2 flex items-center justify-center gap-2 text-2xl font-bold text-neutral-800 md:text-3xl">
+                    <FaTrophy className="text-yellow-400" /> {t("nav.leaderboard")}
+                </h1>
+                <p className="mx-auto max-w-2xl text-sm text-neutral-500">{t("lb.subtitle")}</p>
+            </div>
 
-                    {/* Tab Buttons */}
-                    <div className="flex gap-3">
+            {/* Tabs */}
+            <div className="mb-8 flex flex-wrap justify-center gap-2">
+                {BOARDS.map((b) => {
+                    const active = activeKey === b.key;
+                    return (
                         <button
-                            onClick={() => setActiveTab("trip")}
-                            className={`px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 border ${
-                                activeTab === "trip"
-                                    ? "bg-[#0077D3] text-white border-[#0077D3] shadow-md"
-                                    : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+                            key={b.key}
+                            type="button"
+                            onClick={() => setActiveKey(b.key)}
+                            className={`inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition ${
+                                active
+                                    ? "border-primary-700 bg-primary-700 text-white shadow-sm"
+                                    : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300"
                             }`}
                         >
-                            {t("lb.tab_open_trip")}
+                            <b.Icon className="text-xs" />
+                            {t(b.tab)}
                         </button>
-                        <button
-                            onClick={() => setActiveTab("jastip")}
-                            className={`px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 border ${
-                                activeTab === "jastip"
-                                    ? "bg-[#0077D3] text-white border-[#0077D3] shadow-md"
-                                    : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
-                            }`}
-                        >
-                            {t("search.tab_jastip")}
-                        </button>
-                    </div>
+                    );
+                })}
+            </div>
+
+            {rows.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 py-20 text-center text-sm text-neutral-500">
+                    {t("lb.empty")}
                 </div>
-            </Container>
-            {/* 3. Top 3 Podium Section */}
-            <Container className="pt-18 pb-0">
-            <div className="flex justify-center items-end gap-4 md:gap-20 mb-16">
-                {currentTopThree.map((user) => (
-                    <div
-                        key={user.id}
-                        className={`relative bg-white rounded-2xl shadow-lg flex flex-col items-center justify-center p-6 w-40 md:w-56 transition-all duration-500
-                                ${user.rank === 1 ? "order-2 -translate-y-6 md:-translate-y-10 z-10" : user.rank === 2 ? "order-1" : "order-3"}
-                                `}
-                    >
-                        {/* Avatar & Crown */}
-                        <div className="relative -mt-16 mb-4">
-                            {user.rank === 1 && (
-                                <FaCrown className="absolute -top-10 left-1/2 -translate-x-1/2 text-yellow-400 text-5xl z-20 drop-shadow-md" />
-                            )}
-                            <div
-                                className={`rounded-full overflow-hidden border-4 border-white shadow-md ${user.rank === 1 ? "w-24 h-24 md:w-32 md:h-32" : "w-20 h-20 md:w-24 md:h-24"}`}
-                            >
-                                <img
-                                    src={user.avatar}
-                                    alt={user.name}
-                                    className="w-full h-full object-cover"
-                                />
+            ) : (
+                <>
+                    {/* Podium top 3 */}
+                    <div className="mb-8 flex items-end justify-center gap-4 md:gap-8">
+                        {podiumOrder.map((u) => {
+                            const s = PODIUM_STYLE[u.rank];
+                            return (
+                                <ProfileWrap
+                                    key={u.id}
+                                    user={u}
+                                    className={`flex w-32 flex-col items-center rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm transition hover:shadow-md md:w-44 ${s.order}`}
+                                >
+                                    <div className="relative mb-3">
+                                        {u.rank === 1 && (
+                                            <FaCrown className="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl text-yellow-400 drop-shadow" />
+                                        )}
+                                        <img
+                                            src={u.avatar}
+                                            alt={u.name}
+                                            className={`rounded-full object-cover ring-4 ${s.ring} ${s.size}`}
+                                            onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
+                                        />
+                                        <span className={`absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[11px] font-bold ${s.badge}`}>
+                                            #{u.rank}
+                                        </span>
+                                    </div>
+                                    <h3 className="line-clamp-1 text-center text-sm font-bold text-neutral-800">{u.name}</h3>
+                                    <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs font-semibold text-neutral-600">
+                                        <span className="flex items-center gap-1 text-primary-700">
+                                            <board.Icon /> {u.count} {unit}
+                                        </span>
+                                        {board.rating && (
+                                            <span className="flex items-center gap-1">
+                                                <FaStar className="text-amber-400" /> {Number(u.rating).toFixed(1)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </ProfileWrap>
+                            );
+                        })}
+                    </div>
+
+                    {/* Ranked list */}
+                    {rest.length > 0 && (
+                        <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[640px] text-left">
+                                    <thead>
+                                        <tr className="bg-neutral-50 text-xs font-bold uppercase tracking-wider text-neutral-500">
+                                            <th className="px-6 py-3">{t("lb.col_rank")}</th>
+                                            <th className="px-6 py-3">{t("lb.col_user")}</th>
+                                            <th className="px-6 py-3">{t(board.metric)}</th>
+                                            {board.rating && <th className="px-6 py-3">{t("lb.col_rating")}</th>}
+                                            <th className="px-6 py-3 text-right">{t("lb.col_action")}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-100">
+                                        {rest.map((u) => (
+                                            <tr key={u.id} className="transition hover:bg-neutral-50/60">
+                                                <td className="px-6 py-3.5 text-sm font-semibold text-neutral-500">#{u.rank}</td>
+                                                <td className="px-6 py-3.5">
+                                                    <ProfileWrap user={u} className="flex items-center gap-3 group">
+                                                        <img
+                                                            src={u.avatar}
+                                                            alt={u.name}
+                                                            className="h-9 w-9 rounded-full border border-neutral-200 object-cover"
+                                                            onError={(e) => { e.target.src = "/assets/default-profile.png"; }}
+                                                        />
+                                                        <span className="text-sm font-semibold text-neutral-800 group-hover:text-primary-700">{u.name}</span>
+                                                    </ProfileWrap>
+                                                </td>
+                                                <td className="px-6 py-3.5 text-sm text-neutral-600">{u.count} {unit}</td>
+                                                {board.rating && (
+                                                    <td className="px-6 py-3.5">
+                                                        <span className="flex items-center gap-1 text-sm font-medium text-neutral-700">
+                                                            <FaStar className="text-amber-400" /> {Number(u.rating).toFixed(1)}
+                                                        </span>
+                                                    </td>
+                                                )}
+                                                <td className="px-6 py-3.5 text-right">
+                                                    {u.username && (
+                                                        <Button isButtonLink href={`/forum/users/${u.username}`} type="primary" variant="outline" size="xs" rounded={false} className="rounded-lg">
+                                                            {t("lb.view_profile")}
+                                                        </Button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-
-                        {/* Rank Info */}
-                        <h2 className="text-[#0077D3] font-black text-2xl md:text-3xl mb-1">
-                            #{user.rank}
-                        </h2>
-                        <h3 className="font-bold text-neutral-900 text-base md:text-lg text-center mb-3">
-                            {user.name}
-                        </h3>
-
-                        <div className="flex items-center gap-2 text-xs md:text-sm font-semibold text-neutral-700 mb-5">
-                            <span className="flex items-center gap-1">
-                                <FaStar className="text-orange-400 text-lg mb-0.5" />{" "}
-                                {user.rating}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <IconItem className="text-[#0077D3]" />{" "}
-                                {user.count} {itemLabel}
-                            </span>
-                        </div>
-
-                        <Button type="primary" size="sm" className="w-full">
-                            {t("lb.follow")}
-                        </Button>
-                    </div>
-                ))}
-            </div>
-            </Container>
-
-            {/* 4. Rank List Table Section */}
-            <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden mb-8">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#F4F7FB] border-b border-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-4 px-6">{t("lb.col_rank")}</th>
-                                <th className="py-4 px-6">{columnTwoTitle}</th>
-                                <th className="py-4 px-6">
-                                    {columnThreeTitle}
-                                </th>
-                                <th className="py-4 px-6">{t("lb.col_rating")}</th>
-                                <th className="py-4 px-6 text-center">
-                                    {t("lb.col_action")}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100">
-                            {currentOtherRanks.map((item, idx) => (
-                                <tr
-                                    key={idx}
-                                    className="hover:bg-neutral-50/50 transition duration-150"
-                                >
-                                    <td className="py-4 px-6 text-neutral-500 font-medium text-sm">
-                                        {item.rank}
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <div className="flex items-center gap-3">
-                                            {/* Inisial Profil (Avatar teks) */}
-                                            <div
-                                                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${item.bg}`}
-                                            >
-                                                {item.initials}
-                                            </div>
-                                            <span className="font-semibold text-neutral-900 text-sm">
-                                                {item.name}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="py-4 px-6 text-neutral-600 text-sm">
-                                        {item.count} {itemLabel.toLowerCase()}
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <span className="flex items-center gap-1 text-neutral-800 font-medium text-sm">
-                                            <FaStar className="text-orange-400 text-base mb-0.5" />{" "}
-                                            {item.rating}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-6 text-center">
-                                        {/* Menggunakan komponen Button milikmu (Solid untuk Ikuti, Outline untuk Mengikuti) */}
-                                        <Button
-                                            type="primary"
-                                            variant={
-                                                item.rank === "# 05"
-                                                    ? "outline"
-                                                    : "solid"
-                                            }
-                                            size="sm"
-                                            className="w-28 text-xs py-2"
-                                        >
-                                            {item.rank === "# 05"
-                                                ? t("lb.following")
-                                                : t("lb.follow")}
-                                        </Button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {/* 5. Floating Current User Position */}
-            <div className="sticky max-w-max bottom-10 ml-auto right-4 md:right-10 z-[100]">
-                <div className="flex items-center gap-3 bg-white shadow-xl border border-neutral-100 rounded-full py-2 px-6">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-blue-100 text-[#0077D3] rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                            10
-                        </div>
-                        <span className="text-neutral-900 font-bold text-sm">
-                            {t("lb.current_position")} 🚀
-                        </span>
-                    </div>
-                </div>
-            </div>
+                    )}
+                </>
+            )}
         </Container>
     );
 }
 
-// Integrasikan ke MainLayout yang kamu kasih
 Leaderboard.layout = (page) => <MainLayout>{page}</MainLayout>;

@@ -121,6 +121,7 @@ export default function Index({ items = [], orders = {} }) {
                         key={item.id}
                         item={item}
                         manage
+                        onViewDetail={() => router.visit(`/jastip/${item.id}`)}
                         onEdit={() => router.visit(`/admin/jastip/${item.id}/edit`)}
                         onPublish={() => setPublishModal({ open: true, id: item.id, name: item.name })}
                         onGroupChat={() => router.post(`/chat/jastip/${item.id}/group`)}

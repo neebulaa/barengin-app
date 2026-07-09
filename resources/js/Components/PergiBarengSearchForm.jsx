@@ -3,6 +3,7 @@ import { router, usePage } from "@inertiajs/react";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
 import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
+import { useGeoCity } from "@/lib/useGeoCity";
 import {
     FaMapMarkerAlt,
     FaPlane,
@@ -20,6 +21,9 @@ export default function PergiSearchForm({ naked = true }) {
     const [tanggal, setTanggal] = useState(filters.tanggal || "");
     const [waktu, setWaktu] = useState(filters.waktu || "");
     const [jumlah, setJumlah] = useState(filters.jumlah || "");
+
+    // #7: default "Dari mana" ke lokasi user saat ini
+    useGeoCity(!filters.dari, setDari);
 
     const handleSearch = (e) => {
         e.preventDefault();

@@ -14,6 +14,7 @@ export default function PlaceAutocomplete({
     placeholder,
     leftIcon,
     prioritizeIndonesia = false,
+    fullAddress = false, // true: pilih alamat lengkap (display_name), bukan hanya nama tempat
 }) {
     const [query, setQuery] = useState(value);
     const [results, setResults] = useState([]);
@@ -96,7 +97,11 @@ export default function PlaceAutocomplete({
     }, [query, prioritizeIndonesia]);
 
     const handleSelect = (item) => {
-        const name = item.name || item.display_name?.split(",")[0] || query;
+        // fullAddress: pakai alamat lengkap (untuk kolom alamat spesifik),
+        // selain itu cukup nama tempat singkat (untuk kolom kota/tujuan).
+        const name = fullAddress
+            ? item.display_name || item.name || query
+            : item.name || item.display_name?.split(",")[0] || query;
         skipNextFetch.current = true;
         setQuery(name);
         onChange?.(name);

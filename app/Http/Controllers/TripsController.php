@@ -15,6 +15,7 @@ class TripsController extends Controller
 {
     public function index(Request $request)
     {
+        $dari      = trim((string) $request->query('dari', ''));
         $tujuan    = trim((string) $request->query('tujuan', ''));
         $startDate = $request->query('start_date');
         $endDate   = $request->query('end_date');
@@ -124,6 +125,7 @@ class TripsController extends Controller
             'trips' => $tripsPaginated,
             'all_trips' => $all_trips,
             'filters' => [
+                'dari'       => $dari, // titik berangkat user (untuk prefill; trip tak punya kolom asal)
                 'tujuan'     => $tujuan,
                 'start_date' => $startDate,
                 'end_date'   => $endDate,

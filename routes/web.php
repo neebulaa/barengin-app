@@ -265,9 +265,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Leaderboard
-Route::get('/leaderboard', function () {
-    return inertia('Leaderboard/Index');
-})->name('leaderboard');
+Route::get('/leaderboard', [\App\Http\Controllers\LeaderboardController::class, 'index'])->name('leaderboard');
 
 // Trip Bareng — daftar & detail boleh dilihat publik
 Route::get('/trip-bareng', [TripsController::class, 'index'])->name('trip-bareng');
