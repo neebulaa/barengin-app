@@ -2,9 +2,16 @@ import React, { useState } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Input from "@/Components/Input";
+import Textarea from "@/Components/Textarea";
+import Checkbox from "@/Components/Checkbox";
+import Toggle from "@/Components/Toggle";
+import Button from "@/Components/Button";
+import ConfirmModal from "@/Components/ConfirmModal";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronLeft, FiAlertTriangle } from "react-icons/fi";
 import { FaKey } from "react-icons/fa6"; // Menggunakan FaKey untuk icon verify
+
+const labelClass = "block text-sm font-semibold text-neutral-700 mb-1.5";
 
 export default function EditUser({ user }) {
     const { t } = useTranslation();
@@ -59,61 +66,32 @@ export default function EditUser({ user }) {
             <Head title="Edit Pengguna" />
 
             {/* ==========================================
-                MODAL POPUP: VERIFY & UNVERIFY
+                MODAL POPUP: VERIFY & UNVERIFY (pakai ConfirmModal global)
             ========================================== */}
-            {modalType && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
-                        <div className="p-6">
-                            {/* Header Modal */}
-                            <div className="flex items-start gap-4 mb-4">
-                                {modalType === "verify" ? (
-                                    <div className="w-12 h-12 bg-[#E1F0FF] text-primary-700 rounded-xl flex items-center justify-center flex-shrink-0">
-                                        <FaKey size={20} />
-                                    </div>
-                                ) : (
-                                    <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                                        <FiAlertTriangle size={24} />
-                                    </div>
-                                )}
-
-                                <div>
-                                    <h3 className="text-lg font-bold text-neutral-700 mb-1">
-                                        {modalType === "verify" ? t("admin.edit_user.verify_modal_title") : t("admin.edit_user.unverify_modal_title")}
-                                    </h3>
-                                    <p className="text-neutral-500 text-sm leading-relaxed">
-                                        {modalType === "verify"
-                                            ? t("admin.edit_user.verify_modal_desc")
-                                            : t("admin.edit_user.unverify_modal_desc")}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Tombol Modal */}
-                            <div className="flex items-center justify-end gap-3 mt-6 bg-neutral-50 -mx-6 -mb-6 p-4 border-t border-neutral-100">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="px-5 py-2.5 rounded-xl border border-neutral-200 bg-white text-neutral-700 font-semibold hover:bg-neutral-50 transition-colors"
-                                >
-                                    {t("common.cancel")}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={confirmVerificationChange}
-                                    className={`px-5 py-2.5 rounded-xl font-semibold text-white shadow-sm transition-colors ${
-                                        modalType === "verify"
-                                            ? "bg-primary-700 hover:bg-blue-700"
-                                            : "bg-red-600 hover:bg-red-700"
-                                    }`}
-                                >
-                                    {modalType === "verify" ? t("admin.edit_user.confirm_verify") : t("admin.edit_user.confirm_unverify")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmModal
+                open={modalType === "verify"}
+                onClose={closeModal}
+                onConfirm={confirmVerificationChange}
+                icon={<FaKey size={20} />}
+                iconClass="bg-[#E1F0FF] text-primary-700"
+                title={t("admin.edit_user.verify_modal_title")}
+                description={t("admin.edit_user.verify_modal_desc")}
+                confirmLabel={t("admin.edit_user.confirm_verify")}
+                cancelLabel={t("common.cancel")}
+                confirmType="primary"
+            />
+            <ConfirmModal
+                open={modalType === "unverify"}
+                onClose={closeModal}
+                onConfirm={confirmVerificationChange}
+                icon={<FiAlertTriangle size={22} />}
+                iconClass="bg-red-100 text-red-600"
+                title={t("admin.edit_user.unverify_modal_title")}
+                description={t("admin.edit_user.unverify_modal_desc")}
+                confirmLabel={t("admin.edit_user.confirm_unverify")}
+                cancelLabel={t("common.cancel")}
+                confirmType="danger"
+            />
 
             {/* ==========================================
                 HEADER HALAMAN
@@ -146,46 +124,41 @@ export default function EditUser({ user }) {
                     <div>
                         <h4 className="font-semibold text-neutral-700 mb-1">{t("admin.edit_user.photo_label")}</h4>
                         <p className="text-xs text-neutral-500 mb-2">{t("admin.edit_user.photo_hint")}</p>
-                        <button type="button" className="text-primary-700 text-sm font-semibold hover:underline">
+                        <Button type="danger" variant="ghost" size="xs" rounded={false} className="!p-0 hover:underline">
                             {t("admin.edit_user.remove_photo")}
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 {/* --- READ ONLY FIELDS (Data Diri) --- */}
                 <div className="space-y-5 mb-8">
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.full_name")}</label>
+                    <div>
+                        <label className={labelClass}>{t("admin.edit_user.full_name")}</label>
                         <Input type="text" value={safeUser.full_name ?? ""} disabled />
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.username")}</label>
+                    <div>
+                        <label className={labelClass}>{t("admin.edit_user.username")}</label>
                         <Input type="text" value={safeUser.username ?? ""} disabled />
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.email")}</label>
+                    <div>
+                        <label className={labelClass}>{t("admin.edit_user.email")}</label>
                         <Input type="email" value={safeUser.email ?? ""} disabled />
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.bio")}</label>
-                        <textarea
-                            value={safeUser.bio ?? ""}
-                            disabled
-                            rows="3"
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-400 bg-white text-neutral-700 placeholder:text-neutral-500 resize-none disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70 focus:border-primary-700 focus:outline-none"
-                        />
+                    <div>
+                        <label className={labelClass}>{t("admin.edit_user.bio")}</label>
+                        <Textarea value={safeUser.bio ?? ""} disabled rows={3} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.phone")}</label>
+                        <div>
+                            <label className={labelClass}>{t("admin.edit_user.phone")}</label>
                             <Input type="text" value={safeUser.phone ?? ""} disabled />
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-neutral-700">{t("admin.edit_user.birth_date")}</label>
+                        <div>
+                            <label className={labelClass}>{t("admin.edit_user.birth_date")}</label>
                             <Input type="text" value={safeUser.birth_date ?? ""} disabled />
                         </div>
                     </div>
@@ -193,7 +166,7 @@ export default function EditUser({ user }) {
 
                 {/* --- EDITABLE FIELDS (Roles) --- */}
                 <div className="mb-8">
-                    <label className="text-sm font-semibold text-neutral-700 block mb-3">{t("admin.edit_user.roles_label")}</label>
+                    <label className={`${labelClass} mb-3`}>{t("admin.edit_user.roles_label")}</label>
                     <div className="border border-neutral-200 rounded-2xl p-4 flex flex-col gap-3">
 
                         {/* Guider Checkbox Card */}
@@ -202,11 +175,9 @@ export default function EditUser({ user }) {
                                 <div className="font-bold text-neutral-700 text-sm mb-0.5">{t("admin.edit_user.guider_title")}</div>
                                 <div className="text-xs text-neutral-500">{t("admin.edit_user.guider_desc")}</div>
                             </div>
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 checked={data.is_guider}
-                                onChange={(e) => setData("is_guider", e.target.checked)}
-                                className="w-5 h-5 rounded border-neutral-300 text-primary-700 focus:ring-primary-700 cursor-pointer"
+                                onChange={(checked) => setData("is_guider", checked)}
                             />
                         </label>
 
@@ -216,11 +187,9 @@ export default function EditUser({ user }) {
                                 <div className="font-bold text-neutral-700 text-sm mb-0.5">{t("admin.edit_user.admin_title")}</div>
                                 <div className="text-xs text-neutral-500">{t("admin.edit_user.admin_desc")}</div>
                             </div>
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 checked={data.is_admin}
-                                onChange={(e) => setData("is_admin", e.target.checked)}
-                                className="w-5 h-5 rounded border-neutral-300 text-primary-700 focus:ring-primary-700 cursor-pointer"
+                                onChange={(checked) => setData("is_admin", checked)}
                             />
                         </label>
 
@@ -229,36 +198,19 @@ export default function EditUser({ user }) {
 
                 {/* --- USER VERIFICATION TOGGLE --- */}
                 <div className="mb-10">
-                    <label className="text-sm font-semibold text-neutral-700 block mb-3">{t("admin.edit_user.verify_label")}</label>
-                    <div className="flex items-center gap-3">
-                        {/* Custom Tailwind Switch */}
-                        <button
-                            type="button"
-                            onClick={handleToggleClick}
-                            className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors duration-300 ease-in-out focus:outline-none ${
-                                data.verified ? "bg-primary-700" : "bg-neutral-300"
-                            }`}
-                        >
-                            <div
-                                className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${
-                                    data.verified ? "translate-x-6" : "translate-x-0"
-                                }`}
-                            />
-                        </button>
-                        <span className="text-sm font-medium text-primary-700 cursor-pointer" onClick={handleToggleClick}>
-                            {data.verified ? t("admin.edit_user.verify_click_on") : t("admin.edit_user.verify_click_off")}
-                        </span>
-                    </div>
+                    <label className={`${labelClass} mb-3`}>{t("admin.edit_user.verify_label")}</label>
+                    <Toggle
+                        checked={data.verified}
+                        onChange={handleToggleClick}
+                        label={data.verified ? t("admin.edit_user.verify_click_on") : t("admin.edit_user.verify_click_off")}
+                        labelClassName="!text-primary-700 font-medium"
+                    />
                 </div>
 
                 {/* --- SUBMIT BUTTON --- */}
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="px-8 py-3 bg-primary-700 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
-                >
+                <Button type="primary" rounded={false} disabled={processing} className="rounded-xl font-semibold shadow-sm">
                     {t("admin.edit_user.submit")}
-                </button>
+                </Button>
             </form>
         </div>
     );

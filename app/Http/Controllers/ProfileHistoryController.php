@@ -325,8 +325,13 @@ class ProfileHistoryController extends Controller
                     ->exists();
 
                 $image = $this->resolveImage($p->img_name, $pbDefault);
-                // Pergi bareng = titik waktu tunggal: menunggu sebelum jam janji, selesai setelahnya.
-                $status = Carbon::now()->lt(Carbon::parse($p->time_appointment)) ? 'waiting' : 'finish';
+                // Pergi bareng (tanpa tanggal selesai terpisah): sebelum hari janji =
+                // menunggu, pada hari janji = berlangsung, setelahnya = selesai.
+                $appt = Carbon::parse($p->time_appointment);
+                $now  = Carbon::now();
+                $status = $now->lt($appt->copy()->startOfDay())
+                    ? 'waiting'
+                    : ($now->lte($appt->copy()->endOfDay()) ? 'ongoing' : 'finish');
 
                 return [
                     'key'        => 'pb-' . $p->id,
@@ -663,8 +668,8 @@ class ProfileHistoryController extends Controller
                     'date_label' => Carbon::parse($r->order_date)->translatedFormat('d M Y'),
                     'sort_date'  => Carbon::parse($r->order_date)->timestamp,
                     'status'     => $status,
-                    // Beri ulasan hanya setelah barang siap diambil / selesai
-                    'can_review' => in_array($status, ['ready_pickup', 'closed'], true),
+                    // Beri ulasan hanya setelah jastip selesai (lewat masa pengambilan)
+                    'can_review' => $status === 'closed',
                     'group_chat_url' => '/chat/jastip/' . $r->item_id . '/group',
                     'reviewed'   => $reviewed,
                     'user'       => [

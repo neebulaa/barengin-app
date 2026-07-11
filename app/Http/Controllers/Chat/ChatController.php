@@ -44,6 +44,8 @@ class ChatController extends Controller
             'participants:id,full_name,profile_image',
             'trip:id,name,guider_id,image',
             'pergi_bareng:id,name,img_name,initiator_id',
+            'jastip_item:id,name,user_id',
+            'jastip_item.jastip_item_images:id,jastip_item_id,image_name',
         ]);
 
         $peer = $conversation->participants->firstWhere('id', '!=', $user->id);
@@ -52,11 +54,11 @@ class ChatController extends Controller
             : null;
 
         $title = $conversation->is_group
-            ? ($conversation->trip?->name ?? $conversation->pergi_bareng?->name ?? 'Group')
+            ? $this->groupTitle($conversation)
             : optional($conversation->participants->firstWhere('id', '!=', $user->id))->full_name;
 
         $ownerId = $conversation->is_group
-            ? ($conversation->trip?->guider_id ?? $conversation->pergi_bareng?->initiator_id)
+            ? ($conversation->trip?->guider_id ?? $conversation->pergi_bareng?->initiator_id ?? $conversation->jastip_item?->user_id)
             : null;
 
         $messages = $conversation->messages()
@@ -194,14 +196,16 @@ class ChatController extends Controller
             ->with([
                 'participants:id,full_name,profile_image',
                 'trip:id,name,image',
-                'pergi_bareng:id,name,img_name'
+                'pergi_bareng:id,name,img_name',
+                'jastip_item:id,name,user_id',
+                'jastip_item.jastip_item_images:id,jastip_item_id,image_name',
             ])
             ->get()
             ->map(function ($c) use ($user) {
                 $lastMessage = $c->messages()->latest()->with('sender:id,full_name')->first();
 
                 $title = $c->is_group
-                    ? ($c->trip?->name ?? $c->pergi_bareng?->name ?? 'Group')
+                    ? $this->groupTitle($c)
                     : optional($c->participants->firstWhere('id', '!=', $user->id))->full_name;
 
                 $avatar = $c->is_group
@@ -246,9 +250,30 @@ class ChatController extends Controller
     }
 
     /**
-     * Avatar grup: untuk grup trip pakai gambar utama trip, untuk grup pergi
-     * bareng pakai gambarnya (atau header default). Mengembalikan null untuk
-     * grup lain sehingga pemanggil memakai fallback-nya sendiri.
+     * Judul grup: trip & pergi bareng pakai namanya; grup jastip diberi format
+     * "Jastip: {nama produk} Group" agar selaras dengan gambar produknya.
+     */
+    private function groupTitle(Conversation $conversation): string
+    {
+        if ($conversation->trip) {
+            return $conversation->trip->name;
+        }
+
+        if ($conversation->pergi_bareng) {
+            return $conversation->pergi_bareng->name;
+        }
+
+        if ($conversation->jastip_item) {
+            return 'Jastip: ' . $conversation->jastip_item->name . ' Group';
+        }
+
+        return 'Group';
+    }
+
+    /**
+     * Avatar grup: untuk grup trip pakai gambar utama trip, grup pergi bareng
+     * pakai gambarnya, dan grup jastip pakai gambar pertama produknya.
+     * Mengembalikan null untuk grup lain sehingga pemanggil memakai fallback-nya.
      */
     private function groupAvatar(Conversation $conversation): ?string
     {
@@ -270,7 +295,27 @@ class ChatController extends Controller
             return asset('storage/' . $img);
         }
 
+        if ($conversation->jastip_item) {
+            return $this->resolveJastipImage(
+                $conversation->jastip_item->jastip_item_images->first()?->image_name
+            );
+        }
+
         return null;
+    }
+
+    /** Ubah path gambar produk jastip menjadi URL <img>; null bila tak ada. */
+    private function resolveJastipImage(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        return asset('storage/' . $path);
     }
 
     /**

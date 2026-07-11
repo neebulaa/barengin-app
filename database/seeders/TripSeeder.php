@@ -2,33 +2,39 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use App\Models\Trip;
 use Carbon\Carbon;
 use Faker\Factory as Faker;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class TripSeeder extends Seeder
 {
+    /**
+     * Destinasi nyata + gambar yang relevan (diunduh ke public/assets/trips/{slug}-{1..3}.jpg
+     * oleh skrip download_trip_images). `-1` = gambar kartu, `-2`/`-3` = gambar aktivitas.
+     * `phase`: past (Selesai), ongoing (Berlangsung), future (Akan Mulai).
+     */
+    private function destinations(): array
+    {
+        return [
+            ['slug' => 'bromo',      'name' => 'Gunung Bromo',   'location' => 'Jawa Timur',           'phase' => 'past'],
+            ['slug' => 'borobudur',  'name' => 'Candi Borobudur','location' => 'Jawa Tengah',          'phase' => 'past'],
+            ['slug' => 'toba',       'name' => 'Danau Toba',     'location' => 'Sumatera Utara',       'phase' => 'past'],
+            ['slug' => 'bandung',    'name' => 'Bandung',        'location' => 'Jawa Barat',           'phase' => 'ongoing'],
+            ['slug' => 'yogyakarta', 'name' => 'Yogyakarta',     'location' => 'DI Yogyakarta',        'phase' => 'ongoing'],
+            ['slug' => 'bali',       'name' => 'Bali',           'location' => 'Bali',                 'phase' => 'future'],
+            ['slug' => 'raja-ampat', 'name' => 'Raja Ampat',     'location' => 'Papua Barat Daya',     'phase' => 'future'],
+            ['slug' => 'komodo',     'name' => 'Pulau Komodo',   'location' => 'Nusa Tenggara Timur',  'phase' => 'future'],
+            ['slug' => 'ijen',       'name' => 'Kawah Ijen',     'location' => 'Jawa Timur',           'phase' => 'future'],
+            ['slug' => 'bunaken',    'name' => 'Bunaken',        'location' => 'Sulawesi Utara',       'phase' => 'future'],
+        ];
+    }
+
     public function run()
     {
         $faker = Faker::create('id_ID');
-
-        // Gambar utama trip (dipakai di kartu trip & avatar grup chat trip)
-        $tripImages = [
-            '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg',
-            '/assets/trip-bareng/list-trip/pulau_dewata_bali/trip_bareng-pulau_dewata_bali-1.jpg',
-            '/assets/trip-bareng/list-trip/candi_borobudur/trip_bareng-candi_borobudur-1.jpg',
-        ];
-
-        // Data dummy deskripsi trip
-        $tripDescriptions = [
-            'Jelajahi keindahan alam memukau dengan itinerary yang sudah tersusun rapi. Kita akan mengunjungi spot-spot tersembunyi, menikmati kuliner lokal, dan berbagi cerita bersama teman-teman seperjalanan baru.',
-            'Liburan singkat untuk melepas penat dari kesibukan kota. Menikmati sunrise, udara segar, dan pemandangan hijau yang menyejukkan mata. Perjalanan dijamin nyaman, seru, dan penuh kejutan menyenangkan.',
-            'Petualangan tak terlupakan menanti! Siapkan dirimu untuk mengeksplorasi destinasi ikonik, berburu foto estetik, dan merasakan pengalaman liburan dengan gaya komunitas yang hangat.'
-        ];
 
         // 1. Buat 5 User Guider
         $guiderIds = [];
@@ -69,29 +75,38 @@ class TripSeeder extends Seeder
             DB::table('facilities')->insertGetId(['name' => 'Dokumentasi & Fotografer', 'slug' => 'dokumentasi', 'created_at' => now()]),
         ];
 
-        // 3. Looping 10 Trip
-        for ($i = 1; $i <= 10; $i++) {
+        // 3. Looping trip berdasarkan destinasi nyata (status tersebar: lampau / berlangsung / akan datang)
+        foreach ($this->destinations() as $i => $dest) {
+            [$startDate, $endDate] = $this->datesFor($dest['phase'], $faker);
+            $status = Trip::statusFromDates($startDate, $endDate);
 
-            $startDate = Carbon::parse($faker->dateTimeBetween('+1 month', '+3 months'));
-            $endDate = (clone $startDate)->addDays($faker->numberBetween(2, 4));
-            $price = $faker->randomElement([1500000, 2500000, 3800000]);
+            $price      = $faker->randomElement([1500000, 2500000, 3800000]);
             $customerId = $faker->randomElement($customerIds);
-            $guiderId = $faker->randomElement($guiderIds);
-            $cityName = $faker->city;
+            $guiderId   = $faker->randomElement($guiderIds);
+
+            // Gambar per destinasi: kartu (-1) & aktivitas (-1..-3)
+            $cardImage = "/assets/trips/{$dest['slug']}-1.jpg";
+            $actImages = [
+                "/assets/trips/{$dest['slug']}-1.jpg",
+                "/assets/trips/{$dest['slug']}-2.jpg",
+                "/assets/trips/{$dest['slug']}-3.jpg",
+            ];
 
             $tripId = DB::table('trips')->insertGetId([
                 'guider_id'    => $guiderId,
-                'name'         => 'Trip ' . $cityName,
-                'description'  => $faker->randomElement($tripDescriptions),
+                'name'         => 'Trip ' . $dest['name'],
+                'description'  => "Jelajahi keindahan {$dest['name']} di {$dest['location']} bersama pemandu berpengalaman. "
+                    . 'Itinerary tersusun rapi, mengunjungi spot ikonik & hidden gems, menikmati kuliner lokal, '
+                    . 'dan berbagi cerita bersama teman seperjalanan baru.',
                 'people_amount' => $faker->numberBetween(15, 20),
                 'start_date'   => $startDate,
                 'end_date'     => $endDate,
                 'rating'       => $faker->randomFloat(2, 4.0, 5.0),
                 'price'        => $price,
-                'image'        => $tripImages[($i - 1) % count($tripImages)],
-                'location'     => $cityName, // ← nama kota asli, bukan "Indonesia"
-                'status'       => 'created', // sudah dipublish (cron akan ubah ke ongoing/done sesuai tanggal)
-                'created_at'   => now(),
+                'image'        => $cardImage,
+                'location'     => $dest['location'],
+                'status'       => $status,
+                'created_at'   => now()->subDays($faker->numberBetween(1, 30)),
                 'updated_at'   => now(),
             ]);
 
@@ -101,18 +116,13 @@ class TripSeeder extends Seeder
                 DB::table('trip_facilities')->insert([
                     'trip_id' => $tripId,
                     'facility_id' => $facId,
-                    'created_at' => now()
+                    'created_at' => now(),
                 ]);
             }
 
-            // ==========================================
-            // C. Trip Activities (Bervariasi 3 sampai 8)
-            // ==========================================
-            $totalActivities = $faker->numberBetween(3, 8); // Angka acak dari 3 s.d 8
-
+            // C. Trip Activities (3 sampai 8) — gambar relevan dengan destinasi
+            $totalActivities = $faker->numberBetween(3, 8);
             for ($act = 1; $act <= $totalActivities; $act++) {
-
-                // Menentukan nama & deskripsi berdasarkan urutan (Awal, Tengah, Akhir)
                 if ($act === 1) {
                     $actName = 'Penjemputan & Briefing';
                     $actDesc = 'Tim menjemput peserta di meeting point. Briefing singkat sebelum perjalanan dan pengecekan kelengkapan peserta.';
@@ -120,11 +130,11 @@ class TripSeeder extends Seeder
                     $actName = 'Check-out & Perjalanan Pulang';
                     $actDesc = 'Kembali ke penginapan untuk check-out, singgah ke pusat oleh-oleh lokal, dan pengantaran pulang ke titik awal.';
                 } else {
-                    $actName = 'Eksplorasi Destinasi: ' . $faker->streetName;
+                    $actName = 'Eksplorasi ' . $dest['name'] . ': ' . $faker->streetName;
                     $actDesc = 'Mengunjungi spot wisata ikonik, berfoto bersama, menikmati pemandangan alam, dan aktivitas bebas di sekitar lokasi.';
                 }
 
-                $actStart = (clone $startDate)->addHours($act * 6); // Jarak antar aktivitas 6 jam (hanya simulasi)
+                $actStart = (clone $startDate)->addHours($act * 6);
                 $actEnd = (clone $actStart)->addHours($faker->numberBetween(2, 4));
 
                 $activityId = DB::table('trip_activities')->insertGetId([
@@ -137,33 +147,42 @@ class TripSeeder extends Seeder
                     'created_at' => now(),
                 ]);
 
-                // Insert 2 gambar untuk tiap aktivitas
+                // Dua gambar per aktivitas dari kolam gambar destinasi
                 DB::table('image_activities')->insert([
-                    ['trip_activity_id' => $activityId, 'activity_img_name' => '/assets/trips/bromo1.jpg'],
-                    ['trip_activity_id' => $activityId, 'activity_img_name' => '/assets/trips/bromo2.jpg'],
+                    ['trip_activity_id' => $activityId, 'activity_img_name' => $actImages[($act) % 3]],
+                    ['trip_activity_id' => $activityId, 'activity_img_name' => $actImages[($act + 1) % 3]],
                 ]);
             }
 
-            // D. Tabel user_ratings
-            DB::table('user_ratings')->insert([
-                'user_id' => $customerId,
-                'rated_user_id' => $guiderId,
-                'type' => 'trip_bareng',
-                'rating_amount' => $faker->randomFloat(2, 4.0, 5.0),
-                'comment' => $faker->randomElement(['Guide sangat ramah dan seru!', 'Perjalanan aman dan menyenangkan.', 'Sangat direkomendasikan untuk trip bareng.', 'Itinerary jelas dan on-time.']),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-
-            // Transaksi Dummy
-            // $transactionId = Str::uuid()->toString();
-            // DB::table('transactions')->insert([
-            //     'id' => $transactionId, 'user_id' => $customerId, 'total_amount' => $price, 'type' => 'trip', 'payment_method' => 'BCA Virtual Account', 'va_number' => '123456789', 'expired_at' => now()->addHours(24), 'created_at' => now()
-            // ]);
-            // DB::table('trip_orders')->insert([
-            //     'transaction_id' => $transactionId, 'trip_id' => $tripId, 'user_id' => $customerId, 'quantity' => 1, 'total' => $price, 'order_status' => 'paid', 'created_at' => now()
-            // ]);
+            // D. Ulasan pemandu (hanya trip yang sudah selesai yang wajar diulas)
+            if ($status === Trip::STATUS_DONE) {
+                DB::table('user_ratings')->insert([
+                    'user_id' => $customerId,
+                    'rated_user_id' => $guiderId,
+                    'type' => 'trip_bareng',
+                    'rating_amount' => $faker->randomFloat(2, 4.0, 5.0),
+                    'comment' => $faker->randomElement(['Guide sangat ramah dan seru!', 'Perjalanan aman dan menyenangkan.', 'Sangat direkomendasikan untuk trip bareng.', 'Itinerary jelas dan on-time.']),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
+    }
+
+    /** Rentang tanggal [start, end] sesuai fase status yang diinginkan. */
+    private function datesFor(string $phase, $faker): array
+    {
+        if ($phase === 'past') {
+            $start = Carbon::now()->subDays($faker->numberBetween(20, 60));
+            $end   = (clone $start)->addDays($faker->numberBetween(2, 4));
+        } elseif ($phase === 'ongoing') {
+            $start = Carbon::now()->subDays($faker->numberBetween(1, 2));
+            $end   = Carbon::now()->addDays($faker->numberBetween(1, 3));
+        } else { // future
+            $start = Carbon::now()->addDays($faker->numberBetween(10, 75));
+            $end   = (clone $start)->addDays($faker->numberBetween(2, 4));
+        }
+
+        return [$start, $end];
     }
 }

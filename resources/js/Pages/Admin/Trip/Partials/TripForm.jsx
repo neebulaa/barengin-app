@@ -10,6 +10,9 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-neutral-700 mb-1.5";
 const cardTitle = "text-lg font-semibold text-primary-700 mb-4";
 
+// Penanda kolom wajib
+const Req = () => <span className="text-red-500"> *</span>;
+
 const emptyActivity = () => ({
     name: "",
     date: "",
@@ -20,7 +23,7 @@ const emptyActivity = () => ({
     existing_images: [],
 });
 
-export default function TripForm({ data, setData, errors, processing, onSubmit, submitLabel, facilities = [] }) {
+export default function TripForm({ data, setData, errors, processing, onSubmit, submitLabel, facilities = [], imageRequired = true }) {
     const { t } = useTranslation();
     // Tanggal mulai minimal besok (harus setelah hari ini)
     const minStartDate = new Date(Date.now() + 86400000).toISOString().split("T")[0];
@@ -80,21 +83,21 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         <h3 className={cardTitle}>{t("admin.trip.form.general_info")}</h3>
 
                         <div className="mb-4">
-                            <label className={labelClass}>{t("admin.trip.form.trip_name")}</label>
+                            <label className={labelClass}>{t("admin.trip.form.trip_name")}<Req /></label>
                             <Input type="text" size="sm" value={data.name} onChange={(e) => setData("name", e.target.value)}
                                 placeholder={t("admin.trip.form.trip_name_ph")} />
                             {err("name")}
                         </div>
 
                         <div className="mb-4">
-                            <label className={labelClass}>{t("admin.trip.form.location")}</label>
+                            <label className={labelClass}>{t("admin.trip.form.location")}<Req /></label>
                             <LocationInput value={data.location} onChange={(v) => setData("location", v)}
                                 placeholder={t("admin.trip.form.location_ph")} className={inputClass} />
                             {err("location")}
                         </div>
 
                         <div className="mb-4">
-                            <label className={labelClass}>{t("admin.trip.form.about")}</label>
+                            <label className={labelClass}>{t("admin.trip.form.about")}<Req /></label>
                             <textarea rows={4} value={data.description} onChange={(e) => setData("description", e.target.value)}
                                 placeholder={t("admin.trip.form.about_ph")}
                                 className={inputClass + " resize-none"} />
@@ -103,18 +106,18 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className={labelClass}>{t("admin.trip.form.people_amount")}</label>
+                                <label className={labelClass}>{t("admin.trip.form.people_amount")}<Req /></label>
                                 <Input type="number" size="sm" min="1" value={data.people_amount}
                                     onChange={(e) => setData("people_amount", e.target.value)} placeholder="0" />
                                 {err("people_amount")}
                             </div>
                             <div>
-                                <label className={labelClass}>{t("admin.trip.form.start_date")}</label>
+                                <label className={labelClass}>{t("admin.trip.form.start_date")}<Req /></label>
                                 <Input type="date" size="sm" min={minStartDate} value={data.start_date} onChange={(e) => setData("start_date", e.target.value)} />
                                 {err("start_date")}
                             </div>
                             <div>
-                                <label className={labelClass}>{t("admin.trip.form.end_date")}</label>
+                                <label className={labelClass}>{t("admin.trip.form.end_date")}<Req /></label>
                                 <Input type="date" size="sm" min={data.start_date || minStartDate} value={data.end_date} onChange={(e) => setData("end_date", e.target.value)} />
                                 {err("end_date")}
                             </div>
@@ -124,7 +127,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                     {/* Rincian Harga */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.trip.form.price_section")}</h3>
-                        <label className={labelClass}>{t("admin.trip.form.price_per_person")}</label>
+                        <label className={labelClass}>{t("admin.trip.form.price_per_person")}<Req /></label>
                         <Input type="number" size="sm" min="0" leftAddon="Rp" value={data.price}
                             onChange={(e) => setData("price", e.target.value)} placeholder="contoh: 1500000" />
                         {err("price")}
@@ -152,7 +155,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                     </div>
 
                                     <div className="mb-3">
-                                        <label className={labelClass}>{t("admin.trip.form.activity_name")}</label>
+                                        <label className={labelClass}>{t("admin.trip.form.activity_name")}<Req /></label>
                                         <Input type="text" size="sm" value={act.name} onChange={(e) => updateActivity(i, "name", e.target.value)}
                                             placeholder={t("admin.trip.form.activity_name_ph")} />
                                         {err(`activities.${i}.name`)}
@@ -160,18 +163,18 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                         <div>
-                                            <label className={labelClass}>{t("admin.trip.form.date")}</label>
+                                            <label className={labelClass}>{t("admin.trip.form.date")}<Req /></label>
                                             <Input type="date" size="sm" min={data.start_date || minStartDate} max={data.end_date || undefined}
                                                 value={act.date} onChange={(e) => updateActivity(i, "date", e.target.value)} />
                                             {err(`activities.${i}.date`)}
                                         </div>
                                         <div>
-                                            <label className={labelClass}>{t("admin.trip.form.start_time")}</label>
+                                            <label className={labelClass}>{t("admin.trip.form.start_time")}<Req /></label>
                                             <Input type="time" size="sm" value={act.start_time} onChange={(e) => updateActivity(i, "start_time", e.target.value)} />
                                             {err(`activities.${i}.start_time`)}
                                         </div>
                                         <div>
-                                            <label className={labelClass}>{t("admin.trip.form.end_time")}</label>
+                                            <label className={labelClass}>{t("admin.trip.form.end_time")}<Req /></label>
                                             <Input type="time" size="sm" value={act.end_time} onChange={(e) => updateActivity(i, "end_time", e.target.value)} />
                                             {err(`activities.${i}.end_time`)}
                                         </div>
@@ -222,7 +225,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                 <div className="space-y-6">
                     {/* Fasilitas */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                        <h3 className={cardTitle}>{t("admin.trip.form.facilities")}</h3>
+                        <h3 className={cardTitle}>{t("admin.trip.form.facilities")}<Req /></h3>
                         <div className="space-y-2.5">
                             {facilityOptions.map((name) => (
                                 <label key={name} className="flex items-center justify-between cursor-pointer">
@@ -240,7 +243,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                     {/* Gambar Utama Trip */}
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                        <h3 className={cardTitle}>{t("admin.trip.form.main_image")}</h3>
+                        <h3 className={cardTitle}>{t("admin.trip.form.main_image")}{imageRequired && <Req />}</h3>
                         <label className="block cursor-pointer">
                             <input type="file" accept="image/*" onChange={handleTripImage} className="hidden" />
                             <div className="border-2 border-dashed border-neutral-300 rounded-xl h-44 flex flex-col items-center justify-center text-neutral-400 hover:border-primary-700 hover:text-primary-700 transition overflow-hidden bg-neutral-50">

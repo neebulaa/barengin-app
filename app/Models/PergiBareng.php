@@ -2,12 +2,37 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class PergiBareng extends Model
-{      
-    
+{
+
     protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name'];
+
+    /**
+     * Status berdasarkan waktu janji (tak ada tanggal selesai terpisah):
+     *  - will_start : sebelum hari janji
+     *  - ongoing    : pada hari janji
+     *  - finish     : setelah hari janji → bisa diulas
+     */
+    public function status(): string
+    {
+        if (! $this->time_appointment) {
+            return 'will_start';
+        }
+
+        $now  = Carbon::now();
+        $appt = Carbon::parse($this->time_appointment);
+
+        if ($now->lt($appt->copy()->startOfDay())) {
+            return 'will_start';
+        }
+        if ($now->lte($appt->copy()->endOfDay())) {
+            return 'ongoing';
+        }
+        return 'finish';
+    }
 
     protected function casts(){
         return [

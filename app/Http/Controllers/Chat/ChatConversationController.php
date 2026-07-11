@@ -221,9 +221,11 @@ class ChatConversationController extends Controller
 
         abort_unless((bool) $conversation->is_group, 403, 'Hanya berlaku untuk grup.');
 
-        $conversation->loadMissing(['trip:id,guider_id', 'pergi_bareng:id,initiator_id']);
+        $conversation->loadMissing(['trip:id,guider_id', 'pergi_bareng:id,initiator_id', 'jastip_item:id,user_id']);
 
-        $ownerId = $conversation->trip?->guider_id ?? $conversation->pergi_bareng?->initiator_id;
+        $ownerId = $conversation->trip?->guider_id
+            ?? $conversation->pergi_bareng?->initiator_id
+            ?? $conversation->jastip_item?->user_id;
 
         abort_unless(
             $ownerId !== null && (int) $ownerId === (int) $me->id,

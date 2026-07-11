@@ -6,6 +6,9 @@ import LocationInput from "@/Components/LocationInput";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiPlus, FiX, FiUploadCloud, FiChevronLeft } from "react-icons/fi";
 
+// Penanda kolom wajib
+const Req = () => <span className="text-red-500"> *</span>;
+
 export default function Create({ transportations = [] }) {
     const { t } = useTranslation();
     const [preview, setPreview] = useState(null);
@@ -77,7 +80,7 @@ export default function Create({ transportations = [] }) {
                         <h3 className={cardTitle}>{t("admin.pergi.form.section_destination")}</h3>
 
                         <div className="mb-4">
-                            <label className={labelClass}>{t("admin.pergi.form.name_label")}</label>
+                            <label className={labelClass}>{t("admin.pergi.form.name_label")}<Req /></label>
                             <input
                                 type="text"
                                 value={data.name}
@@ -89,7 +92,7 @@ export default function Create({ transportations = [] }) {
                         </div>
 
                         <div className="mb-4">
-                            <label className={labelClass}>{t("admin.pergi.form.destination_label")}</label>
+                            <label className={labelClass}>{t("admin.pergi.form.destination_label")}<Req /></label>
                             <LocationInput
                                 value={data.destination_loc}
                                 onChange={(v) => setData("destination_loc", v)}
@@ -100,7 +103,7 @@ export default function Create({ transportations = [] }) {
                         </div>
 
                         <div>
-                            <label className={labelClass}>{t("admin.pergi.form.meeting_point_label")}</label>
+                            <label className={labelClass}>{t("admin.pergi.form.meeting_point_label")}<Req /></label>
                             <LocationInput
                                 value={data.departure_loc}
                                 onChange={(v) => setData("departure_loc", v)}
@@ -117,7 +120,7 @@ export default function Create({ transportations = [] }) {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div>
-                                <label className={labelClass}>{t("admin.trip.form.date")}</label>
+                                <label className={labelClass}>{t("admin.trip.form.date")}<Req /></label>
                                 <input
                                     type="date"
                                     value={data.date}
@@ -127,7 +130,7 @@ export default function Create({ transportations = [] }) {
                                 {fieldError("date")}
                             </div>
                             <div>
-                                <label className={labelClass}>{t("admin.pergi.form.time_label")}</label>
+                                <label className={labelClass}>{t("admin.pergi.form.time_label")}<Req /></label>
                                 <input
                                     type="time"
                                     value={data.time}
@@ -137,7 +140,7 @@ export default function Create({ transportations = [] }) {
                                 {fieldError("time")}
                             </div>
                             <div>
-                                <label className={labelClass}>{t("admin.pergi.form.transport_label")}</label>
+                                <label className={labelClass}>{t("admin.pergi.form.transport_label")}<Req /></label>
                                 <select
                                     value={data.transportation}
                                     onChange={(e) => setData("transportation", e.target.value)}
@@ -153,7 +156,7 @@ export default function Create({ transportations = [] }) {
                         </div>
 
                         <div className="mb-4">
-                            <label className={labelClass}>{t("admin.trip.form.description")}</label>
+                            <label className={labelClass}>{t("admin.trip.form.description")}<Req /></label>
                             <textarea
                                 rows={4}
                                 value={data.description}
@@ -203,7 +206,7 @@ export default function Create({ transportations = [] }) {
                 <div className="space-y-6">
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.pergi.form.participants_section")}</h3>
-                        <label className={labelClass}>{t("admin.trip.form.people_amount")}</label>
+                        <label className={labelClass}>{t("admin.trip.form.people_amount")}<Req /></label>
                         <input
                             type="number"
                             min="1"

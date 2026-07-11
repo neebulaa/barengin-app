@@ -2,13 +2,23 @@ import React, { useEffect, useState } from "react";
 import Button from "@/Components/Button";
 import Input from "@/Components/Input";
 import Checkbox from "@/Components/Checkbox";
+import SearchSelect from "@/Components/SearchSelect";
 import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
 import { useTranslation } from "@/lib/useTranslation";
+import { toast } from "@/lib/toast";
 import { INDONESIA_PROVINCES } from "@/lib/indonesiaProvinces";
+import { regenciesOf } from "@/lib/indonesiaRegencies";
+import { COUNTRIES, countryCodeOf } from "@/lib/countries";
 import { FiPlus, FiX, FiTrash2, FiImage, FiMapPin, FiShoppingBag } from "react-icons/fi";
+
+// Batas ukuran gambar 5MB (sesuai validasi backend).
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 // #13: penanda kolom wajib
 const Req = () => <span className="text-red-500"> *</span>;
+
+// Opsi lokasi pembelian: provinsi Indonesia (untuk beli domestik) + negara (luar negeri).
+const PURCHASE_ORIGIN_OPTIONS = [...INDONESIA_PROVINCES, ...COUNTRIES];
 
 const inputClass =
     "w-full rounded-xl border border-neutral-400 px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-700";
@@ -34,6 +44,7 @@ export default function JastipForm({
     onRemoveExisting,
     onSaveDraft,
     autoLocate = false,
+    imageRequired = true,
 }) {
     const { t } = useTranslation();
     const [previews, setPreviews] = useState([]);
@@ -65,6 +76,29 @@ export default function JastipForm({
     const err = (key) => errors?.[key] && <p className="mt-1 text-xs text-red-500">{errors[key]}</p>;
     const totalPrice = Number(data.base_price || 0) + Number(data.jastip_fee || 0);
 
+    // ── Cascade lokasi: kota harus milik provinsi terpilih ──
+    const pickupCities = regenciesOf(data.pickup_province);
+    // Lokasi pembelian: bila memilih provinsi Indonesia, kota diambil dari dataset;
+    // bila memilih negara luar, kota jadi input bebas (tak ada dataset kota luar negeri).
+    const purchaseIsProvince = INDONESIA_PROVINCES.includes(data.purchase_province);
+    const purchaseCities = purchaseIsProvince ? regenciesOf(data.purchase_province) : [];
+
+    // Ganti provinsi ambil → kosongkan kota jika tak lagi cocok dengan provinsinya.
+    const setPickupProvince = (prov) =>
+        setData((d) => {
+            const cities = regenciesOf(prov);
+            const keepCity = d.pickup_city && cities.includes(d.pickup_city);
+            return { ...d, pickup_province: prov, pickup_city: keepCity ? d.pickup_city : "" };
+        });
+
+    // Ganti negara/provinsi pembelian → kosongkan kota jika tak lagi cocok.
+    const setPurchaseOrigin = (val) =>
+        setData((d) => {
+            const cities = INDONESIA_PROVINCES.includes(val) ? regenciesOf(val) : [];
+            const keepCity = d.purchase_city && cities.includes(d.purchase_city);
+            return { ...d, purchase_province: val, purchase_city: keepCity ? d.purchase_city : "" };
+        });
+
     // ── Varian ──
     const updateVariant = (i, field, value) =>
         setData("variants", data.variants.map((v, idx) => (idx === i ? { ...v, [field]: value } : v)));
@@ -72,6 +106,10 @@ export default function JastipForm({
     const removeVariant = (i) => setData("variants", data.variants.filter((_, idx) => idx !== i));
     const setVariantImage = (i, file) => {
         if (!file) return;
+        if (file.size > MAX_IMAGE_BYTES) {
+            toast.error(t("jastip.form.image_too_large"));
+            return;
+        }
         setData("variants", data.variants.map((v, idx) =>
             idx === i ? { ...v, image: file, image_url: URL.createObjectURL(file) } : v));
     };
@@ -103,8 +141,14 @@ export default function JastipForm({
     const addImages = (fileList) => {
         const files = Array.from(fileList || []);
         if (!files.length) return;
-        setData("images", [...(data.images || []), ...files]);
-        setPreviews((prev) => [...prev, ...files.map((f) => ({ url: URL.createObjectURL(f), file: f }))]);
+        // #: tolak gambar > 5MB dan beri notifikasi error.
+        const ok = files.filter((f) => f.size <= MAX_IMAGE_BYTES);
+        if (ok.length < files.length) {
+            toast.error(t("jastip.form.image_too_large"));
+        }
+        if (!ok.length) return;
+        setData("images", [...(data.images || []), ...ok]);
+        setPreviews((prev) => [...prev, ...ok.map((f) => ({ url: URL.createObjectURL(f), file: f }))]);
     };
     const removeNewImage = (idx) => {
         setData("images", data.images.filter((_, i) => i !== idx));
@@ -156,20 +200,39 @@ export default function JastipForm({
                         </div>
                         <div className="space-y-3">
                             <div>
-                                <label className={labelClass}>{t("jastip.form.province")}</label>
-                                <select value={data.pickup_province || ""} onChange={(e) => setData("pickup_province", e.target.value)} className={inputClass + " bg-white cursor-pointer"}>
-                                    <option value="">{t("jastip.form.province_ph")}</option>
-                                    {INDONESIA_PROVINCES.map((p) => (<option key={p} value={p}>{p}</option>))}
-                                </select>
+                                <label className={labelClass}>{t("jastip.form.province")}<Req /></label>
+                                <SearchSelect
+                                    value={data.pickup_province || ""}
+                                    onChange={setPickupProvince}
+                                    options={INDONESIA_PROVINCES}
+                                    placeholder={t("jastip.form.province_ph")}
+                                />
                                 {err("pickup_province")}
                             </div>
                             <div>
                                 <label className={labelClass}>{t("jastip.form.city")}</label>
-                                <PlaceAutocomplete value={data.pickup_city || ""} onChange={(v) => setData("pickup_city", v)} placeholder={t("jastip.form.city_ph")} prioritizeIndonesia />
+                                <SearchSelect
+                                    value={data.pickup_city || ""}
+                                    onChange={(v) => setData("pickup_city", v)}
+                                    options={pickupCities}
+                                    disabled={!data.pickup_province}
+                                    disabledText={t("jastip.form.pick_province_first")}
+                                    allowCustom={Boolean(data.pickup_province) && pickupCities.length === 0}
+                                    placeholder={t("jastip.form.city_select_ph")}
+                                />
+                                {err("pickup_city")}
                             </div>
                             <div>
-                                <label className={labelClass}>{t("jastip.form.pickup_address")}</label>
-                                <PlaceAutocomplete value={data.pickup_address || ""} onChange={(v) => setData("pickup_address", v)} placeholder={t("jastip.form.pickup_address_ph")} prioritizeIndonesia fullAddress />
+                                <label className={labelClass}>{t("jastip.form.pickup_address")}<Req /></label>
+                                <PlaceAutocomplete
+                                    value={data.pickup_address || ""}
+                                    onChange={(v) => setData("pickup_address", v)}
+                                    placeholder={t("jastip.form.pickup_address_ph")}
+                                    fullAddress
+                                    countryCodes="id"
+                                    contextSuffix={[data.pickup_city, data.pickup_province].filter(Boolean).join(", ")}
+                                />
+                                {err("pickup_address")}
                             </div>
                         </div>
                     </div>
@@ -184,16 +247,65 @@ export default function JastipForm({
                         </div>
                         <div className="space-y-3">
                             <div>
-                                <label className={labelClass}>{t("jastip.form.purchase_region")}</label>
-                                <PlaceAutocomplete value={data.purchase_province || ""} onChange={(v) => setData("purchase_province", v)} placeholder={t("jastip.form.purchase_region_ph")} />
+                                <label className={labelClass}>{t("jastip.form.purchase_region")}<Req /></label>
+                                <SearchSelect
+                                    value={data.purchase_province || ""}
+                                    onChange={setPurchaseOrigin}
+                                    options={PURCHASE_ORIGIN_OPTIONS}
+                                    placeholder={t("jastip.form.origin_select_ph")}
+                                />
+                                {err("purchase_province")}
                             </div>
                             <div>
                                 <label className={labelClass}>{t("jastip.form.city")}</label>
-                                <PlaceAutocomplete value={data.purchase_city || ""} onChange={(v) => setData("purchase_city", v)} placeholder={t("jastip.form.purchase_city_ph")} />
+                                {purchaseIsProvince ? (
+                                    // Provinsi Indonesia → daftar kota/kabupaten dari dataset.
+                                    <SearchSelect
+                                        value={data.purchase_city || ""}
+                                        onChange={(v) => setData("purchase_city", v)}
+                                        options={purchaseCities}
+                                        allowCustom={purchaseCities.length === 0}
+                                        placeholder={t("jastip.form.city_select_ph")}
+                                    />
+                                ) : data.purchase_province ? (
+                                    // Negara luar → cari kota via Nominatim, dibatasi hanya negara itu.
+                                    <PlaceAutocomplete
+                                        value={data.purchase_city || ""}
+                                        onChange={(v) => setData("purchase_city", v)}
+                                        placeholder={t("jastip.form.purchase_city_ph")}
+                                        countryCodes={countryCodeOf(data.purchase_province) || ""}
+                                    />
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value=""
+                                        disabled
+                                        placeholder={t("jastip.form.purchase_city_ph")}
+                                        className={inputClass + " cursor-not-allowed bg-neutral-50 text-neutral-400"}
+                                    />
+                                )}
+                                {err("purchase_city")}
                             </div>
                             <div>
                                 <label className={labelClass}>{t("jastip.form.purchase_address")}</label>
-                                <PlaceAutocomplete value={data.purchase_address || ""} onChange={(v) => setData("purchase_address", v)} placeholder={t("jastip.form.purchase_address_ph")} fullAddress />
+                                {data.purchase_province ? (
+                                    <PlaceAutocomplete
+                                        value={data.purchase_address || ""}
+                                        onChange={(v) => setData("purchase_address", v)}
+                                        placeholder={t("jastip.form.purchase_address_ph")}
+                                        countryCodes={purchaseIsProvince ? "id" : (countryCodeOf(data.purchase_province) || "")}
+                                        contextSuffix={[data.purchase_city, data.purchase_province].filter(Boolean).join(", ")}
+                                    />
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value=""
+                                        disabled
+                                        placeholder={t("jastip.form.purchase_address_ph")}
+                                        className={inputClass + " cursor-not-allowed bg-neutral-50 text-neutral-400"}
+                                    />
+                                )}
+                                {err("purchase_address")}
                             </div>
                         </div>
                     </div>
@@ -244,12 +356,12 @@ export default function JastipForm({
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                        <label className={labelClass}>{t("jastip.form.start_date")}</label>
+                        <label className={labelClass}>{t("jastip.form.start_date")}<Req /></label>
                         <Input type="date" size="sm" value={data.start_date} onChange={(e) => setData("start_date", e.target.value)} />
                         {err("start_date")}
                     </div>
                     <div>
-                        <label className={labelClass}>{t("jastip.form.end_date")}</label>
+                        <label className={labelClass}>{t("jastip.form.end_date")}<Req /></label>
                         <Input type="date" size="sm" min={data.start_date || undefined} value={data.end_date} onChange={(e) => setData("end_date", e.target.value)} />
                         {err("end_date")}
                     </div>
@@ -258,12 +370,12 @@ export default function JastipForm({
                 {/* #7: jendela pengambilan barang oleh pembeli */}
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                        <label className={labelClass}>{t("jastip.form.pickup_start_date")}</label>
-                        <Input type="date" size="sm" value={data.pickup_start_date} onChange={(e) => setData("pickup_start_date", e.target.value)} />
+                        <label className={labelClass}>{t("jastip.form.pickup_start_date")}<Req /></label>
+                        <Input type="date" size="sm" min={data.end_date || undefined} value={data.pickup_start_date} onChange={(e) => setData("pickup_start_date", e.target.value)} />
                         {err("pickup_start_date")}
                     </div>
                     <div>
-                        <label className={labelClass}>{t("jastip.form.pickup_end_date")}</label>
+                        <label className={labelClass}>{t("jastip.form.pickup_end_date")}<Req /></label>
                         <Input type="date" size="sm" min={data.pickup_start_date || undefined} value={data.pickup_end_date} onChange={(e) => setData("pickup_end_date", e.target.value)} />
                         {err("pickup_end_date")}
                     </div>
@@ -360,7 +472,8 @@ export default function JastipForm({
 
             {/* Gambar Produk */}
             <div className={card}>
-                <h3 className={cardTitle}>{t("jastip.form.images")}</h3>
+                <h3 className={cardTitle}>{t("jastip.form.images")}{imageRequired && <Req />}</h3>
+                <p className="-mt-2 mb-4 text-xs text-neutral-400">{t("jastip.form.image_size_note")}</p>
                 <div className="flex flex-wrap gap-3">
                     <label className="flex h-32 w-32 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 text-neutral-400 transition hover:border-primary-700 hover:text-primary-700">
                         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addImages(e.target.files); e.target.value = ""; }} />

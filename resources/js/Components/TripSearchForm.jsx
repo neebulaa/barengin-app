@@ -3,28 +3,22 @@ import { router, usePage } from "@inertiajs/react";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
 import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
-import { useGeoCity } from "@/lib/useGeoCity";
 import { useTranslation } from "@/lib/useTranslation";
-import { FaMapMarkerAlt, FaPlaneDeparture, FaSearch } from "react-icons/fa";
+import { FaPlaneDeparture, FaSearch } from "react-icons/fa";
 
 export default function TripSearchForm({ naked = true }) {
     const { t } = useTranslation();
     const { filters = {} } = usePage().props;
 
-    const [dari, setDari] = useState(filters.dari || "");
     const [tujuan, setTujuan] = useState(filters.tujuan || "");
     const [startDate, setStartDate] = useState(filters.start_date || "");
     const [endDate, setEndDate] = useState(filters.end_date || "");
-
-    // #6: default "Dari" ke lokasi user saat ini
-    useGeoCity(!filters.dari, setDari);
 
     const handleSearch = (e) => {
         e.preventDefault();
         router.get(
             "/trip-bareng",
             {
-                dari: dari || undefined,
                 tujuan: tujuan || undefined,
                 start_date: startDate || undefined,
                 end_date: endDate || undefined,
@@ -39,18 +33,7 @@ export default function TripSearchForm({ naked = true }) {
             className={`w-full ${naked ? "bg-white rounded-2xl shadow-lg p-6" : ""}`}
         >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end animate-fade-in">
-                <div className="md:col-span-3">
-                    <PlaceAutocomplete
-                        label={t("search.from")}
-                        placeholder="Jakarta"
-                        leftIcon={<FaMapMarkerAlt />}
-                        value={dari}
-                        onChange={setDari}
-                        prioritizeIndonesia
-                    />
-                </div>
-
-                <div className="md:col-span-3">
+                <div className="md:col-span-4">
                     <PlaceAutocomplete
                         label={t("search.destination")}
                         placeholder="Bromo"
@@ -61,7 +44,7 @@ export default function TripSearchForm({ naked = true }) {
                     />
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-3">
                     <Input
                         label={t("search.start_date")}
                         type="date"
@@ -70,7 +53,7 @@ export default function TripSearchForm({ naked = true }) {
                     />
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-3">
                     <Input
                         label={t("search.end_date")}
                         type="date"

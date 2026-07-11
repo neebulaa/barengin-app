@@ -7,8 +7,28 @@ export default function Pagination({
     totalPages = 10,
     onPageChange = () => {},
     className = "",
+    scrollTargetId = "", // id elemen yang di-scroll ke atas (default: seluruh halaman)
 }) {
     const { t } = useTranslation();
+
+    // Setiap perpindahan halaman: scroll ke atas agar data pertama halaman baru
+    // langsung terlihat (tidak tertinggal di posisi scroll sebelumnya). Bila
+    // `scrollTargetId` diberikan, scroll ke bagian itu (mis. tabel yang tertanam
+    // di tengah halaman) alih-alih ke paling atas.
+    const changePage = (page) => {
+        onPageChange(page);
+        if (typeof window === "undefined") return;
+
+        if (scrollTargetId) {
+            const el = document.getElementById(scrollTargetId);
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                return;
+            }
+        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
     // Logika perhitungan halaman yang dinamis dan optimal
     const getPageNumbers = () => {
         // Jika total halaman sedikit (<= 7), tampilkan semua angkanya
@@ -37,7 +57,7 @@ export default function Pagination({
             
             {/* --- Tombol Prev --- */}
             <button
-                onClick={() => onPageChange(currentPage - 1)}
+                onClick={() => changePage(currentPage - 1)}
                 disabled={currentPage === 1}
                 className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     currentPage === 1
@@ -71,7 +91,7 @@ export default function Pagination({
                     return (
                         <button
                             key={page}
-                            onClick={() => onPageChange(page)}
+                            onClick={() => changePage(page)}
                             className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 ${
                                 isActive
                                     ? "bg-primary-50 border border-primary-500 text-primary-700 shadow-sm"
@@ -87,7 +107,7 @@ export default function Pagination({
 
             {/* --- Tombol Next --- */}
             <button
-                onClick={() => onPageChange(currentPage + 1)}
+                onClick={() => changePage(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     currentPage === totalPages

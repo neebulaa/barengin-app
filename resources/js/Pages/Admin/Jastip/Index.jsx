@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
@@ -7,7 +7,6 @@ import Pagination from "@/Components/Pagination";
 import JastipProductCard from "@/Components/JastipProductCard";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiSearch, FiPlus, FiShoppingCart, FiAlertCircle, FiUploadCloud } from "react-icons/fi";
-import { LuMapPin, LuTruck } from "react-icons/lu";
 
 const STATUS_BADGE = {
     paid: "bg-blue-100 text-primary-700",
@@ -31,6 +30,17 @@ export default function Index({ items = [], orders = {} }) {
         else if (sortBy === "stock") list = [...list].sort((a, b) => (b.max_slot - b.sold) - (a.max_slot - a.sold));
         return list;
     }, [items, search, sortBy]);
+
+    // Pagination produk (client-side, 12 per halaman) agar daftar tidak terlalu
+    // panjang dan Aktivitas Penjualan mudah dijangkau.
+    const PRODUCTS_PER_PAGE = 12;
+    const [itemsPage, setItemsPage] = useState(1);
+    useEffect(() => setItemsPage(1), [search, sortBy]);
+
+    const itemsTotalPages = Math.max(1, Math.ceil(rows.length / PRODUCTS_PER_PAGE));
+    const safeItemsPage = Math.min(itemsPage, itemsTotalPages);
+    const pagedRows = rows.slice((safeItemsPage - 1) * PRODUCTS_PER_PAGE, safeItemsPage * PRODUCTS_PER_PAGE);
+    const isLastItemsPage = safeItemsPage >= itemsTotalPages;
 
     const orderRows = orders?.data ?? [];
 
@@ -62,7 +72,7 @@ export default function Index({ items = [], orders = {} }) {
                 title={t("jastip.delete_title")}
                 description={<>{t("jastip.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.name}</span>{t("jastip.delete_desc_suffix")}</>}
                 confirmLabel={t("jastip.delete_confirm")}
-                confirmClass="bg-red-600 hover:bg-red-700"
+                confirmType="danger"
             />
             <ConfirmModal
                 open={publishModal.open}
@@ -73,7 +83,7 @@ export default function Index({ items = [], orders = {} }) {
                 title={t("jastip.publish_title")}
                 description={<>{t("jastip.publish_desc_prefix")} <span className="font-semibold text-neutral-700">{publishModal.name}</span> {t("jastip.publish_desc_suffix")}</>}
                 confirmLabel={t("jastip.publish_confirm")}
-                confirmClass="bg-primary-700 hover:bg-blue-700"
+                confirmType="primary"
             />
 
             {/* List Product */}
@@ -116,7 +126,7 @@ export default function Index({ items = [], orders = {} }) {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {rows.map((item) => (
+                {pagedRows.map((item) => (
                     <JastipProductCard
                         key={item.id}
                         item={item}
@@ -129,18 +139,32 @@ export default function Index({ items = [], orders = {} }) {
                     />
                 ))}
 
-                {/* Kartu tambah */}
-                <Link
-                    href="/admin/jastip/create"
-                    className="flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-neutral-300 text-neutral-400 transition hover:border-primary-700 hover:text-primary-700"
-                >
-                    <FiShoppingCart size={30} />
-                    <span className="text-sm font-semibold">{t("jastip.add_btn")}</span>
-                </Link>
+                {/* Kartu tambah — hanya di halaman terakhir agar tetap di ujung daftar */}
+                {isLastItemsPage && (
+                    <Link
+                        href="/admin/jastip/create"
+                        className="flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-neutral-300 text-neutral-400 transition hover:border-primary-700 hover:text-primary-700"
+                    >
+                        <FiShoppingCart size={30} />
+                        <span className="text-sm font-semibold">{t("jastip.add_btn")}</span>
+                    </Link>
+                )}
             </div>
 
+            {itemsTotalPages > 1 && (
+                <Pagination
+                    className="mt-8"
+                    currentPage={safeItemsPage}
+                    totalPages={itemsTotalPages}
+                    onPageChange={(p) => {
+                        if (p < 1 || p > itemsTotalPages) return;
+                        setItemsPage(p);
+                    }}
+                />
+            )}
+
             {/* Aktivitas Penjualan */}
-            <div className="mt-10">
+            <div id="sales-activity" className="mt-10 scroll-mt-6">
                 <h2 className="mb-4 text-xl font-bold text-neutral-700">{t("jastip.sales_activity")}</h2>
                 <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm">
                     <div className="overflow-x-auto">
@@ -150,7 +174,6 @@ export default function Index({ items = [], orders = {} }) {
                                     <th className="px-5 py-3">{t("jastip.col_order")}</th>
                                     <th className="px-5 py-3">{t("jastip.col_buyer")}</th>
                                     <th className="px-5 py-3">{t("jastip.col_product")}</th>
-                                    <th className="px-5 py-3">{t("jastip.col_service")}</th>
                                     <th className="px-5 py-3">{t("jastip.col_status")}</th>
                                 </tr>
                             </thead>
@@ -177,12 +200,6 @@ export default function Index({ items = [], orders = {} }) {
                                                 {o.item} <span className="text-neutral-400">×{o.qty}</span>
                                             </td>
                                             <td className="px-5 py-3.5">
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
-                                                    {o.shipping ? <LuTruck size={13} /> : <LuMapPin size={13} />}
-                                                    {o.shipping ? t("jastip.service_delivery") : t("jastip.service_pickup")}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5">
                                                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_BADGE[o.status] || "bg-neutral-100 text-neutral-500"}`}>
                                                     {t(`jastip.order_status.${o.status}`, o.status)}
                                                 </span>
@@ -191,7 +208,7 @@ export default function Index({ items = [], orders = {} }) {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="px-5 py-12 text-center text-sm text-neutral-500">
+                                        <td colSpan="4" className="px-5 py-12 text-center text-sm text-neutral-500">
                                             {t("jastip.no_orders")}
                                         </td>
                                     </tr>
@@ -209,6 +226,7 @@ export default function Index({ items = [], orders = {} }) {
                                 currentPage={orders.current_page}
                                 totalPages={orders.last_page}
                                 onPageChange={goPage}
+                                scrollTargetId="sales-activity"
                             />
                         )}
                     </div>

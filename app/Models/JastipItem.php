@@ -75,6 +75,33 @@ class JastipItem extends Model
     }
 
     /**
+     * Status siklus hidup jastip (untuk badge & kelayakan ulasan):
+     *  - upcoming    : belum dibuka (sebelum start_date)
+     *  - in_order    : masa pemesanan (start_date..end_date)
+     *  - in_process  : sedang dibelikan jastiper (setelah order, sebelum pickup)
+     *  - pickup      : masa pengambilan (pickup_start_date..pickup_end_date)
+     *  - finish      : selesai (setelah pickup_end_date) → bisa diulas
+     */
+    public function lifecycleStatus(): string
+    {
+        $today = \Carbon\Carbon::today();
+
+        if ($this->start_date && $today->lt(\Carbon\Carbon::parse($this->start_date))) {
+            return 'upcoming';
+        }
+        if ($this->end_date && $today->lte(\Carbon\Carbon::parse($this->end_date))) {
+            return 'in_order';
+        }
+        if ($this->pickup_start_date && $today->lt(\Carbon\Carbon::parse($this->pickup_start_date))) {
+            return 'in_process';
+        }
+        if ($this->pickup_end_date && $today->lte(\Carbon\Carbon::parse($this->pickup_end_date))) {
+            return 'pickup';
+        }
+        return 'finish';
+    }
+
+    /**
      * Status jadwal: 'upcoming' (belum dibuka), 'ongoing' (sedang berlangsung),
      * atau 'closed' (sudah lewat batas pemesanan).
      */

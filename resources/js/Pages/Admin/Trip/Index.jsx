@@ -66,7 +66,7 @@ export default function Index({ trips = [] }) {
                 title={translate("admin.trip.delete_title")}
                 description={<>{translate("admin.trip.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.name}</span>{translate("admin.trip.delete_desc_suffix")}</>}
                 confirmLabel={translate("admin.trip.delete_confirm")}
-                confirmClass="bg-red-600 hover:bg-red-700"
+                confirmType="danger"
             />
             <ConfirmModal
                 open={publishModal.open}
@@ -77,7 +77,7 @@ export default function Index({ trips = [] }) {
                 title={translate("admin.trip.publish_title")}
                 description={<>{translate("admin.trip.publish_desc_prefix")} <span className="font-semibold text-neutral-700">{publishModal.name}</span> {translate("admin.trip.publish_desc_suffix")}</>}
                 confirmLabel={translate("admin.trip.publish_confirm")}
-                confirmClass="bg-primary-700 hover:bg-blue-700"
+                confirmType="primary"
             />
 
             {/* Toolbar */}

@@ -101,7 +101,7 @@ class TripsController extends Controller
             return [
                 'id' => $trip->id,
                 'title' => $trip->name,
-                'location' => 'Indonesia',
+                'location' => $trip->location ?: 'Indonesia',
                 'date' => $startDate->format('d M y') . ' - ' . $endDate->format('d M y') . ' (' . $duration . ')',
                 'capacity' => $joined . '/' . $trip->people_amount . ' orang',
                 'remaining_seats' => $remaining > 0 ? $remaining : 0,

@@ -15,6 +15,8 @@ export default function PlaceAutocomplete({
     leftIcon,
     prioritizeIndonesia = false,
     fullAddress = false, // true: pilih alamat lengkap (display_name), bukan hanya nama tempat
+    countryCodes = "", // kode ISO alpha-2 (mis. "my") — batasi hasil hanya pada negara ini
+    contextSuffix = "", // konteks lokasi (mis. "Denpasar, Bali") — dibiaskan ke kota/provinsi itu
 }) {
     const [query, setQuery] = useState(value);
     const [results, setResults] = useState([]);
@@ -62,13 +64,21 @@ export default function PlaceAutocomplete({
 
                 setLoading(true);
 
+                // Bias pencarian ke kota/provinsi terpilih dengan menambah konteksnya
+                // ke query (tanpa mengubah teks yang tampil di input).
+                const searchQuery = contextSuffix ? `${q}, ${contextSuffix}` : q;
+
                 const params = new URLSearchParams({
                     format: "jsonv2",
                     addressdetails: "1",
                     "accept-language": "id",
                     limit: "10",
-                    q,
+                    q: searchQuery,
                 });
+                // Batasi hasil hanya pada negara terpilih (mis. kota di Malaysia saja).
+                if (countryCodes) {
+                    params.set("countrycodes", countryCodes);
+                }
 
                 const res = await fetch(
                     `https://nominatim.openstreetmap.org/search?${params.toString()}`,
@@ -94,7 +104,7 @@ export default function PlaceAutocomplete({
         }, 350);
 
         return () => clearTimeout(handle);
-    }, [query, prioritizeIndonesia]);
+    }, [query, prioritizeIndonesia, countryCodes, contextSuffix]);
 
     const handleSelect = (item) => {
         // fullAddress: pakai alamat lengkap (untuk kolom alamat spesifik),

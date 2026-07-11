@@ -56,6 +56,7 @@ export default function Edit({ trip, facilities = [] }) {
                 onSubmit={submit}
                 submitLabel={t("admin.trip.form.update_draft")}
                 facilities={facilities}
+                imageRequired={false}
             />
         </>
     );

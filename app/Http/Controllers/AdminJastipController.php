@@ -80,7 +80,7 @@ class AdminJastipController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->validateItem($request);
+        $data = $this->validateItem($request, true);
         $item = $this->persistItem(new JastipItem(['user_id' => Auth::id()]), $request, $data);
 
         ActivityLog::record('Membuat produk jastip: ' . $item->name);
@@ -296,17 +296,21 @@ class AdminJastipController extends Controller
         ];
     }
 
-    private function validateItem(Request $request): array
+    private function validateItem(Request $request, bool $isCreate = false): array
     {
+        // Saat membuat produk baru, minimal satu gambar wajib; saat edit, gambar
+        // lama tetap dipertahankan sehingga tidak wajib unggah ulang.
+        $imagesRule = $isCreate ? ['required', 'array', 'min:1'] : ['nullable', 'array'];
+
         return $request->validate([
             'name'               => ['required', 'string', 'max:255'],
             'jastip_category_id' => ['required', 'integer', 'exists:jastip_categories,id'],
             'description'        => ['nullable', 'string'],
-            // Lokasi
-            'pickup_province'    => ['nullable', 'string', 'max:100'],
+            // Lokasi — provinsi & alamat ambil + negara/provinsi pembelian wajib; kota opsional
+            'pickup_province'    => ['required', 'string', 'max:100'],
             'pickup_city'        => ['nullable', 'string', 'max:100'],
-            'pickup_address'     => ['nullable', 'string', 'max:500'],
-            'purchase_province'  => ['nullable', 'string', 'max:100'],
+            'pickup_address'     => ['required', 'string', 'max:500'],
+            'purchase_province'  => ['required', 'string', 'max:100'],
             'purchase_city'      => ['nullable', 'string', 'max:100'],
             'purchase_address'   => ['nullable', 'string', 'max:500'],
             'base_price'         => ['required', 'numeric', 'min:0'],
@@ -321,17 +325,29 @@ class AdminJastipController extends Controller
             'variants.*.stock'         => ['required_with:variants', 'integer', 'min:0'],
             'variants.*.price'         => ['nullable', 'numeric', 'min:0'],
             'variants.*.min_buy'       => ['nullable', 'integer', 'min:1'],
-            'variants.*.image'         => ['nullable', 'image', 'max:4096'],
+            'variants.*.image'         => ['nullable', 'image', 'max:5120'],
             'variants.*.image_name'    => ['nullable', 'string'],
-            'start_date'  => ['nullable', 'date'],
-            'end_date'    => ['nullable', 'date', 'after_or_equal:start_date'],
-            // Jendela pengambilan barang (#7)
-            'pickup_start_date' => ['nullable', 'date'],
-            'pickup_end_date'   => ['nullable', 'date', 'after_or_equal:pickup_start_date'],
+            'start_date'  => ['required', 'date'],
+            'end_date'    => ['required', 'date', 'after_or_equal:start_date'],
+            // Jendela pengambilan barang (#7) — setelah masa pemesanan ditutup
+            'pickup_start_date' => ['required', 'date', 'after_or_equal:end_date'],
+            'pickup_end_date'   => ['required', 'date', 'after_or_equal:pickup_start_date'],
             'publish'     => ['sometimes', 'boolean'],
-            'images'      => ['nullable', 'array'],
-            'images.*'    => ['image', 'max:4096'],
+            'images'      => $imagesRule,
+            'images.*'    => ['image', 'max:5120'],
             'removed_images' => ['nullable', 'array'],
+        ], [
+            'images.required'          => 'Unggah minimal satu gambar produk.',
+            'images.min'               => 'Unggah minimal satu gambar produk.',
+            'images.*.max'             => 'Ukuran gambar maksimal 5MB.',
+            'variants.*.image.max'     => 'Ukuran gambar varian maksimal 5MB.',
+            'pickup_province.required' => 'Provinsi lokasi ambil wajib dipilih.',
+            'pickup_address.required'  => 'Alamat ambil jastip wajib diisi.',
+            'purchase_province.required' => 'Negara/provinsi pembelian wajib dipilih.',
+            'start_date.required'      => 'Tanggal mulai pesan wajib diisi.',
+            'end_date.required'        => 'Tanggal akhir pesan wajib diisi.',
+            'pickup_start_date.required' => 'Tanggal mulai pengambilan wajib diisi.',
+            'pickup_end_date.required'   => 'Tanggal akhir pengambilan wajib diisi.',
         ]);
     }
 

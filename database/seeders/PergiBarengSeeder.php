@@ -6,6 +6,7 @@ use App\Models\PergiBareng;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class PergiBarengSeeder extends Seeder
 {
@@ -143,6 +144,8 @@ class PergiBarengSeeder extends Seeder
             ],
         ];
 
+        $allUserIds = $users->pluck('id')->all();
+
         foreach ($trips as $index => $trip) {
             // Assign random user sebagai initiator
             $trip['initiator_id'] = $users[$index % count($users)]->id;
@@ -150,7 +153,35 @@ class PergiBarengSeeder extends Seeder
             // Gambar berbeda per pergi bareng
             $trip['img_name'] = $images[$index % count($images)];
 
-            PergiBareng::create($trip);
+            // Waktu janji tersebar agar tiap status muncul:
+            //  - index 0-2 : sudah lewat  → Selesai (bisa diulas)
+            //  - index 3-4 : hari ini     → Berlangsung
+            //  - index 5+  : akan datang  → Akan Mulai
+            if ($index < 3) {
+                $trip['time_appointment'] = Carbon::now()->subDays(rand(3, 30))->setTime(rand(6, 16), 0);
+            } elseif ($index < 5) {
+                $trip['time_appointment'] = Carbon::now()->setTime(rand(9, 18), 0);
+            } else {
+                $trip['time_appointment'] = Carbon::now()->addDays(rand(2, 12))->setTime(rand(6, 16), 0);
+            }
+
+            $pb = PergiBareng::create($trip);
+
+            // Peserta (selain penyelenggara) — agar muncul di riwayat & bisa diulas saat selesai
+            $candidates = array_values(array_filter($allUserIds, fn ($id) => $id !== $pb->initiator_id));
+            if (! empty($candidates)) {
+                shuffle($candidates);
+                $count = min(count($candidates), rand(1, min(4, (int) $pb->people_amount - 1)));
+                foreach (array_slice($candidates, 0, max(1, $count)) as $uid) {
+                    DB::table('pergi_bareng_participants')->insert([
+                        'pergi_bareng_id' => $pb->id,
+                        'user_id'         => $uid,
+                        'quantity'        => 1,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ]);
+                }
+            }
         }
 
         $this->command?->info('PergiBareng seeder telah berhasil di-generate dengan 10 data!');

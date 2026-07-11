@@ -33,7 +33,9 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                 </span>
 
                 {manage && (
-                    <div className="absolute left-2.5 top-2.5 flex gap-1.5 opacity-0 transition group-hover:opacity-100">
+                    // Selalu tampil di layar sentuh (tanpa hover); di desktop (md+) muncul saat hover.
+                    // `!` penting agar aturan md menang atas base opacity-100 meski urutan CSS terpisah file.
+                    <div className="absolute left-2.5 top-2.5 flex gap-1.5 opacity-100 transition md:!opacity-0 md:group-hover:!opacity-100">
                         {/* Lihat detail produk (etalase publik) */}
                         {onViewDetail && (
                             <button

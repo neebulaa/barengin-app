@@ -24,8 +24,10 @@ class JastipCatalogSeeder extends Seeder
 {
     public function run(): void
     {
-        $owner = User::where('email', 'admin@barengin.com')->first() ?? User::first();
-        if (! $owner) {
+        // Katalog jastip dibagi rata ke seluruh user (bukan hanya admin) sehingga
+        // marketplace punya banyak jastiper berbeda. Kepemilikan diputar per produk.
+        $sellers = User::orderBy('id')->get();
+        if ($sellers->isEmpty()) {
             $this->command?->warn('JastipCatalogSeeder: tidak ada user, dilewati.');
             return;
         }
@@ -33,8 +35,8 @@ class JastipCatalogSeeder extends Seeder
             $this->call(JastipCategorySeeder::class);
         }
 
-        $buyerIds = User::where('id', '!=', $owner->id)->pluck('id')->all() ?: [$owner->id];
-        $catId    = JastipCategory::pluck('id', 'name');
+        $allUserIds = $sellers->pluck('id')->all();
+        $catId      = JastipCategory::pluck('id', 'name');
 
         // Gambar hasil unduhan yang relevan judul (item-<i>.jpg). Bila unduhan gagal,
         // jatuh ke kolam gambar lama per kategori agar seeding tetap aman.
@@ -111,6 +113,10 @@ class JastipCatalogSeeder extends Seeder
         $created = 0;
 
         foreach ($catalog as [$name, $catName, $base, $fee, $vKey]) {
+            // Pemilik produk diputar antar user; pembeli = user lain selain pemilik.
+            $owner    = $sellers[$i % $sellers->count()];
+            $buyerIds = array_values(array_filter($allUserIds, fn ($uid) => $uid !== $owner->id)) ?: [$owner->id];
+
             $isLocalFood = $catName === 'Makanan & Minuman' && $this->looksLocal($name);
             $purchase = $isLocalFood
                 ? $localLocs[$i % count($localLocs)]
@@ -120,19 +126,11 @@ class JastipCatalogSeeder extends Seeder
             $pool  = $pools[$catName] ?? $pools['Fashion'];
             $image = $catalogImg($i) ?? $pool[$i % count($pool)];
 
-            $upcoming  = ($i % 11 === 0);
-            // Semua produk dibuat tetap terlihat di etalase: 'upcoming' (mulai di masa
-            // depan) atau 'ongoing' (berakhir di masa depan) — tidak ada yang sudah lewat.
-            if ($upcoming) {
-                $startDate = $now->copy()->addDays(rand(4, 20));
-                $endDate   = $startDate->copy()->addDays(rand(25, 70));
-            } else {
-                $startDate = $now->copy()->subDays(rand(3, 40));
-                $endDate   = $now->copy()->addDays(rand(10, 60));
-            }
-            // Jendela pengambilan barang setelah pemesanan ditutup
-            $pickupStart = $endDate->copy()->addDays(rand(2, 7));
-            $pickupEnd   = $pickupStart->copy()->addDays(rand(7, 21));
+            // Siklus hidup tersebar agar tiap status jastip muncul (lihat JastipItem::lifecycleStatus):
+            //  in_order (masa pesan) · in_process (dibelikan) · pickup (masa ambil) · finish (selesai, bisa diulas) · upcoming
+            $phase = ['in_order', 'in_order', 'in_order', 'in_process', 'pickup', 'finish', 'upcoming'][$i % 7];
+            [$startDate, $endDate, $pickupStart, $pickupEnd] = $this->jastipDates($phase, $now);
+            $upcoming = $phase === 'upcoming';
 
             $hasVariants = $vKey !== 'single';
             // Hanya varian warna/rasa/shade yang punya gambar (bukan ukuran sepatu/baju/ml).
@@ -246,7 +244,7 @@ class JastipCatalogSeeder extends Seeder
             $i++;
         }
 
-        // Rating jastiper
+        // Rating jastiper — tiap penjual mendapat ulasan dari user lain.
         $comments = [
             'Jastipnya amanah, barang sesuai & cepat!',
             'Ori dan packing rapi, recommended seller.',
@@ -254,19 +252,64 @@ class JastipCatalogSeeder extends Seeder
             'Barang sampai lebih cepat dari perkiraan. Mantap!',
             'Sesuai deskripsi, harga bersaing. Puas!',
         ];
-        foreach (range(1, 24) as $n) {
-            DB::table('user_ratings')->insert([
-                'user_id'       => $buyerIds[array_rand($buyerIds)],
-                'rated_user_id' => $owner->id,
-                'type'          => 'jastiper',
-                'rating_amount' => rand(42, 50) / 10,
-                'comment'       => $comments[array_rand($comments)],
-                'created_at'    => $now->copy()->subDays(rand(1, 90)),
-                'updated_at'    => $now,
-            ]);
+        foreach ($sellers as $seller) {
+            $raters = array_values(array_filter($allUserIds, fn ($uid) => $uid !== $seller->id)) ?: [$seller->id];
+            foreach (range(1, 8) as $n) {
+                DB::table('user_ratings')->insert([
+                    'user_id'       => $raters[array_rand($raters)],
+                    'rated_user_id' => $seller->id,
+                    'type'          => 'jastiper',
+                    'rating_amount' => rand(42, 50) / 10,
+                    'comment'       => $comments[array_rand($comments)],
+                    'created_at'    => $now->copy()->subDays(rand(1, 90)),
+                    'updated_at'    => $now,
+                ]);
+            }
         }
 
-        $this->command?->info("JastipCatalogSeeder: {$created} produk jastip dibuat untuk {$owner->email}.");
+        $this->command?->info("JastipCatalogSeeder: {$created} produk jastip dibagi ke {$sellers->count()} user.");
+    }
+
+    /**
+     * Tanggal [start, end, pickupStart, pickupEnd] sesuai fase siklus hidup
+     * jastip agar JastipItem::lifecycleStatus() menghasilkan status yang diminta.
+     */
+    private function jastipDates(string $phase, Carbon $now): array
+    {
+        switch ($phase) {
+            case 'in_process': // masa pesan tutup, belum masuk pengambilan
+                $start = $now->copy()->subDays(rand(25, 40));
+                $end   = $now->copy()->subDays(rand(2, 8));
+                $ps    = $now->copy()->addDays(rand(3, 8));
+                $pe    = $ps->copy()->addDays(rand(7, 14));
+                break;
+            case 'pickup': // sedang masa pengambilan
+                $start = $now->copy()->subDays(rand(35, 50));
+                $end   = $now->copy()->subDays(rand(14, 22));
+                $ps    = $now->copy()->subDays(rand(1, 4));
+                $pe    = $now->copy()->addDays(rand(3, 8));
+                break;
+            case 'finish': // sudah lewat pengambilan → selesai, bisa diulas
+                $start = $now->copy()->subDays(rand(55, 75));
+                $end   = $now->copy()->subDays(rand(35, 45));
+                $ps    = $now->copy()->subDays(rand(20, 28));
+                $pe    = $now->copy()->subDays(rand(3, 12));
+                break;
+            case 'upcoming': // belum dibuka
+                $start = $now->copy()->addDays(rand(4, 20));
+                $end   = $start->copy()->addDays(rand(20, 40));
+                $ps    = $end->copy()->addDays(rand(3, 7));
+                $pe    = $ps->copy()->addDays(rand(7, 14));
+                break;
+            default: // in_order — masa pemesanan sedang berlangsung
+                $start = $now->copy()->subDays(rand(3, 20));
+                $end   = $now->copy()->addDays(rand(5, 20));
+                $ps    = $end->copy()->addDays(rand(3, 7));
+                $pe    = $ps->copy()->addDays(rand(7, 14));
+                break;
+        }
+
+        return [$start, $end, $ps, $pe];
     }
 
     private function looksLocal(string $name): bool

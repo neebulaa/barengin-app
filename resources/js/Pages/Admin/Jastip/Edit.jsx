@@ -84,6 +84,7 @@ export default function Edit({ item, categories = [] }) {
                 existingImages={existingImages}
                 onRemoveExisting={removeExisting}
                 onSaveDraft={saveDraft}
+                imageRequired={false}
             />
         </>
     );

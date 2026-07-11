@@ -1,7 +1,9 @@
 import { FiAlertCircle } from "react-icons/fi";
+import Button from "@/Components/Button";
 
-// Dialog konfirmasi standar (hapus/publish/dll) — dipakai konsisten di semua
-// halaman admin. Tanpa blur backdrop, ukuran & gaya seragam.
+// Dialog konfirmasi standar (hapus/publish/verifikasi/dll) — dipakai konsisten
+// di semua halaman admin. Layout: ikon kotak + judul/deskripsi rata kiri, dengan
+// bar aksi di bawah. Tanpa blur backdrop, ukuran & gaya seragam.
 export default function ConfirmModal({
     open,
     onClose,
@@ -10,36 +12,50 @@ export default function ConfirmModal({
     description,
     confirmLabel = "Ya, Hapus",
     cancelLabel = "Batal",
-    icon = <FiAlertCircle size={26} />,
+    icon = <FiAlertCircle size={24} />,
     iconClass = "bg-red-100 text-red-500",
-    confirmClass = "bg-red-600 hover:bg-red-700",
+    confirmType = "danger", // primary | danger | success | warning | neutral
     processing = false,
 }) {
     if (!open) return null;
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-fade-in-up">
-                <div className="p-6 text-center">
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${iconClass}`}>
-                        {icon}
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
+                <div className="p-6">
+                    {/* Header: ikon + judul/deskripsi (rata kiri) */}
+                    <div className="flex items-start gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${iconClass}`}>
+                            {icon}
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-neutral-700 mb-1">{title}</h3>
+                            <p className="text-neutral-500 text-sm leading-relaxed">{description}</p>
+                        </div>
                     </div>
-                    <h3 className="text-lg font-bold text-neutral-700 mb-1.5">{title}</h3>
-                    <p className="text-neutral-500 text-sm mb-6 leading-relaxed">{description}</p>
-                    <div className="flex items-center gap-3">
-                        <button
+
+                    {/* Footer: bar aksi */}
+                    <div className="flex items-center justify-end gap-3 mt-6 bg-neutral-50 -mx-6 -mb-6 p-4 border-t border-neutral-100">
+                        <Button
+                            type="neutral"
+                            variant="outline"
+                            size="sm"
+                            rounded={false}
                             onClick={onClose}
-                            className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 text-sm font-semibold hover:bg-neutral-50 transition-colors"
+                            className="rounded-xl font-semibold"
                         >
                             {cancelLabel}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            type={confirmType}
+                            size="sm"
+                            rounded={false}
                             onClick={onConfirm}
                             disabled={processing}
-                            className={`flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60 ${confirmClass}`}
+                            className="rounded-xl font-semibold shadow-sm disabled:opacity-60"
                         >
                             {confirmLabel}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
