@@ -48,28 +48,45 @@ export default function Leaderboard({ boards = {} }) {
     // Urutan podium: rank 2 (kiri), rank 1 (tengah), rank 3 (kanan)
     const podiumOrder = [topThree.find((r) => r.rank === 2), topThree.find((r) => r.rank === 1), topThree.find((r) => r.rank === 3)].filter(Boolean);
 
-    // Apakah user login ada di papan yang sedang ditampilkan?
-    const meInBoard = authUserId != null && filtered.some((u) => isMe(u));
+    // Peringkat user login di papan yang sedang ditampilkan (untuk label tombol).
+    const myRank = useMemo(() => rows.find((u) => isMe(u))?.rank, [rows, authUserId]);
 
-    // Tombol melayang "ke peringkat kamu": muncul saat baris user login berada
-    // di luar viewport, hilang saat sudah terlihat (mirip scroll-to-top).
+    // Tombol melayang "peringkat kamu": muncul saat baris user login berada di luar
+    // viewport, hilang saat terlihat (mirip scroll-to-top). Cek posisi secara
+    // sinkron (bukan IntersectionObserver) agar langsung akurat saat ganti tab &
+    // tidak berkedip di ambang batas (bikin sulit diklik).
     const [showJump, setShowJump] = useState(false);
     const meElRef = useRef(null);
 
     useEffect(() => {
-        const el = document.querySelector("[data-leaderboard-me]");
-        meElRef.current = el;
-        if (!el) {
-            setShowJump(false);
-            return;
-        }
-        const io = new IntersectionObserver(
-            ([entry]) => setShowJump(!entry.isIntersecting),
-            { threshold: 0.6 },
-        );
-        io.observe(el);
-        return () => io.disconnect();
-    }, [activeKey, query, searching, meInBoard]);
+        let raf = 0;
+        const compute = () => {
+            const el = document.querySelector("[data-leaderboard-me]");
+            meElRef.current = el;
+            if (!el) {
+                setShowJump(false);
+                return;
+            }
+            const r = el.getBoundingClientRect();
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            // Terlihat bila sebagian barisnya masuk viewport (buffer ~navbar atas).
+            const visible = r.top < vh - 24 && r.bottom > 88;
+            setShowJump(!visible);
+        };
+        const onScroll = () => {
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(compute);
+        };
+
+        compute(); // hitung langsung saat tab/pencarian berubah → reset benar
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll);
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("resize", onScroll);
+        };
+    }, [activeKey, query, searching, myRank]);
 
     const jumpToMe = () =>
         meElRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -254,14 +271,14 @@ export default function Leaderboard({ boards = {} }) {
             )}
 
             {/* Tombol melayang: lompat ke peringkat user login bila di luar layar */}
-            {showJump && (
+            {showJump && myRank != null && (
                 <button
                     type="button"
                     onClick={jumpToMe}
-                    className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-primary-700 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-primary-800"
+                    className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full bg-primary-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-primary-800"
                 >
                     <FaLocationCrosshairs />
-                    {t("lb.jump_to_me")}
+                    {t("lb.jump_to_me")} · #{myRank}
                 </button>
             )}
         </Container>

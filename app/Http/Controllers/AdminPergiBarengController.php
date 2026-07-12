@@ -214,6 +214,9 @@ class AdminPergiBarengController extends Controller
 
         \App\Models\ActivityLog::record('Membuat pergi bareng: ' . $trip->name);
 
+        // Buat grup chat langsung saat dibuat (penyelenggara jadi anggota pertama).
+        (new \App\Services\Chat\GroupConversationService())->ensurePergiBarengGroup($trip->id, $trip->initiator_id);
+
         return redirect()->route('admin.pergi-bareng.index')
             ->with('flash', ['type' => 'success', 'message' => 'Pergi bareng "' . $trip->name . '" berhasil dibuat.']);
     }

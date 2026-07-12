@@ -1,12 +1,27 @@
+import { useState } from "react";
 import { Link } from "@inertiajs/react";
 import { FaTimes, FaChevronRight } from "react-icons/fa";
 import Button from "@/Components/Button";
+import ImageLightbox from "@/Components/ImageLightbox";
+import { useTranslation } from "@/lib/useTranslation";
 
 const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
+// Heading status dilokalkan dari status transaksi (bukan teks server).
+const STATUS_LABEL = {
+    completed: "ph.status_completed",
+    waiting_payment: "ph.status_waiting",
+    in_progress: "ph.status_progress",
+};
+
 export default function TransactionDetailModal({ transaction, onClose, onReview }) {
+    const { t } = useTranslation();
     const d = transaction.detail;
+    const [lightbox, setLightbox] = useState({ open: false, index: 0 });
     if (!d) return null;
+
+    // Semua gambar item (mendukung pesanan dengan banyak barang) untuk lightbox.
+    const itemImages = (d.items ?? []).map((it) => it.image).filter(Boolean);
 
     const canReview =
         transaction.status === "completed" &&
@@ -14,6 +29,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
         onReview;
 
     return (
+        <>
         <div
             className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4"
             onClick={onClose}
@@ -25,13 +41,13 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                 {/* Header */}
                 <div className="sticky top-0 flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4">
                     <h2 className="text-xl font-bold text-neutral-900">
-                        Detail Transaksi
+                        {t("ph.detail_title")}
                     </h2>
                     <button
                         type="button"
                         onClick={onClose}
                         className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
-                        aria-label="Tutup"
+                        aria-label={t("ph.close")}
                     >
                         <FaTimes className="h-5 w-5" />
                     </button>
@@ -42,15 +58,17 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <h3 className="mb-3 text-lg font-bold text-neutral-900">
-                                {d.status_heading}
+                                {STATUS_LABEL[transaction.status]
+                                    ? t(STATUS_LABEL[transaction.status])
+                                    : d.status_heading}
                             </h3>
                             <div className="space-y-1.5 text-sm">
                                 <DetailRow
-                                    label="No. Pesanan"
+                                    label={t("ph.detail_order_no")}
                                     value={d.order_no}
                                 />
                                 <DetailRow
-                                    label="Tanggal Pembelian"
+                                    label={t("ph.detail_purchase_date")}
                                     value={d.date_label}
                                 />
                             </div>
@@ -67,7 +85,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                                         rounded={false}
                                         className="rounded-lg"
                                     >
-                                        Beli Lagi
+                                        {t("ph.detail_buy_again")}
                                     </Button>
                                 )}
                                 {canReview && (
@@ -81,7 +99,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                                             onReview(transaction.review_target)
                                         }
                                     >
-                                        Beri Ulasan
+                                        {t("ph.give_review")}
                                     </Button>
                                 )}
                             </div>
@@ -92,7 +110,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                     <div>
                         <div className="mb-3 flex items-center justify-between">
                             <h4 className="font-bold text-neutral-900">
-                                Detail Pesanan
+                                {t("ph.detail_order_detail")}
                             </h4>
                             {d.seller && (
                                 <div className="flex items-center gap-2 text-sm text-neutral-700">
@@ -119,21 +137,29 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                                     key={idx}
                                     className="flex items-center gap-3"
                                 >
-                                    <img
-                                        src={item.image}
-                                        alt={item.name}
-                                        className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                                        onError={(e) => {
-                                            e.target.src =
-                                                "/assets/default-image.png";
-                                        }}
-                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setLightbox({ open: true, index: idx })
+                                        }
+                                        className="shrink-0 overflow-hidden rounded-lg"
+                                    >
+                                        <img
+                                            src={item.image}
+                                            alt={item.name}
+                                            className="h-12 w-12 cursor-zoom-in object-cover transition hover:opacity-90"
+                                            onError={(e) => {
+                                                e.target.src =
+                                                    "/assets/default-image.png";
+                                            }}
+                                        />
+                                    </button>
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate font-semibold text-neutral-900">
                                             {item.name}
                                         </p>
                                         <p className="text-sm text-neutral-500">
-                                            {item.slot} Slot
+                                            {item.slot} {t("ph.slot")}
                                         </p>
                                     </div>
                                 </div>
@@ -145,11 +171,11 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                     {d.shipping && (
                         <div>
                             <h4 className="mb-3 font-bold text-neutral-900">
-                                Info Pengiriman
+                                {t("ph.detail_shipping_info")}
                             </h4>
                             <div className="flex gap-3 text-sm">
                                 <span className="w-20 shrink-0 text-neutral-500">
-                                    Alamat
+                                    {t("ph.detail_address")}
                                 </span>
                                 <span className="text-neutral-800">
                                     {d.shipping.address}
@@ -161,11 +187,11 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                     {/* Rincian Pembayaran */}
                     <div>
                         <h4 className="mb-3 font-bold text-neutral-900">
-                            Rincian Pembayaran
+                            {t("ph.detail_payment_detail")}
                         </h4>
                         <div className="mb-3 flex items-center justify-between text-sm">
                             <span className="text-neutral-500">
-                                Metode Pembayaran
+                                {t("ph.detail_payment_method")}
                             </span>
                             <span className="font-semibold text-neutral-900">
                                 {d.payment_method}
@@ -191,13 +217,21 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                         )}
 
                         <div className="mt-3 flex items-center justify-between border-t border-neutral-200 pt-3 font-bold text-neutral-900">
-                            <span>Total Biaya</span>
+                            <span>{t("ph.detail_total")}</span>
                             <span>{rupiah(d.total)}</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <ImageLightbox
+            images={itemImages}
+            index={lightbox.index}
+            open={lightbox.open}
+            onClose={() => setLightbox((s) => ({ ...s, open: false }))}
+        />
+        </>
     );
 }
 

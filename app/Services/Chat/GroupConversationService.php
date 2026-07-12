@@ -33,4 +33,55 @@ class GroupConversationService{
 
         return $conversation;
     }
+
+    // ── Buat grup langsung saat resource dibuat (pemilik jadi anggota pertama) ──
+    // Dipanggil dari store() Trip/PergiBareng/Jastip agar grup sudah ada sejak awal,
+    // bukan menunggu tombol grup diklik.
+
+    public function ensureTripGroup(int $tripId, ?int $ownerId = null): Conversation
+    {
+        $conversation = Conversation::firstOrCreate(
+            ['trip_id' => $tripId, 'is_group' => true],
+            ['pergi_bareng_id' => null, 'jastip_item_id' => null],
+        );
+
+        $this->attachIfMissing($conversation, $ownerId);
+
+        return $conversation;
+    }
+
+    public function ensurePergiBarengGroup(int $pergiBarengId, ?int $ownerId = null): Conversation
+    {
+        $conversation = Conversation::firstOrCreate(
+            ['pergi_bareng_id' => $pergiBarengId, 'is_group' => true],
+            ['trip_id' => null, 'jastip_item_id' => null],
+        );
+
+        $this->attachIfMissing($conversation, $ownerId);
+
+        return $conversation;
+    }
+
+    public function ensureJastipGroup(int $jastipItemId, ?int $ownerId = null): Conversation
+    {
+        $conversation = Conversation::firstOrCreate(
+            ['jastip_item_id' => $jastipItemId, 'is_group' => true],
+            ['trip_id' => null, 'pergi_bareng_id' => null],
+        );
+
+        $this->attachIfMissing($conversation, $ownerId);
+
+        return $conversation;
+    }
+
+    private function attachIfMissing(Conversation $conversation, ?int $userId): void
+    {
+        if (! $userId) {
+            return;
+        }
+
+        if (! $conversation->participants()->where('users.id', $userId)->exists()) {
+            $conversation->participants()->attach($userId, ['last_read_at' => now()]);
+        }
+    }
 }

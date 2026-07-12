@@ -126,6 +126,9 @@ class AdminJastipController extends Controller
 
         ActivityLog::record('Membuat produk jastip: ' . $item->name);
 
+        // Buat grup chat jastip langsung saat dibuat (jastiper jadi anggota pertama).
+        (new \App\Services\Chat\GroupConversationService())->ensureJastipGroup($item->id, $item->user_id);
+
         return redirect()->route('admin.jastip.index')->with('flash', [
             'type' => 'success',
             'message' => $item->isDraft() ? 'Produk jastip disimpan sebagai draft.' : 'Produk jastip berhasil dipublish.',

@@ -10,8 +10,7 @@ import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
 import { useTranslation } from "@/lib/useTranslation";
 
 import { FaRoute, FaCarSide, FaPaperPlane } from "react-icons/fa";
-import { MdDashboard } from "react-icons/md";
-import { HiOutlineDocumentText } from "react-icons/hi";
+import { MdDashboard, MdHistory } from "react-icons/md";
 import { FiLogOut } from "react-icons/fi";
 import Container from "@/Components/Container.jsx";
 
@@ -130,7 +129,7 @@ export default function NavbarAuth() {
                             {
                                 label: t("nav.profile_history"),
                                 href: "/profile-history",
-                                icon: HiOutlineDocumentText,
+                                icon: MdHistory,
                             },
                             {
                                 label: t("nav.logout"),
@@ -245,7 +244,7 @@ export default function NavbarAuth() {
                                 onClick={closeAll}
                                 className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
                             >
-                                <HiOutlineDocumentText className="w-5 h-5 mr-2 text-current" />
+                                <MdHistory className="w-5 h-5 mr-2 text-current" />
                                 {t("nav.profile_history")}
                             </Link>
 

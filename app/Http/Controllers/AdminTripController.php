@@ -104,6 +104,9 @@ class AdminTripController extends Controller
 
         \App\Models\ActivityLog::record('Membuat draft trip: ' . $trip->name);
 
+        // Buat grup chat trip langsung saat dibuat (pemandu jadi anggota pertama).
+        (new \App\Services\Chat\GroupConversationService())->ensureTripGroup($trip->id, $trip->guider_id);
+
         return redirect()->route('admin.trip.index')
             ->with('flash', ['type' => 'success', 'message' => 'Draft trip "' . $trip->name . '" berhasil disimpan.']);
     }
