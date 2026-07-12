@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Trip;
+use App\Support\FuzzySearch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -28,10 +29,7 @@ class TripsController extends Controller
             ->where('trips.status', '!=', 'draft'); // hanya trip yang sudah dipublish
 
         if ($tujuan !== '') {
-            $query->where(function ($q) use ($tujuan) {
-                $q->where('trips.location', 'like', "%{$tujuan}%")
-                    ->orWhere('trips.name', 'like', "%{$tujuan}%");
-            });
+            FuzzySearch::apply($query, $tujuan, ['trips.location', 'trips.name'], 'trips.id');
         }
         if ($startDate) {
             $query->whereDate('trips.start_date', '>=', $startDate);

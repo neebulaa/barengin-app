@@ -50,7 +50,10 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
 
         router.post("/forum/posts", fd, {
             forceFormData: true,
-            preserveScroll: true,
+            // Server mengarahkan ke /forum (beranda) → jangan pertahankan scroll
+            // supaya pengguna melihat postingan barunya di paling atas.
+            preserveScroll: false,
+            preserveState: false,
             onSuccess: () => {
                 setOpenCreatePost(false);
                 afterCreate?.();
@@ -65,7 +68,6 @@ export default function ForumLayout({ children, tags = [], afterCreate }) {
                     <ForumSideNav
                         onFindPeople={() => setOpenPeople(true)}
                         onCreatePost={() => setOpenCreatePost(true)}
-                        onFindPeople={() => setOpenPeople(true)}
                         isCreatePostOpen={openCreatePost}
                         isFindPeopleOpen={openPeople}
                     />

@@ -189,6 +189,9 @@ export default function PostShow() {
             replies: [],
         };
 
+        // Tampilkan komentar baru optimistik di paling atas. Server akan
+        // mengembalikan halaman dalam urutan "Terbaru" (satu request via redirect),
+        // sehingga komentar tetap di atas — tidak melompat & tanpa request kedua.
         setLocalComments((prev) => [optimistic, ...(prev ?? [])]);
 
         router.post(
@@ -196,20 +199,16 @@ export default function PostShow() {
             { comment_text: text },
             {
                 preserveScroll: true,
+                preserveState: true,
                 onError: () => {
                     setLocalComments((prev) =>
                         (prev ?? []).filter((c) => c.id !== tempId),
                     );
                 },
-                onSuccess: () => {
-                    router.reload({
-                        only: ["comments", "responseCount", "post"],
-                        preserveScroll: true,
-                        onSuccess: (page) => {
-                            setLocalComments(page.props.comments ?? []);
-                            setLocalPost(page.props.post ?? localPost);
-                        },
-                    });
+                onSuccess: (page) => {
+                    // Sinkronkan dengan data server (urutan terbaru, id asli).
+                    setLocalComments(page.props.comments ?? []);
+                    setLocalPost(page.props.post ?? localPost);
                 },
             },
         );

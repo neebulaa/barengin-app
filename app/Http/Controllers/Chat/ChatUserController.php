@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Chat;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\FuzzySearch;
 use Illuminate\Http\Request;
 
 class ChatUserController extends Controller
@@ -16,11 +17,7 @@ class ChatUserController extends Controller
         $users = User::query()
             ->where('id', '!=', $me->id)
             ->when($q, function ($query) use ($q) {
-                $query->where(function ($w) use ($q) {
-                    $w->where('full_name', 'like', "%{$q}%")
-                      ->orWhere('username', 'like', "%{$q}%")
-                      ->orWhere('email', 'like', "%{$q}%");
-                });
+                FuzzySearch::apply($query, $q, ['full_name', 'username', 'email']);
             })
             ->orderBy('full_name')
             ->limit(50)

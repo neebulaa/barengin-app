@@ -7,6 +7,7 @@ use App\Models\JastipCategory;
 use App\Models\JastipItem;
 use App\Models\JastipItemImage;
 use App\Models\JastipItemVariant;
+use App\Support\FuzzySearch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,23 +22,54 @@ class AdminJastipController extends Controller
     {
         $userId = Auth::id();
 
-        $items = JastipItem::query()
+        $search       = trim((string) $request->query('search', ''));
+        $sort         = (string) $request->query('sort', 'latest');
+        $ordersSearch = trim((string) $request->query('orders_search', ''));
+
+        $itemsQuery = JastipItem::query()
             ->where('user_id', $userId)
             ->with(['jastip_item_images', 'category'])
             ->leftJoinSub($this->soldSubquery(), 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
-            ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'))
-            ->latest('jastip_items.created_at')
-            ->get()
-            ->map(fn ($item) => $this->formatCard($item));
+            ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'));
 
-        // Aktivitas penjualan — order item milik produk jastiper ini
-        $orders = DB::table('jastip_order_items')
+        if ($search !== '') {
+            // Nama produk dicari fuzzy (toleran typo); kategori tetap substring.
+            $nameIds = FuzzySearch::ids($itemsQuery, $search, ['jastip_items.name'], 'jastip_items.id');
+            $itemsQuery->where(function ($w) use ($nameIds, $search) {
+                $w->whereIn('jastip_items.id', $nameIds)
+                    ->orWhereHas('category', fn ($c) => $c->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        match ($sort) {
+            'best'  => $itemsQuery->orderByDesc('sold_count'),
+            'stock' => $itemsQuery->orderByRaw('(jastip_items.max_slot - COALESCE(sold.sold, 0)) desc'),
+            default => $itemsQuery->latest('jastip_items.created_at'),
+        };
+
+        $items = $itemsQuery->paginate(12, ['*'], 'page')
+            ->withQueryString()
+            ->through(fn ($item) => $this->formatCard($item));
+
+        // Aktivitas penjualan — order item milik produk jastiper ini (#10: dapat dicari)
+        $ordersQuery = DB::table('jastip_order_items')
             ->join('jastip_items', 'jastip_order_items.jastip_item_id', '=', 'jastip_items.id')
             ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
             ->join('transactions', 'jastip_orders.transaction_id', '=', 'transactions.id')
             ->join('users', 'transactions.user_id', '=', 'users.id')
             ->leftJoin('jastip_item_variants', 'jastip_order_items.jastip_item_variant_id', '=', 'jastip_item_variants.id')
-            ->where('jastip_items.user_id', $userId)
+            ->where('jastip_items.user_id', $userId);
+
+        if ($ordersSearch !== '') {
+            FuzzySearch::apply(
+                $ordersQuery,
+                $ordersSearch,
+                ['users.full_name', 'users.username', 'jastip_items.name'],
+                'jastip_order_items.id',
+            );
+        }
+
+        $orders = $ordersQuery
             ->orderByDesc('jastip_orders.created_at')
             ->select(
                 'jastip_order_items.id',
@@ -45,6 +77,9 @@ class AdminJastipController extends Controller
                 'jastip_orders.order_status',
                 'jastip_orders.use_shipping',
                 'jastip_items.name as item_name',
+                'jastip_items.status as item_status',
+                'jastip_items.end_date as item_end_date',
+                'jastip_items.pickup_start_date as item_pickup_start_date',
                 'jastip_item_variants.var_value as variant',
                 'jastip_order_items.quantity',
                 'users.full_name as buyer_name',
@@ -63,11 +98,17 @@ class AdminJastipController extends Controller
                 'qty'      => (int) $o->quantity,
                 'shipping' => (bool) $o->use_shipping,
                 'status'   => $o->order_status,
+                'jastiper_status' => JastipItem::jastiperStatusOf($o->item_status, $o->item_end_date, $o->item_pickup_start_date),
             ]);
 
         return Inertia::render('Admin/Jastip/Index', [
             'items'  => $items,
             'orders' => $orders,
+            'filters' => [
+                'search'        => $search,
+                'sort'          => $sort,
+                'orders_search' => $ordersSearch,
+            ],
         ]);
     }
 
@@ -201,6 +242,98 @@ class AdminJastipController extends Controller
         return back()->with('flash', ['type' => 'success', 'message' => 'Produk jastip berhasil dipublish.']);
     }
 
+    // #11: Buka ulang jastip yang sudah selesai → duplikat jadi draft baru
+    // (semua data ikut, gambar & varian disalin) dengan tanggal dikosongkan,
+    // lalu arahkan ke form edit agar jastiper mengatur jadwal baru.
+    public function reopen($id)
+    {
+        $source = JastipItem::where('user_id', Auth::id())
+            ->with(['jastip_item_variants', 'jastip_item_images'])
+            ->findOrFail($id);
+
+        if ($source->jastiperStatus() !== 'finished') {
+            return redirect()->route('admin.jastip.index')->with('flash', [
+                'type' => 'info',
+                'message' => 'Hanya jastip yang sudah selesai yang dapat dibuka ulang.',
+            ]);
+        }
+
+        $new = DB::transaction(function () use ($source) {
+            $new = JastipItem::create([
+                'user_id'            => Auth::id(),
+                'jastip_category_id' => $source->jastip_category_id,
+                'name'               => $source->name,
+                'description'        => $source->description,
+                'pickup_province'    => $source->pickup_province,
+                'pickup_city'        => $source->pickup_city,
+                'pickup_address'     => $source->pickup_address,
+                'purchase_province'  => $source->purchase_province,
+                'purchase_city'      => $source->purchase_city,
+                'purchase_address'   => $source->purchase_address,
+                'base_price'         => $source->base_price,
+                'jastip_fee'         => $source->jastip_fee,
+                'has_variants'       => $source->has_variants,
+                'max_slot'           => $source->max_slot,
+                'min_buy'            => $source->min_buy,
+                'weight_gram'        => $source->weight_gram,
+                // Tanggal dikosongkan — wajib diisi ulang
+                'start_date'         => null,
+                'end_date'           => null,
+                'pickup_start_date'  => null,
+                'pickup_end_date'    => null,
+                'status'             => JastipItem::STATUS_DRAFT,
+            ]);
+
+            foreach ($source->jastip_item_variants as $v) {
+                JastipItemVariant::create([
+                    'jastip_item_id'   => $new->id,
+                    'var_name'         => $v->var_name,
+                    'var_value'        => $v->var_value,
+                    'additional_price' => $v->additional_price,
+                    'stock'            => $v->stock,
+                    'min_buy'          => $v->min_buy,
+                    'image_name'       => $this->duplicateStoredImage($v->image_name),
+                ]);
+            }
+            foreach ($source->jastip_item_images as $img) {
+                JastipItemImage::create([
+                    'jastip_item_id' => $new->id,
+                    'image_name'     => $this->duplicateStoredImage($img->image_name),
+                ]);
+            }
+
+            return $new;
+        });
+
+        ActivityLog::record('Membuka ulang jastip: ' . $source->name);
+
+        return redirect()->route('admin.jastip.edit', $new->id)->with('flash', [
+            'type' => 'info',
+            'message' => 'Jastip dibuka ulang sebagai draft. Atur tanggal baru lalu simpan.',
+        ]);
+    }
+
+    // Salin file gambar di storage publik agar draft hasil reopen punya salinan
+    // sendiri (tidak berbagi path dengan produk asal). Referensi eksternal (URL/
+    // absolut) dibiarkan apa adanya.
+    private function duplicateStoredImage(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+        if (Str::startsWith($path, ['http://', 'https://', '/'])) {
+            return $path;
+        }
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        if (! $disk->exists($path)) {
+            return $path;
+        }
+        $ext = pathinfo($path, PATHINFO_EXTENSION);
+        $newPath = 'jastip-images/' . Str::uuid() . ($ext ? '.' . $ext : '');
+        $disk->copy($path, $newPath);
+        return $newPath;
+    }
+
     // ── Analitik Jastip ──────────────────────────────────────────────────
     public function analytics()
     {
@@ -289,6 +422,7 @@ class AdminJastipController extends Controller
             'max_slot'    => (int) $item->max_slot,
             'sold'        => $sold,
             'status'      => $isSoldOut ? 'sold_out' : $item->status,
+            'jastiper_status' => $item->jastiperStatus(),
             'is_draft'    => $item->isDraft(),
             'image'       => $item->relationLoaded('jastip_item_images') && $item->jastip_item_images->isNotEmpty()
                 ? $this->resolveImageUrl($item->jastip_item_images->first()->image_name)

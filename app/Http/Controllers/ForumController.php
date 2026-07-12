@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Tag;
+use App\Support\FuzzySearch;
 use Illuminate\Http\Request;
 use App\Models\PostComment;
 use Illuminate\Support\Facades\Auth;
@@ -43,7 +44,28 @@ class ForumController extends Controller
             ->latest();
 
         if ($q !== '') {
-            $postsQuery->where('content', 'like', "%{$q}%");
+            // Pencarian forum toleran typo & lebih luas: cocokkan isi post,
+            // nama/username penulis, dan tag.
+            $contentIds = FuzzySearch::ids($postsQuery, $q, ['content']);
+
+            $authorIds = FuzzySearch::ids(
+                Post::query()->join('users', 'posts.user_id', '=', 'users.id'),
+                $q,
+                ['users.full_name', 'users.username'],
+                'posts.id',
+            );
+
+            $tagIds = FuzzySearch::ids(
+                Post::query()
+                    ->join('post_tags', 'posts.id', '=', 'post_tags.post_id')
+                    ->join('tags', 'post_tags.tag_id', '=', 'tags.id'),
+                $q,
+                ['tags.tag_name'],
+                'posts.id',
+            );
+
+            $matchIds = array_values(array_unique(array_merge($contentIds, $authorIds, $tagIds)));
+            $postsQuery->whereIn('posts.id', $matchIds);
         }
 
         if ($tag !== '') {
@@ -258,7 +280,10 @@ class ForumController extends Controller
             'comment_text' => $request->comment_text,
         ]);
 
-        return redirect()->back()->with('flash', ['type' => 'success', 'message' => 'Komentar berhasil ditambahkan.']);
+        // Selalu kembalikan dalam urutan "Terbaru" agar komentar baru tampil di
+        // paling atas — tidak melompat ke bawah walau pengguna sedang di "Populer".
+        return redirect()->route('forum.show', ['id' => $post->id, 'sort' => 'newest'])
+            ->with('flash', ['type' => 'success', 'message' => 'Komentar berhasil ditambahkan.']);
     }
 
     public function storeReply(Request $request, PostComment $comment)

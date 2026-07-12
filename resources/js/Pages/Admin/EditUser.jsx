@@ -7,6 +7,7 @@ import Checkbox from "@/Components/Checkbox";
 import Toggle from "@/Components/Toggle";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
+import { toast } from "@/lib/toast";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronLeft, FiAlertTriangle } from "react-icons/fi";
 import { FaKey } from "react-icons/fa6"; // Menggunakan FaKey untuk icon verify
@@ -58,7 +59,11 @@ export default function EditUser({ user }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Kirim perubahan role & verifikasi ke backend
-        put(`/admin/management-user/${safeUser.id}`);
+        put(`/admin/management-user/${safeUser.id}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success(t("admin.edit_user.toast_success")),
+            onError: () => toast.error(t("admin.edit_user.toast_error")),
+        });
     };
 
     return (
@@ -124,9 +129,15 @@ export default function EditUser({ user }) {
                     <div>
                         <h4 className="font-semibold text-neutral-700 mb-1">{t("admin.edit_user.photo_label")}</h4>
                         <p className="text-xs text-neutral-500 mb-2">{t("admin.edit_user.photo_hint")}</p>
-                        <Button type="danger" variant="ghost" size="xs" rounded={false} className="!p-0 hover:underline">
+                        {/* Fitur hapus gambar dinonaktifkan untuk aksi edit di dashboard admin */}
+                        <button
+                            type="button"
+                            disabled
+                            title={t("admin.edit_user.remove_photo_disabled")}
+                            className="text-sm font-semibold text-neutral-300 cursor-not-allowed"
+                        >
                             {t("admin.edit_user.remove_photo")}
-                        </Button>
+                        </button>
                     </div>
                 </div>
 

@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
+import EmptyState from "@/Components/EmptyState";
+import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
-import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiExternalLink, FiAlertCircle } from "react-icons/fi";
+import { useServerTable } from "@/lib/useServerTable";
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiExternalLink, FiAlertCircle, FiMapPin } from "react-icons/fi";
 
 const STATUS_STYLES = {
     draft: "bg-blue-100 text-blue-700",
@@ -13,25 +16,15 @@ const STATUS_STYLES = {
     done: "bg-green-100 text-green-700",
 };
 
-const STATUS_ORDER = { draft: 0, created: 1, ongoing: 2, done: 3 };
-
-export default function Index({ trips = [] }) {
+export default function Index({ trips = {}, filters = {} }) {
     const { t: translate } = useTranslation();
-    const [search, setSearch] = useState("");
-    const [sortBy, setSortBy] = useState("latest");
+    const rows = trips.data ?? [];
+    const { values, set, goPage } = useServerTable("/admin/trip", {
+        search: filters.search ?? "",
+        sort: filters.sort ?? "latest",
+    });
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
     const [publishModal, setPublishModal] = useState({ open: false, id: null, name: "" });
-
-    const rows = useMemo(() => {
-        const q = search.toLowerCase();
-        let list = trips.filter((t) => t.name?.toLowerCase().includes(q) || t.location?.toLowerCase().includes(q));
-
-        if (sortBy === "seats") list = [...list].sort((a, b) => b.joined - a.joined);
-        else if (sortBy === "status") list = [...list].sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
-        // "latest" -> sudah diurutkan dari server (created_at desc)
-
-        return list;
-    }, [trips, search, sortBy]);
 
     const confirmDelete = () => {
         router.delete(`/admin/trip/${deleteModal.id}`, {
@@ -84,13 +77,13 @@ export default function Index({ trips = [] }) {
             <div className="p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="relative flex-1 max-w-md">
                     <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                    <input type="text" placeholder={translate("admin.trip.search_ph")} value={search} onChange={(e) => setSearch(e.target.value)}
+                    <input type="text" placeholder={translate("admin.trip.search_ph")} value={values.search} onChange={(e) => set("search", e.target.value, { debounce: true })}
                         className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all" />
                 </div>
 
                 <div className="flex items-center gap-3">
                     <div className="relative">
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+                        <select value={values.sort} onChange={(e) => set("sort", e.target.value)}
                             className="appearance-none w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all">
                             <option value="latest">{translate("admin.trip.sort_latest")}</option>
                             <option value="seats">{translate("admin.trip.sort_seats")}</option>
@@ -174,13 +167,22 @@ export default function Index({ trips = [] }) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="7" className="py-12 text-center text-neutral-500 text-sm">
-                                    {translate("admin.trip.empty")}
+                                <td colSpan="7">
+                                    <EmptyState icon={<FiMapPin size={30} />} title={translate("admin.trip.empty_title")} description={translate("admin.trip.empty_desc")} />
                                 </td>
                             </tr>
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-neutral-50 p-4 border-t border-neutral-100">
+                <span className="text-xs text-neutral-500 font-medium">
+                    {translate("common.showing")} {trips.from ?? 0}–{trips.to ?? 0} {translate("common.of")} {trips.total ?? 0} {translate("common.data")}
+                </span>
+                {trips.last_page > 1 && (
+                    <Pagination currentPage={trips.current_page} totalPages={trips.last_page} onPageChange={goPage} />
+                )}
             </div>
         </div>
         </>

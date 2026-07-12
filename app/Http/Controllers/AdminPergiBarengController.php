@@ -7,6 +7,7 @@ use App\Models\FinancingEstimate;
 use App\Models\PergiBareng;
 use App\Models\PergiBarengParticipant;
 use App\Models\PergiBarengRequest;
+use App\Support\FuzzySearch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,16 +30,61 @@ class AdminPergiBarengController extends Controller
         return '#' . strtoupper(substr(md5('pergi-bareng-' . $id), 0, 5));
     }
 
+    /** Resolusi gambar pergi bareng (samakan dengan halaman front). */
+    private function resolvePergiImage(?string $path): string
+    {
+        $fallback = '/assets/pergi-bareng/PergiBarengHeader.avif';
+        if (! $path) {
+            return $fallback;
+        }
+        if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://', '/'])) {
+            return $path;
+        }
+        return '/storage/' . $path;
+    }
+
     public function index(Request $request)
     {
-        $trips = PergiBareng::with(['pergi_bareng_participants', 'pergi_bareng_requests'])
-            ->where('initiator_id', Auth::id())
-            ->orderByDesc('created_at') // "Terbaru" = waktu dibuat, bukan tanggal trip
-            ->orderByDesc('id')         // tie-break agar yang terbaru dibuat selalu di atas
-            ->get()
-            ->map(function ($trip) {
-                $joined = (int) $trip->pergi_bareng_participants->sum('quantity');
+        $search = trim((string) $request->query('search', ''));
+        $sort   = (string) $request->query('sort', 'latest');
+
+        // Total peserta (sum quantity) sebagai subquery agar bisa di-sort di server
+        $joinedSub = DB::table('pergi_bareng_participants')
+            ->groupBy('pergi_bareng_id')
+            ->select('pergi_bareng_id', DB::raw('COALESCE(SUM(quantity),0) as joined'));
+
+        $query = PergiBareng::query()
+            ->leftJoinSub($joinedSub, 'p', 'p.pergi_bareng_id', '=', 'pergi_barengs.id')
+            ->where('pergi_barengs.initiator_id', Auth::id())
+            ->withCount('pergi_bareng_requests')
+            ->select('pergi_barengs.*', DB::raw('COALESCE(p.joined,0) as joined_count'));
+
+        if ($search !== '') {
+            FuzzySearch::apply(
+                $query,
+                $search,
+                ['pergi_barengs.name', 'pergi_barengs.destination_loc', 'pergi_barengs.departure_loc'],
+                'pergi_barengs.id',
+            );
+        }
+
+        match ($sort) {
+            'seats'  => $query->orderByDesc('joined_count'),
+            // "status": waiting (jadwal terjauh) → finish (paling lampau)
+            'status' => $query->orderByDesc('pergi_barengs.time_appointment'),
+            default  => $query->orderByDesc('pergi_barengs.created_at')->orderByDesc('pergi_barengs.id'),
+        };
+
+        $trips = $query->paginate(10)->withQueryString()
+            ->through(function ($trip) {
                 $date = $trip->time_appointment;
+
+                // Status selaras dengan Riwayat "Jalan Bareng" (ProfileHistory):
+                // waiting (belum mulai) | ongoing (hari-H) | finish (sudah lewat)
+                $now = Carbon::now();
+                $status = $now->lt($date->copy()->startOfDay())
+                    ? 'waiting'
+                    : ($now->lte($date->copy()->endOfDay()) ? 'ongoing' : 'finish');
 
                 return [
                     'id' => $trip->id,
@@ -46,18 +92,19 @@ class AdminPergiBarengController extends Controller
                     'name' => $trip->name,
                     'destination' => $trip->destination_loc,
                     'departure' => $trip->departure_loc,
-                    'image' => $trip->img_name ? '/storage/' . $trip->img_name : '/assets/pergi-bareng/PergiBarengHeader.avif',
+                    'image' => $this->resolvePergiImage($trip->img_name),
                     'date_label' => $date->translatedFormat('d M Y'),
                     'time_label' => $date->format('H:i'),
-                    'joined' => $joined,
+                    'joined' => (int) $trip->joined_count,
                     'capacity' => $trip->people_amount,
-                    'status' => $date->isFuture() ? 'aktif' : 'selesai',
-                    'pending_requests' => $trip->pergi_bareng_requests->count(),
+                    'status' => $status,
+                    'pending_requests' => (int) $trip->pergi_bareng_requests_count,
                 ];
             });
 
         return Inertia::render('Admin/PergiBareng/Index', [
             'trips' => $trips,
+            'filters' => ['search' => $search, 'sort' => $sort],
         ]);
     }
 
@@ -169,6 +216,37 @@ class AdminPergiBarengController extends Controller
 
         return redirect()->route('admin.pergi-bareng.index')
             ->with('flash', ['type' => 'success', 'message' => 'Pergi bareng "' . $trip->name . '" berhasil dibuat.']);
+    }
+
+    // #14: Buka ulang pergi bareng yang sudah selesai → tampilkan form buat baru
+    // dengan data ter-isi (kecuali tanggal & waktu yang dikosongkan).
+    public function reopen($id)
+    {
+        $trip = PergiBareng::with('financing_estimate')
+            ->where('initiator_id', Auth::id())
+            ->findOrFail($id);
+
+        // Hanya yang berstatus "selesai" (waktu janji sudah lewat) yang bisa dibuka ulang
+        $isFinished = Carbon::now()->gt($trip->time_appointment->copy()->endOfDay());
+        if (! $isFinished) {
+            return redirect()->route('admin.pergi-bareng.index')->with('flash', [
+                'type' => 'info',
+                'message' => 'Hanya pergi bareng yang sudah selesai yang dapat dibuka ulang.',
+            ]);
+        }
+
+        return Inertia::render('Admin/PergiBareng/Create', [
+            'transportations' => self::TRANSPORTATIONS,
+            'prefill' => [
+                'name'                => $trip->name,
+                'destination_loc'     => $trip->destination_loc,
+                'departure_loc'       => $trip->departure_loc,
+                'transportation'      => $trip->transportation,
+                'description'         => $trip->description,
+                'people_amount'       => (string) $trip->people_amount,
+                'financing_estimates' => $trip->financing_estimate->pluck('name')->filter()->values()->all() ?: [''],
+            ],
+        ]);
     }
 
     public function destroy($id)

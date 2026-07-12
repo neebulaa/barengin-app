@@ -149,6 +149,11 @@ export default function Show({ product, related = [] }) {
                             <ul className="space-y-1 text-sm text-neutral-600">
                                 {product.weight_gram && <li>{t("jastip.show.weight")}: {product.weight_gram} gram</li>}
                                 <li>{t("jastip.show.min_buy")}: {minBuy} {t("jastip.show.pack")}</li>
+                                {(product.start_date || product.end_date) && (
+                                    <li>
+                                        {t("jastip.show.order_window")}: {product.start_date || "-"} – {product.end_date || "-"}
+                                    </li>
+                                )}
                                 {(product.pickup_start_date || product.pickup_end_date) && (
                                     <li>
                                         {t("jastip.show.pickup_window")}: {product.pickup_start_date || "-"} – {product.pickup_end_date || "-"}

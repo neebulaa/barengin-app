@@ -3,13 +3,14 @@ import { router, usePage } from "@inertiajs/react";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
 import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
-import { useGeoCity } from "@/lib/useGeoCity";
+import { detectCity } from "@/lib/useGeoCity";
 import {
     FaMapMarkerAlt,
     FaPlane,
     FaUser,
     FaSearch,
 } from "react-icons/fa";
+import { FaLocationCrosshairs } from "react-icons/fa6";
 import { useTranslation } from "@/lib/useTranslation";
 
 export default function PergiSearchForm({ naked = true }) {
@@ -21,9 +22,17 @@ export default function PergiSearchForm({ naked = true }) {
     const [tanggal, setTanggal] = useState(filters.tanggal || "");
     const [waktu, setWaktu] = useState(filters.waktu || "");
     const [jumlah, setJumlah] = useState(filters.jumlah || "");
+    const [locating, setLocating] = useState(false);
 
-    // #7: default "Dari mana" ke lokasi user saat ini
-    useGeoCity(!filters.dari, setDari);
+    // "Dari mana" TIDAK lagi diisi otomatis dengan lokasi user. Pengguna bisa
+    // menekan tombol crosshair untuk mengisi lokasinya sendiri saat dibutuhkan.
+    const useMyLocation = async () => {
+        if (locating) return;
+        setLocating(true);
+        const city = await detectCity();
+        setLocating(false);
+        if (city) setDari(city);
+    };
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -54,6 +63,19 @@ export default function PergiSearchForm({ naked = true }) {
                         leftIcon={<FaMapMarkerAlt />}
                         value={dari}
                         onChange={setDari}
+                        rightAddon={
+                            <button
+                                type="button"
+                                onClick={useMyLocation}
+                                title={t("search.use_my_location")}
+                                aria-label={t("search.use_my_location")}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-primary-700 transition hover:bg-primary-50"
+                            >
+                                <FaLocationCrosshairs
+                                    className={locating ? "animate-pulse" : ""}
+                                />
+                            </button>
+                        }
                     />
                 </div>
 

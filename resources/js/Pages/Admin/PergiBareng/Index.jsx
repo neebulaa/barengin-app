@@ -1,35 +1,24 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
+import EmptyState from "@/Components/EmptyState";
+import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
-import { FiSearch, FiTrash2, FiPlus, FiUsers } from "react-icons/fi";
+import { useServerTable } from "@/lib/useServerTable";
+import { FiSearch, FiTrash2, FiPlus, FiUsers, FiRefreshCw } from "react-icons/fi";
+import { FaCarSide } from "react-icons/fa";
 import { BsChatDotsFill } from "react-icons/bs";
 
-export default function Index({ trips = [] }) {
+export default function Index({ trips = {}, filters = {} }) {
     const { t: translate } = useTranslation();
-    const [search, setSearch] = useState("");
-    const [sortBy, setSortBy] = useState("latest");
+    const rows = trips.data ?? [];
+    const { values, set, goPage } = useServerTable("/admin/pergi-bareng", {
+        search: filters.search ?? "",
+        sort: filters.sort ?? "latest",
+    });
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
-
-    const rows = useMemo(() => {
-        let list = trips.filter((t) => {
-            const q = search.toLowerCase();
-            return (
-                t.name?.toLowerCase().includes(q) ||
-                t.destination?.toLowerCase().includes(q) ||
-                t.departure?.toLowerCase().includes(q) ||
-                t.code?.toLowerCase().includes(q)
-            );
-        });
-
-        if (sortBy === "seats") list = [...list].sort((a, b) => b.joined - a.joined);
-        else if (sortBy === "status") list = [...list].sort((a, b) => a.status.localeCompare(b.status));
-        // "latest" -> sudah diurutkan dari server
-
-        return list;
-    }, [trips, search, sortBy]);
 
     const openGroupChat = (id) => router.post(`/chat/pergi-bareng/${id}/group`);
 
@@ -40,10 +29,12 @@ export default function Index({ trips = [] }) {
         });
     };
 
-    const statusBadge = (status) =>
-        status === "aktif"
-            ? "bg-blue-100 text-primary-700"
-            : "bg-green-100 text-green-700";
+    // Status selaras dengan Riwayat "Jalan Bareng" (JalanBarengCard)
+    const STATUS_META = {
+        waiting: { key: "ph.status_waiting", cls: "bg-amber-100 text-amber-700" },
+        ongoing: { key: "ph.status_ongoing", cls: "bg-blue-100 text-primary-700" },
+        finish: { key: "ph.status_finish", cls: "bg-success-50 text-success-700" },
+    };
 
     return (
         <>
@@ -70,8 +61,8 @@ export default function Index({ trips = [] }) {
                         <input
                             type="text"
                             placeholder={translate("admin.pergi.search_ph")}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            value={values.search}
+                            onChange={(e) => set("search", e.target.value, { debounce: true })}
                             className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all"
                         />
                     </div>
@@ -79,8 +70,8 @@ export default function Index({ trips = [] }) {
                     <div className="flex items-center gap-3">
                         <div className="relative">
                             <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
+                                value={values.sort}
+                                onChange={(e) => set("sort", e.target.value)}
                                 className="appearance-none w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
                             >
                                 <option value="latest">{translate("admin.trip.sort_latest")}</option>
@@ -127,7 +118,7 @@ export default function Index({ trips = [] }) {
                                                     className="w-11 h-11 rounded-lg object-cover border border-neutral-200"
                                                     onError={(e) => (e.target.src = "/assets/pergi-bareng/PergiBarengHeader.avif")}
                                                 />
-                                                <span className="font-semibold text-neutral-700 text-sm max-w-[180px] truncate">{t.name}</span>
+                                                <span className="font-semibold text-neutral-700 text-sm max-w-[220px] break-words">{t.name}</span>
                                             </div>
                                         </td>
                                         <td className="py-3.5 px-5 text-sm text-neutral-600 max-w-[200px]">
@@ -141,8 +132,8 @@ export default function Index({ trips = [] }) {
                                             {t.joined}/{t.capacity}
                                         </td>
                                         <td className="py-3.5 px-5">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge(t.status)}`}>
-                                                {t.status}
+                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${STATUS_META[t.status]?.cls ?? "bg-neutral-100 text-neutral-600"}`}>
+                                                {STATUS_META[t.status] ? translate(STATUS_META[t.status].key) : t.status}
                                             </span>
                                         </td>
                                         <td className="py-3.5 px-5">
@@ -166,6 +157,15 @@ export default function Index({ trips = [] }) {
                                                 >
                                                     <BsChatDotsFill size={16} />
                                                 </button>
+                                                {t.status === "finish" && (
+                                                    <Link
+                                                        href={`/admin/pergi-bareng/${t.id}/reopen`}
+                                                        className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                                                        title={translate("admin.pergi.action_reopen")}
+                                                    >
+                                                        <FiRefreshCw size={16} />
+                                                    </Link>
+                                                )}
                                                 <button
                                                     onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })}
                                                     className="p-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
@@ -179,13 +179,22 @@ export default function Index({ trips = [] }) {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="7" className="py-12 text-center text-neutral-500 text-sm">
-                                        {translate("admin.pergi.empty")}
+                                    <td colSpan="7">
+                                        <EmptyState icon={<FaCarSide size={30} />} title={translate("admin.pergi.empty_title")} description={translate("admin.pergi.empty_desc")} />
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-neutral-50 p-4 border-t border-neutral-100">
+                    <span className="text-xs text-neutral-500 font-medium">
+                        {translate("common.showing")} {trips.from ?? 0}–{trips.to ?? 0} {translate("common.of")} {trips.total ?? 0} {translate("common.data")}
+                    </span>
+                    {trips.last_page > 1 && (
+                        <Pagination currentPage={trips.current_page} totalPages={trips.last_page} onPageChange={goPage} />
+                    )}
                 </div>
         </div>
         </>

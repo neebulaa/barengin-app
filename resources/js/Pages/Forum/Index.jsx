@@ -57,7 +57,17 @@ function ForumIndexPage({ posts, tags, filters }) {
         if (!posts) return;
 
         const currentPage = Number(posts?.current_page ?? 1);
-        if (currentPage <= 1) return;
+
+        // Respons halaman 1 = feed segar (load awal, pencarian, atau setelah
+        // membuat post) → ganti total supaya postingan baru langsung tampil di
+        // atas tanpa perlu refresh manual.
+        if (currentPage <= 1) {
+            setItems(posts?.data ?? []);
+            setNextUrl(posts?.next_page_url ?? null);
+            setIsLoadingMore(false);
+            isLoadMoreInFlightRef.current = false;
+            return;
+        }
 
         setItems((prev) => mergeUniquePosts(prev, posts?.data ?? []));
         setNextUrl(posts?.next_page_url ?? null);
@@ -289,14 +299,9 @@ export default function ForumIndex(props) {
 }
 
 ForumIndex.layout = (page) => (
-    <ForumLayout
-        tags={page.props.tags ?? []}
-        afterCreate={() => {
-            router.reload({ only: ["posts"], preserveScroll: true });
-        }}
-    >
-        {page}
-    </ForumLayout>
+    // Setelah membuat post, server mengarahkan ke /forum sehingga feed halaman 1
+    // dimuat ulang otomatis (postingan baru tampil di atas) — tak perlu afterCreate.
+    <ForumLayout tags={page.props.tags ?? []}>{page}</ForumLayout>
 );
 
 function formatRelativeTime(iso) {

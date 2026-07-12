@@ -13,6 +13,7 @@ export default function PlaceAutocomplete({
     onChange,
     placeholder,
     leftIcon,
+    rightAddon = null, // tombol opsional di kanan input (mis. "gunakan lokasi saya")
     prioritizeIndonesia = false,
     fullAddress = false, // true: pilih alamat lengkap (display_name), bukan hanya nama tempat
     countryCodes = "", // kode ISO alpha-2 (mis. "my") — batasi hasil hanya pada negara ini
@@ -125,6 +126,7 @@ export default function PlaceAutocomplete({
                 label={label}
                 placeholder={placeholder}
                 leftIcon={leftIcon}
+                rightAddon={rightAddon}
                 value={query}
                 onChange={(e) => {
                     setQuery(e.target.value);

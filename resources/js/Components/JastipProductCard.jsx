@@ -1,5 +1,5 @@
 import React from "react";
-import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers, FiEye } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiUploadCloud, FiUsers, FiEye, FiRefreshCw } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
 const STATUS_STYLE = {
@@ -8,15 +8,28 @@ const STATUS_STYLE = {
     sold_out: "bg-red-600 text-white",
 };
 
+// Badge siklus hidup jastiper (draft/published/buy_time/finished)
+const LIFECYCLE_STYLE = {
+    draft: "bg-neutral-800 text-white",
+    published: "bg-green-600 text-white",
+    buy_time: "bg-amber-500 text-white",
+    finished: "bg-primary-700 text-white",
+};
+
 const FALLBACK_IMG = "/assets/default-image.png";
 
 // Kartu produk jastip. `manage` menampilkan aksi (edit/publish/hapus) saat hover.
-export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat, onViewDetail }) {
+export default function JastipProductCard({ item, manage = false, onEdit, onPublish, onDelete, onGroupChat, onViewDetail, onReopen }) {
     const { t } = useTranslation();
 
     const pct = item.max_slot > 0 ? Math.min(100, (item.sold / item.max_slot) * 100) : 0;
-    const statusCls = STATUS_STYLE[item.status] || STATUS_STYLE.draft;
     const catLabel = item.category || "";
+
+    // Badge: pakai status siklus hidup jastiper bila tersedia, jika tidak fallback ke status lama
+    const lifecycle = item.jastiper_status;
+    const badgeCls = lifecycle ? (LIFECYCLE_STYLE[lifecycle] || LIFECYCLE_STYLE.draft) : (STATUS_STYLE[item.status] || STATUS_STYLE.draft);
+    const badgeLabel = lifecycle ? t(`jastip.jastiper_status.${lifecycle}`, lifecycle) : t(`jastip.status.${item.status}`, item.status);
+    const isFinished = lifecycle === "finished";
 
     return (
         <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
@@ -28,16 +41,15 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                     className="h-full w-full object-cover"
                     onError={(e) => { e.target.src = FALLBACK_IMG; }}
                 />
-                <span className={`absolute right-2.5 top-2.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm ${statusCls}`}>
-                    {t(`jastip.status.${item.status}`, item.status)}
+                <span className={`absolute right-2.5 top-2.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm ${badgeCls}`}>
+                    {badgeLabel}
                 </span>
 
                 {manage && (
-                    // Selalu tampil di layar sentuh (tanpa hover); di desktop (md+) muncul saat hover.
-                    // `!` penting agar aturan md menang atas base opacity-100 meski urutan CSS terpisah file.
-                    <div className="absolute left-2.5 top-2.5 flex gap-1.5 opacity-100 transition md:!opacity-0 md:group-hover:!opacity-100">
-                        {/* Lihat detail produk (etalase publik) */}
-                        {onViewDetail && (
+                    // Selalu tampil (juga di mobile yang tidak bisa hover) agar aksi mudah dijangkau.
+                    <div className="absolute left-2.5 top-2.5 flex gap-1.5">
+                        {/* Lihat detail produk (etalase publik) — draft belum punya halaman publik */}
+                        {!item.is_draft && onViewDetail && (
                             <button
                                 type="button"
                                 onClick={onViewDetail}
@@ -77,6 +89,17 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-primary-700 shadow-sm hover:bg-white"
                             >
                                 <FiUsers size={15} />
+                            </button>
+                        )}
+                        {/* #11: buka ulang jastip yang sudah selesai menjadi draft baru */}
+                        {isFinished && onReopen && (
+                            <button
+                                type="button"
+                                onClick={onReopen}
+                                title={t("jastip.action_reopen")}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-green-600 shadow-sm hover:bg-white"
+                            >
+                                <FiRefreshCw size={15} />
                             </button>
                         )}
                         <button

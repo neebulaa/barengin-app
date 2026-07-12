@@ -1,10 +1,12 @@
 import React from "react";
-import { Head, router } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import TripCard from "@/Components/TripCard";
+import PergiBarengCard from "@/Components/PergiBarengCard";
+import JastipProductCard from "@/Components/JastipProductCard";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
-import { FiUsers, FiDownload } from "react-icons/fi";
+import { FiUsers, FiDownload, FiArrowRight } from "react-icons/fi";
 import { FaSuitcase, FaCar } from "react-icons/fa6";
 import { MdOutlineShoppingBag } from "react-icons/md";
 
@@ -28,7 +30,22 @@ const AVATAR_BG = [
     "bg-pink-100 text-pink-600",
 ];
 
-export default function Beranda({ stats, latestTrips = [], logs }) {
+// Header seksi dengan judul + tautan "Lihat Semua" ke halaman publik terkait
+function SectionHeader({ title, href, seeAllLabel }) {
+    return (
+        <div className="flex items-center justify-between mb-4 gap-3">
+            <h2 className="text-lg font-semibold text-neutral-700">{title}</h2>
+            <Link
+                href={href}
+                className="inline-flex items-center gap-1 text-sm font-semibold text-primary-700 hover:underline whitespace-nowrap"
+            >
+                {seeAllLabel} <FiArrowRight size={15} />
+            </Link>
+        </div>
+    );
+}
+
+export default function Beranda({ stats, latestTrips = [], latestPergi = [], popularJastip = [], logs }) {
     const { t } = useTranslation();
     const data = logs?.data ?? [];
     const currentPage = logs?.current_page ?? 1;
@@ -64,9 +81,11 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
 
             {/* Trip terbaru */}
             <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-neutral-700 mb-4">
-                    {latestTrips.length} {t("admin.home.latest_trips_suffix")}
-                </h2>
+                <SectionHeader
+                    title={`${latestTrips.length} ${t("admin.home.latest_trips_suffix")}`}
+                    href="/trip-bareng"
+                    seeAllLabel={t("admin.home.see_all")}
+                />
                 {latestTrips.length > 0 ? (
                     <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-slim">
                         {latestTrips.map((trip) => (
@@ -77,6 +96,46 @@ export default function Beranda({ stats, latestTrips = [], logs }) {
                     </div>
                 ) : (
                     <p className="text-sm text-neutral-400 py-8 text-center">{t("admin.home.no_trips")}</p>
+                )}
+            </div>
+
+            {/* Pergi bareng terbaru */}
+            <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
+                <SectionHeader
+                    title={`${latestPergi.length} ${t("admin.home.latest_pergi_suffix")}`}
+                    href="/pergi-bareng"
+                    seeAllLabel={t("admin.home.see_all")}
+                />
+                {latestPergi.length > 0 ? (
+                    <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-slim">
+                        {latestPergi.map((trip) => (
+                            <div key={trip.id} className="w-[360px] shrink-0">
+                                <PergiBarengCard data={trip} />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-neutral-400 py-8 text-center">{t("admin.home.no_pergi")}</p>
+                )}
+            </div>
+
+            {/* Jastip terpopuler */}
+            <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
+                <SectionHeader
+                    title={`${popularJastip.length} ${t("admin.home.popular_jastip_suffix")}`}
+                    href="/jastip"
+                    seeAllLabel={t("admin.home.see_all")}
+                />
+                {popularJastip.length > 0 ? (
+                    <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-slim">
+                        {popularJastip.map((item) => (
+                            <Link key={item.id} href={`/jastip/${item.id}`} className="w-[280px] shrink-0">
+                                <JastipProductCard item={item} />
+                            </Link>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-neutral-400 py-8 text-center">{t("admin.home.no_jastip")}</p>
                 )}
             </div>
 

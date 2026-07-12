@@ -2,9 +2,10 @@ import React from "react";
 import { Head } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import AccountPerformanceCard from "@/Components/AccountPerformanceCard";
+import EmptyState from "@/Components/EmptyState";
 import { useTranslation } from "@/lib/useTranslation";
 import { FaCar } from "react-icons/fa6";
-import { FiUsers, FiTrendingUp, FiPercent } from "react-icons/fi";
+import { FiUsers, FiTrendingUp, FiPercent, FiMap } from "react-icons/fi";
 
 function StatCard({ icon, label, value }) {
     return (
@@ -64,8 +65,8 @@ export default function Analytics({ stats, topRoutes = [], rating }) {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="4" className="py-12 text-center text-neutral-500 text-sm">
-                                            {t("admin.pergi.analytics.empty")}
+                                        <td colSpan="4">
+                                            <EmptyState icon={<FiMap size={30} />} title={t("admin.pergi.analytics.empty_title")} description={t("admin.pergi.analytics.empty_desc")} />
                                         </td>
                                     </tr>
                                 )}

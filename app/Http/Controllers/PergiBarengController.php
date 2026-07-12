@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PergiBareng;
 use App\Models\PergiBarengRequest;
+use App\Support\FuzzySearch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -112,10 +113,10 @@ class PergiBarengController extends Controller
             ->where('time_appointment', '>=', now()); // sembunyikan yang sudah lewat
 
         if ($dari !== '') {
-            $query->where('departure_loc', 'like', "%{$dari}%");
+            FuzzySearch::apply($query, $dari, ['departure_loc']);
         }
         if ($ke !== '') {
-            $query->where('destination_loc', 'like', "%{$ke}%");
+            FuzzySearch::apply($query, $ke, ['destination_loc']);
         }
         if ($tanggal) {
             $query->whereDate('time_appointment', $tanggal);

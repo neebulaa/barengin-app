@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Head, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Pagination from "@/Components/Pagination";
 import ConfirmModal from "@/Components/ConfirmModal";
+import EmptyState from "@/Components/EmptyState";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiSearch, FiChevronDown, FiTrash2, FiMessageSquare } from "react-icons/fi";
 
@@ -60,10 +61,17 @@ export default function Message({ messages = {}, filters = {} }) {
     // Fungsi Ganti Halaman
     const handlePageChange = (page) => visit({ page });
 
-    // Fungsi Pencarian (Search) — tekan Enter
-    const handleSearch = (e) => {
-        if (e.key === "Enter") visit({ page: 1 });
-    };
+    // Pencarian live (debounce) — konsisten dengan halaman dashboard lain.
+    // Lewati eksekusi pertama saat mount agar tidak memicu reload tanpa perlu.
+    const didMount = useRef(false);
+    useEffect(() => {
+        if (!didMount.current) {
+            didMount.current = true;
+            return;
+        }
+        const timeout = setTimeout(() => visit({ page: 1 }), 350);
+        return () => clearTimeout(timeout);
+    }, [searchTerm]);
 
     // Fungsi Filter (periode)
     const handleFilter = (e) => {
@@ -102,7 +110,6 @@ export default function Message({ messages = {}, filters = {} }) {
                             placeholder={t("admin.messages.search_ph")}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={handleSearch}
                             className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-400 rounded-xl focus:outline-none focus:border-primary-700 text-sm transition-all"
                         />
                     </div>
@@ -155,16 +162,12 @@ export default function Message({ messages = {}, filters = {} }) {
                             </div>
                         ))
                     ) : (
-                        /* TAMPILAN EMPTY STATE */
-                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-neutral-400">
-                            <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
-                                <FiMessageSquare size={32} className="text-neutral-300" />
-                            </div>
-                            <h3 className="text-neutral-600 font-semibold mb-1">{t("admin.messages.empty_title")}</h3>
-                            <p className="text-sm text-center max-w-sm">
-                                {t("admin.messages.empty_desc")}
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={<FiMessageSquare size={32} />}
+                            title={t("admin.messages.empty_title")}
+                            description={t("admin.messages.empty_desc")}
+                            className="flex-1"
+                        />
                     )}
                 </div>
 

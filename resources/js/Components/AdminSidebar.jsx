@@ -68,8 +68,10 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen
 
     // Tentukan satu href aktif: cocokkan url lalu pilih yang paling spesifik (terpanjang),
     // sehingga "/admin/pergi-bareng" tidak ikut menyala saat di "/admin/pergi-bareng/analytics".
+    // Buang query string (mis. ?search=...) supaya menu tetap menyala saat mencari/filter.
+    const path = url.split("?")[0];
     const matchHref = (href) =>
-        href === "/admin" ? url === "/admin" : url === href || url.startsWith(href + "/");
+        href === "/admin" ? path === "/admin" : path === href || path.startsWith(href + "/");
 
     const activeHref = visibleMenus
         .flatMap((menu) => menu.items.map((item) => item.href))

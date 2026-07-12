@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import EmptyState from "@/Components/EmptyState";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronLeft, FiCheck, FiX, FiInbox } from "react-icons/fi";
 
@@ -56,10 +57,11 @@ export default function Requests({ trip, requests = [] }) {
 
             <div className="p-4 sm:p-6">
                 {requests.length === 0 ? (
-                    <div className="py-16 flex flex-col items-center justify-center text-neutral-400">
-                        <FiInbox size={40} className="mb-3" />
-                        <p className="text-sm">{t("admin.pergi.requests.empty")}</p>
-                    </div>
+                    <EmptyState
+                        icon={<FiInbox size={30} />}
+                        title={t("admin.pergi.requests.empty_title")}
+                        description={t("admin.pergi.requests.empty_desc")}
+                    />
                 ) : (
                     <div className="space-y-3">
                         {requests.map((req) => {

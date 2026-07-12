@@ -1,11 +1,13 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Pagination from "@/Components/Pagination";
 import ConfirmModal from "@/Components/ConfirmModal";
+import EmptyState from "@/Components/EmptyState";
 import { useTranslation } from "@/lib/useTranslation";
+import { useServerTable } from "@/lib/useServerTable";
 
-import { FiSearch, FiTrash2, FiEdit2 } from "react-icons/fi";
+import { FiSearch, FiTrash2, FiEdit2, FiUsers } from "react-icons/fi";
 import { FaCircleCheck } from "react-icons/fa6";
 
 // Helper: Inisial Nama
@@ -57,12 +59,12 @@ const UserAvatar = ({ avatar, initials, bg, sizeClass = "w-9 h-9 text-xs" }) => 
     );
 };
 
-export default function ManagementUser({ users = [] }) {
+export default function ManagementUser({ users = {}, filters = {} }) {
     const { t } = useTranslation();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [filterRole, setFilterRole] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    const { values, set, goPage } = useServerTable("/admin/management-user", {
+        search: filters.search ?? "",
+        role: filters.role ?? "",
+    });
 
     // ==========================================
     // STATE UNTUK MODAL POPUP DELETE
@@ -73,58 +75,24 @@ export default function ManagementUser({ users = [] }) {
         userName: "",
     });
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchQuery, filterRole]);
+    // Format baris dari data paginasi server (pencarian/filter dilakukan di server)
+    const paginatedUsers = (users.data ?? []).map((user) => {
+        const userRoles = [];
+        if (user.is_admin) userRoles.push("admin");
+        if (user.is_guider) userRoles.push("guider");
+        if (userRoles.length === 0) userRoles.push("user");
 
-    // Format Data
-    const formattedUsers = useMemo(() => {
-        if (!users || users.length === 0) return [];
-
-        return users.map((user) => {
-            const userRoles = [];
-            if (user.is_admin) userRoles.push("admin");
-            if (user.is_guider) userRoles.push("guider");
-            if (userRoles.length === 0) userRoles.push("user");
-
-            return {
-                id: user.id,
-                name: user.full_name,
-                email: user.email,
-                verified: user.is_verified === 1 || user.is_verified === true,
-                initials: getInitials(user.full_name),
-                bg: getRandomBg(user.id),
-                avatar: user.public_profile_image,
-                roles: userRoles,
-            };
-        });
-    }, [users]);
-
-    // Filter & Search
-    const filteredUsers = useMemo(() => {
-        return formattedUsers.filter((user) => {
-            const matchSearch =
-                (user.name &&
-                    user.name
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase())) ||
-                (user.email &&
-                    user.email
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()));
-            const matchRole = filterRole
-                ? user.roles.includes(filterRole)
-                : true;
-            return matchSearch && matchRole;
-        });
-    }, [searchQuery, filterRole, formattedUsers]);
-
-    // Pagination
-    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
-    const paginatedUsers = filteredUsers.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+        return {
+            id: user.id,
+            name: user.full_name,
+            email: user.email,
+            verified: user.is_verified === 1 || user.is_verified === true,
+            initials: getInitials(user.full_name),
+            bg: getRandomBg(user.id),
+            avatar: user.public_profile_image,
+            roles: userRoles,
+        };
+    });
 
     // ==========================================
     // LOGIKA HAPUS (MEMBUKA MODAL LALU EKSEKUSI)
@@ -202,16 +170,16 @@ export default function ManagementUser({ users = [] }) {
                         <input
                             type="text"
                             placeholder={t("admin.users.search_ph")}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            value={values.search}
+                            onChange={(e) => set("search", e.target.value, { debounce: true })}
                             className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all"
                         />
                     </div>
 
                     <div className="relative w-full md:w-44 shrink-0">
                         <select
-                            value={filterRole}
-                            onChange={(e) => setFilterRole(e.target.value)}
+                            value={values.role}
+                            onChange={(e) => set("role", e.target.value)}
                             className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer appearance-none transition-all"
                         >
                             <option value="">{t("admin.users.filter_all")}</option>
@@ -297,8 +265,8 @@ export default function ManagementUser({ users = [] }) {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="4" className="py-12 text-center text-neutral-500">
-                                        {t("admin.users.no_results")}
+                                    <td colSpan="4">
+                                        <EmptyState icon={<FiUsers size={30} />} title={t("admin.users.empty_title")} description={t("admin.users.empty_desc")} />
                                     </td>
                                 </tr>
                             )}
@@ -357,23 +325,23 @@ export default function ManagementUser({ users = [] }) {
                             </div>
                         ))
                     ) : (
-                        <div className="py-12 text-center text-neutral-500 text-sm">
-                            {t("admin.users.no_results")}
-                        </div>
+                        <EmptyState icon={<FiUsers size={30} />} title={t("admin.users.empty_title")} description={t("admin.users.empty_desc")} />
                     )}
                 </div>
             </div>
 
             <div className="bg-neutral-100 p-4 border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="text-xs text-neutral-500 font-medium text-center md:text-left">
-                    {t("common.showing")} {paginatedUsers.length} {t("common.of")} {filteredUsers.length} {t("common.data")}
+                    {t("common.showing")} {users.from ?? 0}–{users.to ?? 0} {t("common.of")} {users.total ?? 0} {t("common.data")}
                 </div>
-                <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    className="mt-0"
-                />
+                {users.last_page > 1 && (
+                    <Pagination
+                        currentPage={users.current_page}
+                        totalPages={users.last_page}
+                        onPageChange={goPage}
+                        className="mt-0"
+                    />
+                )}
             </div>
         </div>
         </>

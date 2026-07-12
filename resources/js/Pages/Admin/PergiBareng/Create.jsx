@@ -9,20 +9,22 @@ import { FiPlus, FiX, FiUploadCloud, FiChevronLeft } from "react-icons/fi";
 // Penanda kolom wajib
 const Req = () => <span className="text-red-500"> *</span>;
 
-export default function Create({ transportations = [] }) {
+export default function Create({ transportations = [], prefill = null }) {
     const { t } = useTranslation();
     const [preview, setPreview] = useState(null);
 
+    // #14: saat "buka ulang", data ter-isi dari pergi bareng lama, tapi tanggal &
+    // waktu SELALU dikosongkan agar jastiper mengatur jadwal baru.
     const { data, setData, post, processing, errors } = useForm({
-        name: "",
-        destination_loc: "",
-        departure_loc: "",
+        name: prefill?.name ?? "",
+        destination_loc: prefill?.destination_loc ?? "",
+        departure_loc: prefill?.departure_loc ?? "",
         date: "",
         time: "",
-        transportation: "",
-        description: "",
-        people_amount: "",
-        financing_estimates: [""],
+        transportation: prefill?.transportation ?? "",
+        description: prefill?.description ?? "",
+        people_amount: prefill?.people_amount ?? "",
+        financing_estimates: prefill?.financing_estimates?.length ? prefill.financing_estimates : [""],
         image: null,
     });
 
@@ -71,6 +73,12 @@ export default function Create({ transportations = [] }) {
                     <p className="text-neutral-500 text-sm">{t("admin.pergi.create_subtitle")}</p>
                 </div>
             </div>
+
+            {prefill && (
+                <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-primary-700">
+                    {t("admin.pergi.reopen_note")}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Kolom kiri */}

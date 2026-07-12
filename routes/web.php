@@ -337,6 +337,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/', [AdminPergiBarengController::class, 'store'])->name('store');
         Route::delete('/{id}', [AdminPergiBarengController::class, 'destroy'])->whereNumber('id')->name('destroy');
 
+        Route::get('/{id}/reopen', [AdminPergiBarengController::class, 'reopen'])->whereNumber('id')->name('reopen');
         Route::get('/{id}/requests', [AdminPergiBarengController::class, 'requests'])->whereNumber('id')->name('requests');
         Route::post('/{id}/requests/{requestId}/approve', [AdminPergiBarengController::class, 'approve'])->whereNumber('id')->whereNumber('requestId')->name('requests.approve');
         Route::delete('/{id}/requests/{requestId}', [AdminPergiBarengController::class, 'reject'])->whereNumber('id')->whereNumber('requestId')->name('requests.reject');
@@ -351,6 +352,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/{id}/edit', [AdminJastipController::class, 'edit'])->whereNumber('id')->name('edit');
         Route::post('/{id}', [AdminJastipController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/publish', [AdminJastipController::class, 'publish'])->whereNumber('id')->name('publish');
+        Route::post('/{id}/reopen', [AdminJastipController::class, 'reopen'])->whereNumber('id')->name('reopen');
         Route::delete('/{id}', [AdminJastipController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
 

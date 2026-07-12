@@ -4,16 +4,37 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Support\FuzzySearch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class AdminUserController extends Controller
 {
-    // 1. Tampilkan halaman daftar user
-    public function index()
+    // 1. Tampilkan halaman daftar user (pencarian & filter server-side + URL params)
+    public function index(Request $request)
     {
+        $search = trim((string) $request->query('search', ''));
+        $role   = (string) $request->query('role', '');
+
+        $query = User::query();
+
+        if ($search !== '') {
+            FuzzySearch::apply($query, $search, ['full_name', 'email', 'username']);
+        }
+
+        if ($role === 'admin') {
+            $query->where('is_admin', 1);
+        } elseif ($role === 'guider') {
+            $query->where('is_guider', 1);
+        } elseif ($role === 'user') {
+            $query->where('is_admin', 0)->where('is_guider', 0);
+        }
+
+        $users = $query->orderByDesc('id')->paginate(10)->withQueryString();
+
         return Inertia::render('Admin/ManagementUser', [
-            'users' => User::all()
+            'users'   => $users,
+            'filters' => ['search' => $search, 'role' => $role],
         ]);
     }
 
@@ -41,7 +62,9 @@ class AdminUserController extends Controller
 
         ActivityLog::record('Mengubah izin pengguna: ' . $user->full_name);
 
-        return redirect()->route('management-user')->with('success_message', 'Pengguna berhasil diperbarui!');
+        // Toast sukses ditangani di sisi klien (EditUser) agar terlokalisasi &
+        // mendukung status gagal — jadi tidak perlu flash dari server di sini.
+        return redirect()->route('management-user');
     }
 
     // 4. Hapus user

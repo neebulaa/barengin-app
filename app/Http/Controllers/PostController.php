@@ -121,7 +121,9 @@ class PostController extends Controller
             }
         });
 
-        return redirect()->back()->with('flash', ['type' => 'success', 'message' => 'Postingan berhasil dibuat.']);
+        // Selalu arahkan ke beranda forum agar pengguna langsung melihat postingan
+        // barunya di paling atas, dari halaman mana pun ia membuat post.
+        return redirect()->route('forum.index')->with('flash', ['type' => 'success', 'message' => 'Postingan berhasil dibuat.']);
     }
 
     private function normalizeChipTags(array $tags): array

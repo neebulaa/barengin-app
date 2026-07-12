@@ -6,6 +6,7 @@ use App\Models\Facility;
 use App\Models\ImageActivity;
 use App\Models\Trip;
 use App\Models\TripActivity;
+use App\Support\FuzzySearch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,40 +18,54 @@ class AdminTripController extends Controller
 {
     /** Status badge styling key sudah ditangani di frontend. */
 
-    public function index()
+    public function index(Request $request)
     {
         // Selaraskan status (terjadwal/berlangsung/selesai) sesuai tanggal terkini
         Trip::refreshStatuses();
 
-        $trips = Trip::with('detail_trips')
-            ->where('guider_id', Auth::id())
-            ->orderByDesc('created_at') // "Terbaru" = waktu dibuat
-            ->orderByDesc('id')         // tie-break agar yang terbaru selalu di atas
-            ->get()
-            ->map(function ($trip) {
-                $joined = (int) DB::table('trip_orders')
-                    ->where('trip_id', $trip->id)
-                    ->where('order_status', 'paid')
-                    ->distinct()
-                    ->count('user_id');
+        $search = trim((string) $request->query('search', ''));
+        $sort   = (string) $request->query('sort', 'latest');
 
-                return [
-                    'id' => $trip->id,
-                    'name' => $trip->name,
-                    'location' => $trip->location,
-                    'image' => $this->resolveImage($trip->image),
-                    'price' => (float) $trip->price,
-                    'date_label' => Carbon::parse($trip->start_date)->translatedFormat('d M Y'),
-                    'joined' => $joined,
-                    'capacity' => $trip->people_amount,
-                    'status' => $trip->status,
-                    'status_label' => $trip->statusLabel(),
-                    'is_draft' => $trip->status === Trip::STATUS_DRAFT,
-                ];
-            });
+        // Jumlah peserta (paid) sebagai subquery agar bisa di-sort & dipaginasi di server
+        $joinedSub = DB::table('trip_orders')
+            ->where('order_status', 'paid')
+            ->groupBy('trip_id')
+            ->select('trip_id', DB::raw('COUNT(DISTINCT user_id) as joined'));
+
+        $query = Trip::query()
+            ->with('detail_trips')
+            ->leftJoinSub($joinedSub, 'j', 'j.trip_id', '=', 'trips.id')
+            ->where('trips.guider_id', Auth::id())
+            ->select('trips.*', DB::raw('COALESCE(j.joined, 0) as joined_count'));
+
+        if ($search !== '') {
+            FuzzySearch::apply($query, $search, ['trips.name', 'trips.location'], 'trips.id');
+        }
+
+        match ($sort) {
+            'seats'  => $query->orderByDesc('joined_count'),
+            'status' => $query->orderBy('trips.status')->orderByDesc('trips.created_at'),
+            default  => $query->orderByDesc('trips.created_at')->orderByDesc('trips.id'),
+        };
+
+        $trips = $query->paginate(10)->withQueryString()
+            ->through(fn ($trip) => [
+                'id' => $trip->id,
+                'name' => $trip->name,
+                'location' => $trip->location,
+                'image' => $this->resolveImage($trip->image),
+                'price' => (float) $trip->price,
+                'date_label' => Carbon::parse($trip->start_date)->translatedFormat('d M Y'),
+                'joined' => (int) $trip->joined_count,
+                'capacity' => $trip->people_amount,
+                'status' => $trip->status,
+                'status_label' => $trip->statusLabel(),
+                'is_draft' => $trip->status === Trip::STATUS_DRAFT,
+            ]);
 
         return Inertia::render('Admin/Trip/Index', [
             'trips' => $trips,
+            'filters' => ['search' => $search, 'sort' => $sort],
         ]);
     }
 

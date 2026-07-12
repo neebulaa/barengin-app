@@ -75,6 +75,34 @@ class JastipItem extends Model
     }
 
     /**
+     * Status untuk jastiper (pemilik jastip), 4 tahap:
+     *  - draft     : masih draft
+     *  - published : masa pemesanan masih buka (hari ini <= end_date)
+     *  - buy_time  : masa pemesanan tutup, sebelum pengambilan dibuka
+     *                (setelah end_date, sebelum pickup_start_date) → saatnya membelikan
+     *  - finished  : sudah masuk/melewati masa pengambilan → bisa di-reopen
+     */
+    public static function jastiperStatusOf(?string $status, $endDate, $pickupStartDate): string
+    {
+        if ($status === self::STATUS_DRAFT) {
+            return 'draft';
+        }
+        $today = \Carbon\Carbon::today();
+        if ($endDate && $today->lte(\Carbon\Carbon::parse($endDate))) {
+            return 'published';
+        }
+        if ($pickupStartDate && $today->lt(\Carbon\Carbon::parse($pickupStartDate))) {
+            return 'buy_time';
+        }
+        return 'finished';
+    }
+
+    public function jastiperStatus(): string
+    {
+        return self::jastiperStatusOf($this->status, $this->end_date, $this->pickup_start_date);
+    }
+
+    /**
      * Status siklus hidup jastip (untuk badge & kelayakan ulasan):
      *  - upcoming    : belum dibuka (sebelum start_date)
      *  - in_order    : masa pemesanan (start_date..end_date)

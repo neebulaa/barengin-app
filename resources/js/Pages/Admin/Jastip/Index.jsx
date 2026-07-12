@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
 import Pagination from "@/Components/Pagination";
 import JastipProductCard from "@/Components/JastipProductCard";
+import EmptyState from "@/Components/EmptyState";
 import { useTranslation } from "@/lib/useTranslation";
-import { FiSearch, FiPlus, FiShoppingCart, FiAlertCircle, FiUploadCloud } from "react-icons/fi";
+import { FiSearch, FiPlus, FiShoppingCart, FiAlertCircle, FiUploadCloud, FiRefreshCw } from "react-icons/fi";
 
 const STATUS_BADGE = {
     paid: "bg-blue-100 text-primary-700",
@@ -14,35 +15,62 @@ const STATUS_BADGE = {
     unpaid: "bg-neutral-100 text-neutral-500",
 };
 
-export default function Index({ items = [], orders = {} }) {
+// Badge status siklus hidup jastip (jastiper): draft/published/buy_time/finished
+const JASTIPER_STATUS_BADGE = {
+    draft: "bg-neutral-100 text-neutral-600",
+    published: "bg-green-100 text-green-700",
+    buy_time: "bg-amber-100 text-amber-700",
+    finished: "bg-blue-100 text-primary-700",
+};
+
+export default function Index({ items = {}, orders = {}, filters = {} }) {
     const { t } = useTranslation();
-    const [search, setSearch] = useState("");
-    const [sortBy, setSortBy] = useState("latest");
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
     const [publishModal, setPublishModal] = useState({ open: false, id: null, name: "" });
+    const [reopenModal, setReopenModal] = useState({ open: false, id: null, name: "" });
 
-    const rows = useMemo(() => {
-        const q = search.toLowerCase();
-        let list = items.filter(
-            (i) => i.name?.toLowerCase().includes(q) || i.category?.toLowerCase().includes(q),
-        );
-        if (sortBy === "best") list = [...list].sort((a, b) => b.sold - a.sold);
-        else if (sortBy === "stock") list = [...list].sort((a, b) => (b.max_slot - b.sold) - (a.max_slot - a.sold));
-        return list;
-    }, [items, search, sortBy]);
-
-    // Pagination produk (client-side, 12 per halaman) agar daftar tidak terlalu
-    // panjang dan Aktivitas Penjualan mudah dijangkau.
-    const PRODUCTS_PER_PAGE = 12;
-    const [itemsPage, setItemsPage] = useState(1);
-    useEffect(() => setItemsPage(1), [search, sortBy]);
-
-    const itemsTotalPages = Math.max(1, Math.ceil(rows.length / PRODUCTS_PER_PAGE));
-    const safeItemsPage = Math.min(itemsPage, itemsTotalPages);
-    const pagedRows = rows.slice((safeItemsPage - 1) * PRODUCTS_PER_PAGE, safeItemsPage * PRODUCTS_PER_PAGE);
-    const isLastItemsPage = safeItemsPage >= itemsTotalPages;
-
+    const pagedRows = items.data ?? [];
     const orderRows = orders?.data ?? [];
+    const isLastItemsPage = (items.current_page ?? 1) >= (items.last_page ?? 1);
+
+    // Pencarian/sort/pagination produk + pencarian/pagination pesanan — semuanya
+    // server-side dengan URL params, mengelola kedua tabel dalam satu tempat.
+    const paramsRef = useRef({
+        search: filters.search ?? "",
+        sort: filters.sort ?? "latest",
+        page: undefined,
+        orders_search: filters.orders_search ?? "",
+        orders_page: undefined,
+    });
+    const [ui, setUi] = useState({
+        search: filters.search ?? "",
+        sort: filters.sort ?? "latest",
+        orders_search: filters.orders_search ?? "",
+    });
+    const timer = useRef(null);
+
+    const go = () => {
+        const p = paramsRef.current;
+        const out = {};
+        if (p.search) out.search = p.search;
+        if (p.sort && p.sort !== "latest") out.sort = p.sort;
+        if (p.page && p.page > 1) out.page = p.page;
+        if (p.orders_search) out.orders_search = p.orders_search;
+        if (p.orders_page && p.orders_page > 1) out.orders_page = p.orders_page;
+        router.get("/admin/jastip", out, { preserveState: true, preserveScroll: true, replace: true });
+    };
+
+    const update = (patch, { debounce = false, resetPage = false, resetOrdersPage = false } = {}) => {
+        paramsRef.current = { ...paramsRef.current, ...patch };
+        if (resetPage) paramsRef.current.page = 1;
+        if (resetOrdersPage) paramsRef.current.orders_page = 1;
+        setUi((u) => ({ ...u, ...patch }));
+        clearTimeout(timer.current);
+        if (debounce) timer.current = setTimeout(go, 350);
+        else go();
+    };
+
+    useEffect(() => () => clearTimeout(timer.current), []);
 
     const confirmDelete = () =>
         router.delete(`/admin/jastip/${deleteModal.id}`, {
@@ -56,9 +84,10 @@ export default function Index({ items = [], orders = {} }) {
             onSuccess: () => setPublishModal({ open: false, id: null, name: "" }),
         });
 
-    const goPage = (page) =>
-        router.get(window.location.pathname, { orders_page: page }, {
-            preserveScroll: true, preserveState: true, replace: true, only: ["orders"],
+    const confirmReopen = () =>
+        router.post(`/admin/jastip/${reopenModal.id}/reopen`, {}, {
+            preserveScroll: true,
+            onSuccess: () => setReopenModal({ open: false, id: null, name: "" }),
         });
 
     return (
@@ -85,6 +114,17 @@ export default function Index({ items = [], orders = {} }) {
                 confirmLabel={t("jastip.publish_confirm")}
                 confirmType="primary"
             />
+            <ConfirmModal
+                open={reopenModal.open}
+                onClose={() => setReopenModal({ open: false, id: null, name: "" })}
+                onConfirm={confirmReopen}
+                icon={<FiRefreshCw size={24} />}
+                iconClass="bg-green-100 text-green-600"
+                title={t("jastip.reopen_title")}
+                description={<>{t("jastip.reopen_desc_prefix")} <span className="font-semibold text-neutral-700">{reopenModal.name}</span>{t("jastip.reopen_desc_suffix")}</>}
+                confirmLabel={t("jastip.reopen_confirm")}
+                confirmType="primary"
+            />
 
             {/* List Product */}
             <div className="mb-2">
@@ -97,16 +137,16 @@ export default function Index({ items = [], orders = {} }) {
                     <input
                         type="text"
                         placeholder={t("jastip.search_ph")}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        value={ui.search}
+                        onChange={(e) => update({ search: e.target.value }, { debounce: true, resetPage: true })}
                         className="w-full rounded-xl border border-neutral-400 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-primary-700"
                     />
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
+                            value={ui.sort}
+                            onChange={(e) => update({ sort: e.target.value }, { resetPage: true })}
                             className="w-44 appearance-none rounded-xl border border-neutral-400 bg-white py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-primary-700 cursor-pointer"
                         >
                             <option value="latest">{t("jastip.sort_latest")}</option>
@@ -135,6 +175,7 @@ export default function Index({ items = [], orders = {} }) {
                         onEdit={() => router.visit(`/admin/jastip/${item.id}/edit`)}
                         onPublish={() => setPublishModal({ open: true, id: item.id, name: item.name })}
                         onGroupChat={() => router.post(`/chat/jastip/${item.id}/group`)}
+                        onReopen={() => setReopenModal({ open: true, id: item.id, name: item.name })}
                         onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name })}
                     />
                 ))}
@@ -151,30 +192,41 @@ export default function Index({ items = [], orders = {} }) {
                 )}
             </div>
 
-            {itemsTotalPages > 1 && (
+            {items.last_page > 1 && (
                 <Pagination
                     className="mt-8"
-                    currentPage={safeItemsPage}
-                    totalPages={itemsTotalPages}
-                    onPageChange={(p) => {
-                        if (p < 1 || p > itemsTotalPages) return;
-                        setItemsPage(p);
-                    }}
+                    currentPage={items.current_page}
+                    totalPages={items.last_page}
+                    onPageChange={(p) => update({ page: p })}
                 />
             )}
 
             {/* Aktivitas Penjualan */}
             <div id="sales-activity" className="mt-10 scroll-mt-6">
-                <h2 className="mb-4 text-xl font-bold text-neutral-700">{t("jastip.sales_activity")}</h2>
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="text-xl font-bold text-neutral-700">{t("jastip.sales_activity")}</h2>
+                    <div className="relative w-full sm:max-w-xs">
+                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+                        <input
+                            type="text"
+                            placeholder={t("jastip.sales_search_ph")}
+                            value={ui.orders_search}
+                            onChange={(e) => update({ orders_search: e.target.value }, { debounce: true, resetOrdersPage: true })}
+                            className="w-full rounded-xl border border-neutral-400 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-primary-700"
+                        />
+                    </div>
+                </div>
                 <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[820px] border-collapse text-left">
+                        <table className="w-full min-w-[960px] border-collapse text-left">
                             <thead>
                                 <tr className="bg-neutral-100 text-xs font-bold uppercase tracking-wider text-neutral-500">
                                     <th className="px-5 py-3">{t("jastip.col_order")}</th>
                                     <th className="px-5 py-3">{t("jastip.col_buyer")}</th>
                                     <th className="px-5 py-3">{t("jastip.col_product")}</th>
+                                    <th className="px-5 py-3 text-center">{t("jastip.col_quantity")}</th>
                                     <th className="px-5 py-3">{t("jastip.col_status")}</th>
+                                    <th className="px-5 py-3">{t("jastip.col_jastip_status")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-100">
@@ -183,33 +235,55 @@ export default function Index({ items = [], orders = {} }) {
                                         <tr key={o.id} className="transition hover:bg-neutral-50/50">
                                             <td className="px-5 py-3.5 text-sm font-medium text-neutral-500">{o.code}</td>
                                             <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-2.5">
-                                                    <img
-                                                        src={o.avatar}
-                                                        alt={o.buyer}
-                                                        className="h-8 w-8 rounded-full border border-neutral-200 object-cover"
-                                                        onError={(e) => (e.target.src = "/assets/default-profile.png")}
-                                                    />
-                                                    <div className="min-w-0">
-                                                        <div className="truncate text-sm font-semibold text-neutral-700">{o.buyer}</div>
-                                                        {o.username && <div className="truncate text-xs text-neutral-400">@{o.username}</div>}
+                                                {o.username ? (
+                                                    <Link
+                                                        href={`/forum/users/${o.username}`}
+                                                        className="flex items-center gap-2.5 group/buyer"
+                                                        title={t("jastip.view_buyer_profile")}
+                                                    >
+                                                        <img
+                                                            src={o.avatar}
+                                                            alt={o.buyer}
+                                                            className="h-8 w-8 rounded-full border border-neutral-200 object-cover"
+                                                            onError={(e) => (e.target.src = "/assets/default-profile.png")}
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <div className="truncate text-sm font-semibold text-neutral-700 group-hover/buyer:text-primary-700 group-hover/buyer:underline">{o.buyer}</div>
+                                                            <div className="truncate text-xs text-neutral-400">@{o.username}</div>
+                                                        </div>
+                                                    </Link>
+                                                ) : (
+                                                    <div className="flex items-center gap-2.5">
+                                                        <img
+                                                            src={o.avatar}
+                                                            alt={o.buyer}
+                                                            className="h-8 w-8 rounded-full border border-neutral-200 object-cover"
+                                                            onError={(e) => (e.target.src = "/assets/default-profile.png")}
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <div className="truncate text-sm font-semibold text-neutral-700">{o.buyer}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )}
                                             </td>
-                                            <td className="px-5 py-3.5 text-sm text-neutral-600">
-                                                {o.item} <span className="text-neutral-400">×{o.qty}</span>
-                                            </td>
+                                            <td className="px-5 py-3.5 text-sm text-neutral-600">{o.item}</td>
+                                            <td className="px-5 py-3.5 text-center text-sm font-semibold text-neutral-700 tabular-nums">{o.qty}</td>
                                             <td className="px-5 py-3.5">
                                                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_BADGE[o.status] || "bg-neutral-100 text-neutral-500"}`}>
                                                     {t(`jastip.order_status.${o.status}`, o.status)}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3.5">
+                                                <span className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${JASTIPER_STATUS_BADGE[o.jastiper_status] || "bg-neutral-100 text-neutral-500"}`}>
+                                                    {t(`jastip.jastiper_status.${o.jastiper_status}`, o.jastiper_status)}
                                                 </span>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="4" className="px-5 py-12 text-center text-sm text-neutral-500">
-                                            {t("jastip.no_orders")}
+                                        <td colSpan="6">
+                                            <EmptyState icon={<FiShoppingCart size={30} />} title={t("jastip.no_orders_title")} description={t("jastip.no_orders_desc")} />
                                         </td>
                                     </tr>
                                 )}
@@ -225,7 +299,7 @@ export default function Index({ items = [], orders = {} }) {
                             <Pagination
                                 currentPage={orders.current_page}
                                 totalPages={orders.last_page}
-                                onPageChange={goPage}
+                                onPageChange={(p) => update({ orders_page: p })}
                                 scrollTargetId="sales-activity"
                             />
                         )}

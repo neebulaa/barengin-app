@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@inertiajs/react";
 import { FaSuitcaseRolling, FaUtensils, FaDownload } from "react-icons/fa";
 import Button from "@/Components/Button";
 import TransactionDetailModal from "./TransactionDetailModal";
@@ -68,24 +69,40 @@ export default function TransactionCard({ transaction, onPay, onReview }) {
             {/* Body */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <div className="flex items-center gap-3">
-                        <img
-                            src={image}
-                            alt={item_name}
-                            className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                            onError={(e) => {
-                                e.target.src = "/assets/default-image.png";
-                            }}
-                        />
-                        <div>
-                            <p className="font-semibold text-neutral-900">
-                                {item_name}
-                            </p>
-                            <p className="text-sm text-neutral-500">
-                                {slot} {t("ph.slot")}
-                            </p>
-                        </div>
-                    </div>
+                    {(() => {
+                        const card = (
+                            <div className="flex items-center gap-3">
+                                <img
+                                    src={image}
+                                    alt={item_name}
+                                    className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                                    onError={(e) => {
+                                        e.target.src = "/assets/default-image.png";
+                                    }}
+                                />
+                                <div>
+                                    <p className="font-semibold text-neutral-900 group-hover:text-primary-700">
+                                        {item_name}
+                                    </p>
+                                    <p className="text-sm text-neutral-500">
+                                        {slot} {t("ph.slot")}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+
+                        // Jika ada halaman detail produk (jastip / trip), jadikan kartu kecil bisa diklik.
+                        return detail_url ? (
+                            <Link
+                                href={detail_url}
+                                className="group -m-1 block rounded-lg p-1 transition hover:bg-neutral-50"
+                            >
+                                {card}
+                            </Link>
+                        ) : (
+                            card
+                        );
+                    })()}
 
                     <div className="mt-4">
                         <p className="text-xs text-neutral-500">

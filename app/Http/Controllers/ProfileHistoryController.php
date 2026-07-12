@@ -221,7 +221,8 @@ class ProfileHistoryController extends Controller
             'total'      => (float) $t->total_amount,
             'status'     => $status,
             'snap_token' => $t->snap_token,
-            'detail_url' => null,
+            // Tautkan ke halaman produk jastip (item pertama pada pesanan).
+            'detail_url' => $firstItem ? '/jastip/' . $firstItem->id : null,
             'detail'     => [
                 'order_no'       => 'TRX-' . strtoupper(substr((string) $t->id, 0, 8)),
                 'date_label'     => Carbon::parse($t->created_at)->translatedFormat('d F Y'),

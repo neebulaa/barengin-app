@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Jastip;
+use App\Models\JastipItem;
 use App\Models\PergiBareng;
 use App\Models\Trip;
 use App\Models\User;
@@ -35,6 +36,31 @@ class AdminDashboardController extends Controller
             ->get()
             ->map(fn ($trip) => $this->formatTripCard($trip));
 
+        // 3 pergi bareng terbaru dibuat (format sama dengan PergiBarengCard)
+        $latestPergi = PergiBareng::with(['initiator.received_ratings', 'pergi_bareng_participants'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(3)
+            ->get()
+            ->map(fn ($trip) => $this->formatPergiCard($trip));
+
+        // 3 jastip terpopuler (paling banyak dibeli) — global, hanya yang dipublish
+        $soldSub = DB::table('jastip_order_items')
+            ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
+            ->where('jastip_orders.order_status', 'paid')
+            ->groupBy('jastip_item_id')
+            ->select('jastip_item_id', DB::raw('SUM(quantity) as sold'));
+
+        $popularJastip = JastipItem::query()
+            ->with(['jastip_item_images', 'category'])
+            ->leftJoinSub($soldSub, 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
+            ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'))
+            ->where('jastip_items.status', 'published')
+            ->orderByDesc('sold_count')
+            ->limit(3)
+            ->get()
+            ->map(fn ($item) => $this->formatJastipCard($item));
+
         // Log kegiatan — paginasi 5 per halaman
         $logs = ActivityLog::with('user:id,full_name,profile_image')
             ->latest()
@@ -53,6 +79,8 @@ class AdminDashboardController extends Controller
         return Inertia::render('Admin/Beranda', [
             'stats' => $stats,
             'latestTrips' => $latestTrips,
+            'latestPergi' => $latestPergi,
+            'popularJastip' => $popularJastip,
             'logs' => $logs,
         ]);
     }
@@ -92,6 +120,79 @@ class AdminDashboardController extends Controller
             return Str::upper(Str::substr($words[0], 0, 1) . Str::substr($words[1], 0, 1));
         }
         return Str::upper(Str::substr($name, 0, 2));
+    }
+
+    // Format pergi bareng agar cocok dengan props PergiBarengCard.jsx
+    private function formatPergiCard(PergiBareng $trip): array
+    {
+        $date = $trip->time_appointment;
+        $avgRating = $trip->initiator?->receivedRatingAvg('pergi_bareng') ?? 0;
+        $totalReviews = $trip->initiator?->receivedRatingCount('pergi_bareng') ?? 0;
+        $joined = $trip->pergi_bareng_participants->sum('quantity');
+
+        $transportIcon = str_contains(strtolower((string) $trip->transportation), 'umum') ? 'train' : 'car';
+
+        return [
+            'id' => $trip->id,
+            'image' => $this->resolvePergiImage($trip->img_name),
+            'title' => $trip->name,
+            'address' => $trip->departure_loc,
+            'date' => $date->translatedFormat('d M y'),
+            'time' => $date->format('H:i'),
+            'capacity' => $joined . '/' . $trip->people_amount . ' Orang',
+            'remainingSeats' => max(0, $trip->people_amount - $joined),
+            'user' => [
+                'id' => $trip->initiator?->id,
+                'name' => $trip->initiator?->full_name ?? 'Penyelenggara',
+                'avatar' => $trip->initiator?->public_profile_image ?? asset('assets/default-profile.png'),
+                'rating' => number_format($avgRating, 1),
+                'reviews' => (int) $totalReviews,
+                'verified' => true,
+            ],
+            'transportType' => $trip->transportation,
+            'transportIcon' => $transportIcon,
+            'href' => '/pergi-bareng/' . $trip->id,
+            'liked' => false,
+        ];
+    }
+
+    // Samakan resolusi gambar pergi bareng dengan halaman front (PergiBarengController)
+    private function resolvePergiImage(?string $path): string
+    {
+        $fallback = '/assets/pergi-bareng/PergiBarengHeader.avif';
+        if (! $path) {
+            return $fallback;
+        }
+        if (Str::startsWith($path, ['http://', 'https://', '/'])) {
+            return $path;
+        }
+        return '/storage/' . $path;
+    }
+
+    // Format produk jastip agar cocok dengan props JastipProductCard.jsx
+    private function formatJastipCard(JastipItem $item): array
+    {
+        $sold = (int) ($item->sold_count ?? 0);
+        $isSoldOut = $item->max_slot > 0 && $sold >= $item->max_slot;
+
+        $image = $item->relationLoaded('jastip_item_images') && $item->jastip_item_images->isNotEmpty()
+            ? $item->jastip_item_images->first()->image_name
+            : null;
+        if ($image && ! Str::startsWith($image, ['http://', 'https://', '/'])) {
+            $image = asset('storage/' . $image);
+        }
+
+        return [
+            'id' => $item->id,
+            'name' => $item->name,
+            'category' => $item->category?->name,
+            'image' => $image ?: '/assets/default-image.png',
+            'max_slot' => (int) $item->max_slot,
+            'sold' => $sold,
+            'status' => $isSoldOut ? 'sold_out' : $item->status,
+            'jastiper_status' => $item->jastiperStatus(),
+            'is_draft' => false,
+        ];
     }
 
     private function formatTripCard($trip): array

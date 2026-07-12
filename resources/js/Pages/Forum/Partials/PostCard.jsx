@@ -1,44 +1,74 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "@inertiajs/react";
 import TagPillList from "./TagPillList";
+import ImageLightbox from "@/Components/ImageLightbox";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
 import { FiMapPin } from "react-icons/fi";
 
 function PostMediaScroll({ images = [] }) {
+    const [lightbox, setLightbox] = useState({ open: false, index: 0 });
     if (!images.length) return null;
 
+    const openAt = (index) => setLightbox({ open: true, index });
+
+    const lightboxEl = (
+        <ImageLightbox
+            images={images}
+            index={lightbox.index}
+            open={lightbox.open}
+            onClose={() => setLightbox((s) => ({ ...s, open: false }))}
+            alt="Post media"
+        />
+    );
+
+    // Satu gambar → tampilkan sesuai rasio aslinya (tidak dipotong), lebar
+    // menyesuaikan (bukan 100%) dengan batas tinggi & lebar maksimum.
     if (images.length === 1) {
         return (
-            <div className="mt-4">
-                <img
-                    src={images[0]}
-                    alt="Post media"
-                    className="w-full h-54 md:h-62 object-cover rounded-2xl"
-                    loading="lazy"
-                />
-            </div>
+            <>
+                <div className="mt-4">
+                    <button
+                        type="button"
+                        onClick={() => openAt(0)}
+                        className="block overflow-hidden rounded-2xl bg-neutral-100"
+                    >
+                        <img
+                            src={images[0]}
+                            alt="Post media"
+                            className="max-h-[520px] w-auto max-w-full cursor-zoom-in object-contain"
+                            loading="lazy"
+                        />
+                    </button>
+                </div>
+                {lightboxEl}
+            </>
         );
     }
 
     return (
-        <div className="mt-4">
-            <div className="flex gap-3 overflow-x-auto pb-1 pr-1 snap-x snap-mandatory scrollbar-slim">
-                {images.map((src, idx) => (
-                    <div
-                        key={idx}
-                        className="snap-start shrink-0 overflow-hidden rounded-2xl bg-neutral-100 w-64 sm:w-72 md:w-80"
-                    >
-                        <img
-                            src={src}
-                            alt={`Post media ${idx + 1}`}
-                            className="h-48 w-full object-cover md:h-54"
-                            loading="lazy"
-                        />
-                    </div>
-                ))}
+        <>
+            <div className="mt-4">
+                <div className="flex gap-3 overflow-x-auto pb-1 pr-1 snap-x snap-mandatory scrollbar-slim">
+                    {images.map((src, idx) => (
+                        <button
+                            type="button"
+                            key={idx}
+                            onClick={() => openAt(idx)}
+                            className="snap-start shrink-0 overflow-hidden rounded-2xl bg-neutral-100 w-64 sm:w-72 md:w-80"
+                        >
+                            <img
+                                src={src}
+                                alt={`Post media ${idx + 1}`}
+                                className="h-48 w-full cursor-zoom-in object-cover md:h-54"
+                                loading="lazy"
+                            />
+                        </button>
+                    ))}
+                </div>
             </div>
-        </div>
+            {lightboxEl}
+        </>
     );
 }
 

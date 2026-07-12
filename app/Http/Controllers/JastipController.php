@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\JastipCategory;
 use App\Models\JastipItem;
+use App\Support\FuzzySearch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -101,7 +102,9 @@ class JastipController extends Controller
         }
 
         if ($search !== '') {
-            $query->where('jastip_items.name', 'like', "%{$search}%");
+            // Pencarian nama produk toleran salah-ketik → langsung tampilkan
+            // hasil yang mirip (bukan sekadar saran "mungkin maksud Anda").
+            FuzzySearch::apply($query, $search, ['jastip_items.name'], 'jastip_items.id');
         }
         // "Dari" — tempat barang dibeli (negara/kota/alamat pembelian)
         if ($fromQ !== '') {
@@ -440,8 +443,13 @@ class JastipController extends Controller
             }
         }
 
-        $subtotal    = array_sum(array_map(fn ($l) => $l['price'] * $l['quantity'], $lines));
-        $totalAmount = (int) round($subtotal + self::SERVICE_FEE);
+        // Jumlahkan dari harga per-baris yang SUDAH dibulatkan agar gross_amount cocok
+        // persis dengan sum(item_details) yang dikirim ke Midtrans (hindari selisih
+        // pembulatan yang memicu error 400). (#12)
+        $totalAmount = array_sum(array_map(
+            fn ($l) => ((int) round($l['price'])) * (int) $l['quantity'],
+            $lines,
+        )) + self::SERVICE_FEE;
 
         $transactionId = (string) Str::uuid();
 
@@ -497,12 +505,15 @@ class JastipController extends Controller
         \Midtrans\Config::$isSanitized  = true;
         \Midtrans\Config::$is3ds        = true;
 
+        // array_values penting: $lines dikunci string "item-variant", tanpa ini
+        // item_details ter-encode sebagai objek JSON (bukan array) sehingga Midtrans
+        // menolak dengan "item_details ... is required / not a number". (#12)
         $itemDetails = array_map(fn ($l) => [
             'id'       => 'JITEM-' . $l['item_id'] . '-' . $l['variant_id'],
             'price'    => (int) round($l['price']),
-            'quantity' => $l['quantity'],
+            'quantity' => (int) $l['quantity'],
             'name'     => substr($l['name'], 0, 50),
-        ], $lines);
+        ], array_values($lines));
         $itemDetails[] = [
             'id'       => 'SERVICE-FEE',
             'price'    => self::SERVICE_FEE,

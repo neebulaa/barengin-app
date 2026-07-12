@@ -50,7 +50,7 @@ export default function Analytics({ stats, monthly = [], bestSeller, rating }) {
                             <h3 className="font-bold text-primary-700">{t("jastip.monthly_sales")}</h3>
                             <span className="rounded-lg bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500">{t("jastip.last_6_months")}</span>
                         </div>
-                        <SalesChart data={monthly} />
+                        <SalesChart data={monthly} unitLabel={t("jastip.sold")} />
                         <p className="mt-3 text-center text-xs text-neutral-400">{t("jastip.chart_caption")}</p>
                     </div>
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContactMessage; // <-- UBAH IMPORT INI
+use App\Support\FuzzySearch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,11 +16,7 @@ class AdminMessageController extends Controller
 
         $messages = ContactMessage::query()
             ->when($search, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('body', 'like', "%{$search}%");
-                });
+                FuzzySearch::apply($query, $search, ['name', 'email', 'body']);
             })
             ->when($filter === 'today', fn ($q) => $q->whereDate('created_at', today()))
             ->when($filter === 'week', fn ($q) => $q->where('created_at', '>=', now()->subDays(7)))
