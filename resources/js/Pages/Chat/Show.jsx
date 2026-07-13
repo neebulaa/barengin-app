@@ -10,11 +10,12 @@ import Segment from "./Partials/Segment";
 import ChatListItem from "./Partials/ChatListItem";
 import Bubble from "./Partials/BubbleChat";
 import Avatar from "./Partials/Avatar";
+import ImageLightbox from "@/Components/ImageLightbox";
 import NewChatModal from "./Partials/NewChatModal";
 import GroupMembersModal from "./Partials/GroupMembersModal";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
-import { FiArrowLeft, FiChevronRight, FiFilter, FiPaperclip, FiSend } from "react-icons/fi";
+import { FiArrowLeft, FiChevronRight, FiFilter, FiPaperclip, FiSend, FiX, FiCornerUpLeft } from "react-icons/fi";
 
 import axios from "axios";
 
@@ -164,9 +165,10 @@ export default function ChatShow({
     const getSubtitleFromPayload = (payload) => {
         if (payload.text) return payload.text;
 
-        if (payload.attachment_type?.startsWith("image/")) return "Foto";
-        if (payload.attachment_type === "application/pdf") return "PDF";
-        if (payload.attachment_url) return "Lampiran";
+        const first = (payload.attachments ?? [])[0];
+        if (first?.type?.startsWith("image/")) return "Foto";
+        if (first?.type === "application/pdf") return "PDF";
+        if (first) return "Lampiran";
 
         return "";
     };
@@ -381,26 +383,77 @@ export default function ChatShow({
     const [text, setText] = useState("");
     const sendingRef = useRef(false);
 
-    const sendMessage = (messageText, attachmentFile = null) => {
-        if (sendingRef.current) return;
+    // Balasan pesan & lampiran tertunda (bisa banyak gambar + keterangan).
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [pendingAttachments, setPendingAttachments] = useState([]);
+    const [attachError, setAttachError] = useState("");
 
+    // Modal gambar (lightbox) & sorotan pesan tujuan saat klik kutipan balasan.
+    const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
+    const [highlightId, setHighlightId] = useState(null);
+    const highlightTimer = useRef(null);
+
+    // Reset komposer saat pindah percakapan.
+    useEffect(() => {
+        setReplyingTo(null);
+        setPendingAttachments([]);
+        setAttachError("");
+    }, [conversation?.id]);
+
+    const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5MB
+
+    const attachmentLabel = (type, hasFile) => {
+        if (type?.startsWith("image/")) return "Foto";
+        if (type === "application/pdf") return "PDF";
+        return hasFile ? "Lampiran" : "";
+    };
+
+    const openLightbox = (images, index) =>
+        setLightbox({ open: true, images: images ?? [], index: index ?? 0 });
+
+    // Klik kutipan balasan → gulir ke pesan asal & beri sorotan sesaat.
+    const scrollToMessage = (id) => {
+        const el = document.getElementById(`msg-${id}`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightId(id);
+        clearTimeout(highlightTimer.current);
+        highlightTimer.current = setTimeout(() => setHighlightId(null), 1600);
+    };
+    useEffect(() => () => clearTimeout(highlightTimer.current), []);
+
+    const sendMessage = (messageText, files, replyObj) => {
+        if (sendingRef.current) return;
         sendingRef.current = true;
 
+        const tmpId = `tmp-${Date.now()}`;
         const optimistic = {
-            id: `tmp-${Date.now()}`,
+            id: tmpId,
             conversation_id: conversation.id,
             sender_id: authUser?.id,
             text: messageText || "",
             created_at: new Date().toISOString(),
-            attachment_url: attachmentFile ? URL.createObjectURL(attachmentFile) : null,
-            attachment_type: attachmentFile?.type ?? null,
-            attachment_name: attachmentFile?.name ?? null,
+            attachments: (files ?? []).map((f) => ({
+                url: URL.createObjectURL(f),
+                type: f.type,
+                name: f.name,
+            })),
+            reply_to: replyObj
+                ? {
+                      id: replyObj.id,
+                      sender_name: replyObj.sender?.name ?? "",
+                      text: replyObj.text,
+                      attachment_type: (replyObj.attachments ?? [])[0]?.type ?? null,
+                      has_attachment: (replyObj.attachments ?? []).length > 0,
+                  }
+                : null,
             sender: {
                 id: authUser?.id,
                 name: authUser?.full_name,
                 avatar: authUser?.public_profile_image,
             },
             optimistic: true,
+            sent: false,
         };
 
         setLocalMessages((prev) => [...(prev ?? []), optimistic]);
@@ -408,11 +461,41 @@ export default function ChatShow({
 
         const formData = new FormData();
         if (messageText) formData.append("message_text", messageText);
-        if (attachmentFile) formData.append("attachment", attachmentFile);
+        (files ?? []).forEach((f) => formData.append("attachments[]", f));
+        if (replyObj?.id) formData.append("reply_to_id", replyObj.id);
 
         router.post(`/chat/${conversation.id}/messages`, formData, {
             preserveScroll: true,
             forceFormData: true,
+            onSuccess: (page) => {
+                // Rekonsiliasi dengan daftar pesan otoritatif dari server agar
+                // pesan optimistik memperoleh id numerik aslinya. Tanpa ini,
+                // pesan yang baru kita kirim tetap ber-id "tmp-…" sepanjang sesi
+                // sehingga tombol "Balas" (yang butuh id numerik) tak muncul —
+                // itulah sebabnya kita seolah tak bisa membalas pesan sendiri.
+                const serverMessages = page?.props?.messages;
+                if (Array.isArray(serverMessages)) {
+                    setLocalMessages((prev) => {
+                        const knownIds = new Set(serverMessages.map((m) => m.id));
+                        // Pertahankan pesan optimistik lain yang belum tercakup
+                        // server, tetapi buang milik kita yang kini sudah nyata.
+                        const stillPending = (prev ?? []).filter(
+                            (m) =>
+                                m.optimistic &&
+                                m.id !== tmpId &&
+                                !knownIds.has(m.id),
+                        );
+                        return [...serverMessages, ...stillPending];
+                    });
+                } else {
+                    // Fallback: minimal tandai "Terkirim".
+                    setLocalMessages((prev) =>
+                        (prev ?? []).map((m) =>
+                            m.id === tmpId ? { ...m, sent: true } : m,
+                        ),
+                    );
+                }
+            },
             onFinish: () => {
                 sendingRef.current = false;
             },
@@ -424,23 +507,66 @@ export default function ChatShow({
 
     const submit = (e) => {
         e.preventDefault();
-        if (!text.trim()) return;
-        sendMessage(text, null);
+        const trimmed = text.trim();
+        const files = pendingAttachments.map((a) => a.file);
+        if (!trimmed && files.length === 0) return;
+
+        sendMessage(trimmed, files, replyingTo);
+
+        // Bersihkan komposer (object URL pratinjau dibebaskan).
+        pendingAttachments.forEach((a) => {
+            if (a.preview) {
+                try { URL.revokeObjectURL(a.preview); } catch {}
+            }
+        });
+        setReplyingTo(null);
+        setPendingAttachments([]);
+        setAttachError("");
     };
 
     const handleAttach = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        sendMessage("", file);
+        const files = Array.from(e.target.files ?? []);
         e.target.value = "";
+        if (files.length === 0) return;
+
+        const accepted = [];
+        let hasOversize = false;
+        files.forEach((file) => {
+            if (file.size > MAX_ATTACHMENT_BYTES) {
+                hasOversize = true;
+                return;
+            }
+            const isImage = (file.type || "").startsWith("image/");
+            accepted.push({
+                file,
+                isImage,
+                name: file.name,
+                preview: isImage ? URL.createObjectURL(file) : null,
+            });
+        });
+
+        setAttachError(hasOversize ? "Beberapa file dilewati — maksimal 5MB per file." : "");
+        if (accepted.length) {
+            setPendingAttachments((prev) => [...prev, ...accepted].slice(0, 10));
+        }
+    };
+
+    const removePendingAttachment = (index) => {
+        setPendingAttachments((prev) => {
+            const target = prev[index];
+            if (target?.preview) {
+                try { URL.revokeObjectURL(target.preview); } catch {}
+            }
+            return prev.filter((_, i) => i !== index);
+        });
     };
 
     return (
         <>
             <NavbarAuth />
             <Container className="max-w-[1400px]">
-                <div className="min-h-[calc(100vh-96px)] border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
-                    <aside className="hidden border-r border-neutral-200 bg-white px-8 py-8 md:block">
+                <div className="h-[calc(100vh-96px)] overflow-hidden border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
+                    <aside className="hidden h-full min-h-0 overflow-y-auto border-r border-neutral-200 bg-white px-8 py-8 md:block">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-neutral-700">
                                 Chat Messages
@@ -517,8 +643,8 @@ export default function ChatShow({
                         </div>
                     </aside>
 
-                    <section className="relative bg-white">
-                        <div className="flex items-center gap-3 border-b border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
+                    <section className="relative flex h-full min-h-0 flex-col bg-white">
+                        <div className="flex shrink-0 items-center gap-3 border-b border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
                             <Link
                                 href="/chat"
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-neutral-100 md:hidden"
@@ -566,7 +692,7 @@ export default function ChatShow({
                             )}
                         </div>
 
-                        <div className="h-[calc(100vh-96px-84px-96px)] overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
+                        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
                             <div className="space-y-2">
                                 {(localMessages ?? []).map((m) => {
                                     const isMine = Number(m.sender_id) === Number(authUser?.id);
@@ -576,19 +702,38 @@ export default function ChatShow({
                                         m.created_at &&
                                         new Date(peerLastReadAt).getTime() >= new Date(m.created_at).getTime();
 
+                                    // Status pesan sendiri: Mengirim… → Terkirim → Dibaca.
+                                    let statusText = "";
+                                    if (isMine) {
+                                        if (isRead) statusText = "Dibaca";
+                                        else if (m.optimistic && !m.sent) statusText = "Mengirim…";
+                                        else statusText = "Terkirim";
+                                    }
+
+                                    // Balas hanya untuk pesan yang sudah tersimpan (punya id numerik).
+                                    const canReply = Number.isFinite(Number(m.id));
+
                                     return (
                                         <Bubble
                                             key={m.id}
+                                            id={m.id}
+                                            highlighted={String(highlightId) === String(m.id)}
                                             mine={isMine}
                                             text={m.text}
                                             time={formatTime(m.created_at)}
-                                            readText={isRead ? "dibaca" : ""}
+                                            readText={statusText}
                                             avatar={m.sender?.avatar}
                                             isGroup={conversation?.is_group}
                                             senderName={m.sender?.name}
-                                            attachmentUrl={m.attachment_url}
-                                            attachmentType={m.attachment_type}
-                                            attachmentName={m.attachment_name}
+                                            attachments={m.attachments}
+                                            onImageClick={openLightbox}
+                                            reply={m.reply_to}
+                                            onReplyQuoteClick={
+                                                m.reply_to?.id
+                                                    ? () => scrollToMessage(m.reply_to.id)
+                                                    : undefined
+                                            }
+                                            onReply={canReply ? () => setReplyingTo(m) : undefined}
                                         />
                                     );
                                 })}
@@ -596,12 +741,80 @@ export default function ChatShow({
                             </div>
                         </div>
 
-                        <div className="border-t border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
+                        <div className="shrink-0 border-t border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
+                            {/* Bar "membalas" — desain baru (garis tipis + ikon, bukan kotak biru) */}
+                            {replyingTo ? (
+                                <div className="mb-3 flex items-center gap-3 border-l-2 border-neutral-300 bg-neutral-50 py-1.5 pl-3 pr-2">
+                                    <FiCornerUpLeft className="h-4 w-4 shrink-0 text-neutral-400" />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-semibold text-neutral-700">
+                                            {`Membalas ${
+                                                Number(replyingTo.sender_id) === Number(authUser?.id)
+                                                    ? "diri sendiri"
+                                                    : replyingTo.sender?.name ?? ""
+                                            }`}
+                                        </div>
+                                        <div className="truncate text-sm text-neutral-500">
+                                            {replyingTo.text ||
+                                                attachmentLabel(
+                                                    (replyingTo.attachments ?? [])[0]?.type,
+                                                    (replyingTo.attachments ?? []).length > 0,
+                                                )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setReplyingTo(null)}
+                                        className="shrink-0 text-neutral-400 hover:text-neutral-700"
+                                        aria-label="Batal balas"
+                                    >
+                                        <FiX className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            ) : null}
+
+                            {/* Pratinjau banyak lampiran (bisa diberi keterangan) */}
+                            {pendingAttachments.length > 0 ? (
+                                <div className="mb-3 flex flex-wrap gap-2">
+                                    {pendingAttachments.map((a, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="relative h-16 w-16 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50"
+                                        >
+                                            {a.isImage ? (
+                                                <img
+                                                    src={a.preview}
+                                                    alt={a.name}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full w-full items-center justify-center text-2xl">
+                                                    📄
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removePendingAttachment(idx)}
+                                                className="absolute right-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                                                aria-label="Hapus lampiran"
+                                            >
+                                                <FiX className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+
+                            {attachError ? (
+                                <div className="mb-2 text-sm text-danger-700">{attachError}</div>
+                            ) : null}
+
                             <form onSubmit={submit} className="flex items-center gap-4">
                                 <div className="relative flex-1">
                                     <input
                                         type="file"
                                         accept="image/jpeg,image/png,image/webp,application/pdf"
+                                        multiple
                                         className="hidden"
                                         id="chat-attachment"
                                         onChange={handleAttach}
@@ -616,7 +829,11 @@ export default function ChatShow({
                                     <input
                                         value={text}
                                         onChange={(e) => setText(e.target.value)}
-                                        placeholder="Your Messages"
+                                        placeholder={
+                                            pendingAttachments.length > 0
+                                                ? "Tambahkan keterangan (opsional)..."
+                                                : "Your Messages"
+                                        }
                                         className={cn(
                                             "h-14 w-full rounded-full border border-neutral-300 bg-white pl-12 pr-4 text-sm text-neutral-700 placeholder:text-neutral-500",
                                             "focus:border-primary-700 focus:outline-none",
@@ -636,6 +853,13 @@ export default function ChatShow({
                     </section>
                 </div>
             </Container>
+
+            <ImageLightbox
+                images={lightbox.images}
+                index={lightbox.index}
+                open={lightbox.open}
+                onClose={() => setLightbox((s) => ({ ...s, open: false }))}
+            />
             <NewChatModal open={openNewChat} onClose={() => setOpenNewChat(false)} />
             <GroupMembersModal
                 open={openMembers}

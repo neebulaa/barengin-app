@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Support\Carbon;
 
@@ -66,7 +67,7 @@ class ChatController extends Controller
             : null;
 
         $messages = $conversation->messages()
-            ->with('sender:id,full_name,profile_image')
+            ->with(['sender:id,full_name,profile_image', 'replyTo.sender:id,full_name'])
             ->orderBy('created_at')
             ->get()
             ->map(fn ($m) => $this->mapMessage($m));
@@ -112,8 +113,15 @@ class ChatController extends Controller
 
         $data = $request->validate([
             'message_text' => ['nullable', 'string', 'max:5000'],
-            'attachment' => [
+            // Pesan yang dibalas harus berada di percakapan yang sama.
+            'reply_to_id' => [
                 'nullable',
+                'integer',
+                Rule::exists('messages', 'id')->where('conversation_id', $conversation->id),
+            ],
+            // Banyak lampiran (gambar/PDF), masing-masing maksimal 5MB.
+            'attachments' => ['nullable', 'array', 'max:10'],
+            'attachments.*' => [
                 'file',
                 function ($attribute, $value, $fail) {
                     if (! $value) return;
@@ -125,8 +133,8 @@ class ChatController extends Controller
                     $pdfMime = 'application/pdf';
 
                     if (in_array($mime, $imageMimes, true)) {
-                        if ($size > 3 * 1024 * 1024) {
-                            $fail('Gambar maksimal 3MB.');
+                        if ($size > 5 * 1024 * 1024) {
+                            $fail('Gambar maksimal 5MB.');
                         }
                         return;
                     }
@@ -144,32 +152,28 @@ class ChatController extends Controller
         ]);
 
         $text = $data['message_text'] ?? '';
-        $file = $request->file('attachment');
+        $files = $request->file('attachments', []);
 
-        if (! $text && ! $file) {
+        if (! $text && empty($files)) {
             return back()->withErrors(['message_text' => 'Pesan kosong.']);
         }
 
-        $attachmentPath = null;
-        $attachmentType = null;
-        $attachmentName = null;
-        $attachmentSize = null;
-
-        if ($file) {
-            $attachmentPath = $file->store('chat-attachments', 'public');
-            $attachmentType = $file->getMimeType();
-            $attachmentName = $file->getClientOriginalName();
-            $attachmentSize = $file->getSize();
+        $attachments = [];
+        foreach ($files as $file) {
+            $attachments[] = [
+                'path' => $file->store('chat-attachments', 'public'),
+                'type' => $file->getMimeType(),
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+            ];
         }
 
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $user->id,
+            'reply_to_id' => $data['reply_to_id'] ?? null,
             'message_text' => $text,
-            'attachment_path' => $attachmentPath,
-            'attachment_type' => $attachmentType,
-            'attachment_name' => $attachmentName,
-            'attachment_size' => $attachmentSize,
+            'attachments' => $attachments ?: null,
         ]);
 
         broadcast(new MessageSent($message))->toOthers();
@@ -202,7 +206,7 @@ class ChatController extends Controller
         $messages = $conversation->messages()
             ->where('id', '>', $afterId)
             ->where('sender_id', '!=', $user->id)
-            ->with('sender:id,full_name,profile_image')
+            ->with(['sender:id,full_name,profile_image', 'replyTo.sender:id,full_name'])
             ->orderBy('id')
             ->get()
             ->map(fn ($m) => $this->mapMessage($m));
@@ -264,17 +268,66 @@ class ChatController extends Controller
             'sender_id' => $m->sender_id,
             'text' => $m->message_text,
             'created_at' => $m->created_at?->toISOString(),
-            'attachment_url' => $m->attachment_path
-                ? asset('storage/'.$m->attachment_path)
-                : null,
-            'attachment_type' => $m->attachment_type,
-            'attachment_name' => $m->attachment_name,
-            'attachment_size' => $m->attachment_size,
+            'attachments' => self::mapAttachments($m),
+            'reply_to' => $this->mapReply($m->replyTo),
             'sender' => [
                 'id' => $m->sender?->id,
                 'name' => $m->sender?->full_name,
                 'avatar' => $m->sender?->public_profile_image ?? asset('assets/default-profile.png'),
             ],
+        ];
+    }
+
+    /** Daftar lampiran pesan; jatuh balik ke kolom lama untuk pesan lama. */
+    public static function mapAttachments(Message $m): array
+    {
+        $list = [];
+
+        if (is_array($m->attachments) && count($m->attachments)) {
+            foreach ($m->attachments as $a) {
+                $list[] = [
+                    'url' => self::attachmentUrl($a['path'] ?? null),
+                    'type' => $a['type'] ?? null,
+                    'name' => $a['name'] ?? null,
+                    'size' => $a['size'] ?? null,
+                ];
+            }
+        } elseif ($m->attachment_path) {
+            $list[] = [
+                'url' => self::attachmentUrl($m->attachment_path),
+                'type' => $m->attachment_type,
+                'name' => $m->attachment_name,
+                'size' => $m->attachment_size,
+            ];
+        }
+
+        return $list;
+    }
+
+    private static function attachmentUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+            return $path;
+        }
+        return asset('storage/'.$path);
+    }
+
+    /** Ringkasan pesan yang dibalas (untuk kutipan di gelembung). */
+    public static function mapReply(?Message $reply): ?array
+    {
+        if (! $reply) {
+            return null;
+        }
+
+        return [
+            'id' => $reply->id,
+            'sender_name' => $reply->sender?->full_name ?? 'Pengguna',
+            'text' => $reply->message_text,
+            'attachment_type' => $reply->attachment_type,
+            'has_attachment' => (bool) $reply->attachment_path,
         ];
     }
 
@@ -313,13 +366,17 @@ class ChatController extends Controller
                         ->count();
 
                 $subtitle = $lastMessage?->message_text;
-                if (!$subtitle && $lastMessage?->attachment_type){
-                    if (str_starts_with($lastMessage->attachment_type, 'image/')) {
-                        $subtitle = 'Foto';
-                    } elseif ($lastMessage->attachment_type === 'application/pdf') {
-                        $subtitle = 'PDF';
-                    }else{
-                        $subtitle = 'Lampiran';
+                if (! $subtitle && $lastMessage) {
+                    // Dukung pesan lampiran-banyak (JSON) & pesan lama (kolom tunggal).
+                    $type = self::mapAttachments($lastMessage)[0]['type'] ?? null;
+                    if ($type) {
+                        if (str_starts_with($type, 'image/')) {
+                            $subtitle = 'Foto';
+                        } elseif ($type === 'application/pdf') {
+                            $subtitle = 'PDF';
+                        } else {
+                            $subtitle = 'Lampiran';
+                        }
                     }
                 }
 

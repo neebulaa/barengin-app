@@ -3,7 +3,7 @@ import axios from "axios";
 import Container from "@/Components/Container";
 import InputField from "@/Components/Input";
 import Button from "@/Components/Button";
-import NavAuth from "@/Components/NavbarAuth"
+import NavAuth from "@/Components/NavbarAuth";
 import { Link } from "@inertiajs/react";
 
 import Segment from "./Partials/Segment";
@@ -18,7 +18,7 @@ function cn(...a) {
     return a.filter(Boolean).join(" ");
 }
 
-export default function ChatIndex({conversations = []}) {
+export default function ChatIndex({ conversations = [] }) {
     const [tab, setTab] = useState("personal");
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
@@ -91,7 +91,7 @@ export default function ChatIndex({conversations = []}) {
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100"
                                 aria-label="New Chat"
                             >
-                                <BiMessageSquareAdd className="text-3xl" />
+                                <BiMessageSquareAdd className="text-xl" />
                             </button>
                         </div>
 
@@ -176,7 +176,10 @@ export default function ChatIndex({conversations = []}) {
                     </section>
                 </div>
             </Container>
-            <NewChatModal open={openNewChat} onClose={() => setOpenNewChat(false)} />
+            <NewChatModal
+                open={openNewChat}
+                onClose={() => setOpenNewChat(false)}
+            />
         </>
     );
 }
