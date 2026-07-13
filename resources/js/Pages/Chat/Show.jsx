@@ -545,7 +545,7 @@ export default function ChatShow({
             });
         });
 
-        setAttachError(hasOversize ? "Beberapa file dilewati — maksimal 5MB per file." : "");
+        setAttachError(hasOversize ? "File gagal diupload - Maksimal 5MB per file." : "");
         if (accepted.length) {
             setPendingAttachments((prev) => [...prev, ...accepted].slice(0, 10));
         }
