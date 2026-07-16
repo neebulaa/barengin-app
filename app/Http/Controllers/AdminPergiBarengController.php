@@ -388,6 +388,14 @@ class AdminPergiBarengController extends Controller
         // Undang user ke grup chat pergi bareng
         $this->ensureGroupAndAttach($trip, $req->user_id);
 
+        \App\Models\UserNotification::send(
+            (int) $req->user_id,
+            'pergi_bareng.approved',
+            ['name' => $trip->name],
+            '/pergi-bareng/' . $trip->id,
+            'pergi_bareng.approved:req:' . $req->id,
+        );
+
         \App\Models\ActivityLog::record('Menyetujui permintaan pergi bareng: ' . $trip->name);
 
         return back()->with('flash', [
@@ -400,9 +408,25 @@ class AdminPergiBarengController extends Controller
     {
         $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
 
+        // Pemohon dibaca sebelum dihapus — sesudahnya tidak ada lagi yang bisa
+        // memberi tahu siapa yang harus dikabari.
+        $req = PergiBarengRequest::where('pergi_bareng_id', $trip->id)
+            ->where('id', $requestId)
+            ->first();
+
         PergiBarengRequest::where('pergi_bareng_id', $trip->id)
             ->where('id', $requestId)
             ->delete();
+
+        if ($req) {
+            \App\Models\UserNotification::send(
+                (int) $req->user_id,
+                'pergi_bareng.rejected',
+                ['name' => $trip->name],
+                '/pergi-bareng/' . $trip->id,
+                'pergi_bareng.rejected:req:' . $req->id,
+            );
+        }
 
         \App\Models\ActivityLog::record('Menolak permintaan pergi bareng: ' . $trip->name);
 
@@ -424,6 +448,20 @@ class AdminPergiBarengController extends Controller
 
         foreach ($memberIds->diff($existingIds) as $uid) {
             $conversation->participants()->attach($uid, ['last_read_at' => now()]);
+
+            // Hanya anggota yang benar-benar baru masuk yang dikabari — diff()
+            // di atas sudah menyaring yang sudah tergabung. Penyelenggara ikut
+            // ter-attach di sini, tapi dia tidak perlu diberi tahu soal grupnya
+            // sendiri.
+            if ((int) $uid !== (int) $trip->initiator_id) {
+                \App\Models\UserNotification::send(
+                    (int) $uid,
+                    'group.joined',
+                    ['name' => $trip->name, 'kind' => 'pergi_bareng'],
+                    '/chat?conversation=' . $conversation->id,
+                    'group.joined:conv:' . $conversation->id . ':user:' . $uid,
+                );
+            }
         }
     }
 }

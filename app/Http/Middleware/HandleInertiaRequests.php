@@ -79,6 +79,21 @@ class HandleInertiaRequests extends Middleware
                     ->distinct()
                     ->count('cp.conversation_id');
             },
+            // Jumlah notifikasi belum dibaca — untuk lencana pada lonceng navbar.
+            // Sepola dengan chat_unread_count di atas: satu query agregat, ikut
+            // di setiap response Inertia.
+            'notif_unread_count' => function () use ($request) {
+                $user = $request->user();
+
+                if (! $user) {
+                    return 0;
+                }
+
+                return (int) \App\Models\UserNotification::query()
+                    ->where('user_id', $user->id)
+                    ->whereNull('read_at')
+                    ->count();
+            },
             // Jumlah baris item di keranjang jastip (session) — untuk indikator keranjang
             'jastip_cart_count' => function () use ($request) {
                 $cart = $request->session()->get('jastip_cart', []);

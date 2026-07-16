@@ -118,6 +118,22 @@ class SplitBillController extends Controller
 
         $this->postBillToGroup($trip, $bill);
 
+        // Kabari tiap anggota yang ditagih (penyelenggara tidak menagih dirinya
+        // sendiri; kalaupun ikut, dedupe per-share menjaga satu notifikasi saja).
+        foreach ($bill->shares()->with('user')->get() as $share) {
+            \App\Models\UserNotification::send(
+                (int) $share->user_id,
+                'split_bill.created',
+                [
+                    'title' => $bill->title,
+                    'amount' => (float) $share->amount,
+                    'name' => $trip->name,
+                ],
+                '/profile-history?tab=transactions',
+                'split_bill.created:share:' . $share->id,
+            );
+        }
+
         \App\Models\ActivityLog::record('Membuat bagi tagihan: ' . $bill->title);
 
         return back()->with('flash', [

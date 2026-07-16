@@ -14,6 +14,7 @@ use App\Http\Controllers\ForumPeopleController;
 use App\Http\Controllers\ForumProfileController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\MidtransController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PergiBarengController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PostController;
@@ -230,6 +231,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile-history', [ProfileHistoryController::class, 'update'])->name('profile-history.update');
     Route::post('/profile-history/image', [ProfileHistoryController::class, 'updateProfileImage'])->name('profile-history.image.update');
     Route::delete('/profile-history/image', [ProfileHistoryController::class, 'removeProfileImage'])->name('profile-history.image.remove');
+
+    // Notifikasi. Urutan penting: /notifications/poll didaftarkan sebelum rute
+    // ber-parameter agar "poll" tidak tertangkap sebagai id (sepola /chat/poll).
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/poll', [NotificationController::class, 'poll'])->name('notifications.poll');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('/notifications/preferences', [NotificationController::class, 'updatePreferences'])->name('notifications.preferences');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->whereNumber('id')->name('notifications.read');
 });
 
 // Group Route untuk Pergi Bareng (publik: daftar & detail)

@@ -146,8 +146,8 @@ class ChatController extends Controller
                 'integer',
                 Rule::exists('messages', 'id')->where('conversation_id', $conversation->id),
             ],
-            // Kartu referensi opsional (Trip / Pergi Bareng) untuk pesan pertama.
-            'reference_type' => ['nullable', 'in:trip,pergi_bareng'],
+            // Kartu referensi opsional (Trip / Pergi Bareng / Jastip) untuk pesan pertama.
+            'reference_type' => ['nullable', 'in:trip,pergi_bareng,jastip'],
             'reference_id' => ['nullable', 'integer'],
             // Banyak lampiran (gambar/PDF), masing-masing maksimal 5MB.
             'attachments' => ['nullable', 'array', 'max:10'],
@@ -365,6 +365,24 @@ class ChatController extends Controller
                 'image_url' => $imageUrl,
                 'subtitle' => $pb->destination_loc ?? null,
                 'url' => '/pergi-bareng/' . $pb->id,
+            ];
+        }
+
+        if ($type === 'jastip') {
+            $item = \App\Models\JastipItem::with('jastip_item_images:id,jastip_item_id,image_name')->find($id);
+            if (! $item) {
+                return null;
+            }
+
+            return [
+                'type' => 'jastip',
+                'id' => (int) $item->id,
+                'title' => $item->name,
+                'image_url' => $this->resolveJastipImage(
+                    $item->jastip_item_images->first()?->image_name
+                ) ?? asset('assets/default-image.png'),
+                'subtitle' => $item->purchase_city ?? $item->pickup_city ?? null,
+                'url' => '/jastip/' . $item->id,
             ];
         }
 

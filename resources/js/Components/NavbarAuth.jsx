@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import axios from "axios";
 import { Link, usePage } from "@inertiajs/react";
 import Button from "@/Components/Button.jsx";
 import NavDropdown from "@/Components/NavDropdown.jsx";
@@ -6,12 +7,12 @@ import NavLink from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
 import StreakBadge from "@/Components/StreakBadge.jsx";
-import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
+import NotificationBell from "@/Components/NotificationBell.jsx";
 import { useTranslation } from "@/lib/useTranslation";
 
 import { FaRoute, FaCarSide, FaPaperPlane } from "react-icons/fa";
 import { MdDashboard, MdHistory } from "react-icons/md";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiSettings } from "react-icons/fi";
 import Container from "@/Components/Container.jsx";
 
 export default function NavbarAuth() {
@@ -19,9 +20,67 @@ export default function NavbarAuth() {
     const user = props?.auth?.user;
     const { t } = useTranslation();
 
-    // Jumlah percakapan dengan pesan belum dibaca (shared prop dari Inertia).
-    const unreadChats = Number(props?.chat_unread_count ?? 0);
+    // Jumlah percakapan dengan pesan belum dibaca. Nilai awal datang dari shared
+    // prop Inertia (hanya ikut berubah saat pindah halaman), lalu dijaga tetap
+    // hidup lewat Echo + polling di bawah.
+    const [unreadChats, setUnreadChats] = useState(
+        Number(props?.chat_unread_count ?? 0),
+    );
     const unreadLabel = unreadChats > 99 ? "99+" : String(unreadChats);
+
+    // Selaraskan lagi setiap kunjungan Inertia (mis. setelah membuka /chat,
+    // lencana harus langsung turun tanpa menunggu poll berikutnya).
+    useEffect(() => {
+        setUnreadChats(Number(props?.chat_unread_count ?? 0));
+    }, [props?.chat_unread_count]);
+
+    // Hitung ulang dari sumber yang sama dengan halaman Chat, agar lencana dan
+    // daftar chat tidak pernah berbeda angka.
+    const refreshUnread = useCallback(async () => {
+        try {
+            const { data } = await axios.get("/chat/poll");
+            if (Array.isArray(data?.conversations)) {
+                setUnreadChats(
+                    data.conversations.filter((c) => (c.unread ?? 0) > 0).length,
+                );
+            }
+        } catch {
+            /* diamkan — lencana cukup pakai nilai terakhir */
+        }
+    }, []);
+
+    // Realtime: pesan masuk ke channel pribadi user langsung memicu hitung ulang.
+    useEffect(() => {
+        if (!window.Echo || !user?.id) return;
+
+        const channelName = `user.${user.id}`;
+        const channel = window.Echo.private(channelName);
+
+        channel.listen(".message.sent", (payload) => {
+            // Pesan sendiri (dikirim dari perangkat lain) bukan notifikasi.
+            if (Number(payload?.sender_id) === Number(user.id)) return;
+            refreshUnread();
+        });
+
+        return () => {
+            channel.stopListening(".message.sent");
+            window.Echo.leave(`private-${channelName}`);
+        };
+    }, [user?.id, refreshUnread]);
+
+    // Fallback polling — menjaga lencana tetap akurat pada hosting tanpa
+    // WebSocket, sekaligus menurunkan angka saat chat dibaca di tab lain.
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const tick = () => {
+            if (document.hidden) return;
+            refreshUnread();
+        };
+        const interval = setInterval(tick, 12000);
+
+        return () => clearInterval(interval);
+    }, [user?.id, refreshUnread]);
 
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -80,7 +139,7 @@ export default function NavbarAuth() {
                     </Link>
                 </div>
 
-                <nav className="hidden md:flex shrink-0 space-x-5 lg:space-x-6 items-center text-neutral-700 whitespace-nowrap">
+                <nav className="hidden lg:flex shrink-0 space-x-4 xl:space-x-6 items-center text-neutral-700 whitespace-nowrap">
                     <NavLink href="/">{t("nav.home")}</NavLink>
 
                     <NavDropdown
@@ -100,8 +159,11 @@ export default function NavbarAuth() {
                 </nav>
 
                 <div className="flex-1 flex items-center justify-end">
-                <div className="hidden md:flex items-center gap-2 lg:gap-3">
-                    <LanguageSwitcher />
+                <div className="hidden lg:flex items-center gap-2 xl:gap-3">
+                    {/* Pemilih bahasa tidak lagi di sini — pindah ke tab
+                        Pengaturan di Profile History agar navbar longgar dan
+                        lonceng notifikasi kebagian tempat. */}
+                    <NotificationBell onNavigate={closeAll} />
 
                     <Link
                         href="/profile-history"
@@ -146,6 +208,15 @@ export default function NavbarAuth() {
                                 href: "/profile-history",
                                 icon: MdHistory,
                             },
+                            // Pengaturan memang berupa tab di Profile History, tapi
+                            // tab paling kanan pada bar yang bergulir horizontal itu
+                            // praktis tak ditemukan. Dropdown profil adalah tempat
+                            // orang benar-benar mencari "Pengaturan".
+                            {
+                                label: t("settings.title"),
+                                href: "/profile-history?tab=settings",
+                                icon: FiSettings,
+                            },
                             {
                                 label: t("nav.logout"),
                                 href: "/logout",
@@ -165,14 +236,16 @@ export default function NavbarAuth() {
                             <img
                                 src={user?.public_profile_image}
                                 alt={user?.name || "Profile"}
-                                className="w-10 h-10 rounded-full object-cover border border-neutral-200 shadow-sm cursor-pointer"
+                                className="w-10 h-10 shrink-0 rounded-full object-cover border border-neutral-200 shadow-sm cursor-pointer"
                             />
                         }
                         showChevron={false}
                     />
                 </div>
 
-                <div className="md:hidden flex items-center gap-3">
+                <div className="lg:hidden flex items-center gap-2">
+                    <NotificationBell onNavigate={closeAll} />
+
                     <Link
                         href="/profile-history"
                         onClick={closeAll}
@@ -223,7 +296,7 @@ export default function NavbarAuth() {
             </Container>
 
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">
+                <div className="lg:hidden bg-white border-t border-neutral-100 absolute w-full left-0 shadow-lg">
                     {/* User accordion */}
                     <div className="px-4 pt-3 pb-2 border-b border-neutral-200">
                         <NavDropdownMobile
@@ -261,6 +334,15 @@ export default function NavbarAuth() {
                             >
                                 <MdHistory className="w-5 h-5 mr-2 text-current" />
                                 {t("nav.profile_history")}
+                            </Link>
+
+                            <Link
+                                href="/profile-history?tab=settings"
+                                onClick={closeAll}
+                                className="block px-3 py-3 rounded-md text-base font-medium text-neutral-600 hover:text-primary-700 hover:bg-neutral-50 transition-colors flex items-center"
+                            >
+                                <FiSettings className="w-5 h-5 mr-2 text-current" />
+                                {t("settings.title")}
                             </Link>
 
                             <Link
@@ -314,8 +396,6 @@ export default function NavbarAuth() {
                     </div>
 
                     <div className="pt-4 pb-6 border-t border-neutral-200 px-4 space-y-3">
-                        <LanguageSwitcher variant="block" />
-
                         <Button
                             isButtonLink
                             href="/chat"

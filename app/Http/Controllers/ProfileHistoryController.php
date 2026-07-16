@@ -41,6 +41,9 @@ class ProfileHistoryController extends Controller
             'pergi_barengs'     => $this->pergiBarengs($user),
             'jastip_favorites'  => $this->jastipFavorites($user),
             'jastip_requests'   => $this->jastipRequests($user),
+            // Preferensi lengkap (kategori yang belum diatur ikut terisi `true`),
+            // jadi tab Pengaturan tidak perlu tahu daftar kategori default.
+            'notification_prefs' => $user->notificationPrefs(),
             'tab'               => $request->query('tab', 'transactions'),
             'midtrans_client_key' => config('midtrans.client_key'),
         ]);

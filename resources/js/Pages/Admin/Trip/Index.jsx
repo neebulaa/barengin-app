@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import ConfirmModal from "@/Components/ConfirmModal";
 import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock } from "react-icons/fi";
-import { FaStar } from "react-icons/fa";
 import { BsChatDots } from "react-icons/bs";
 import OngoingSection from "@/Pages/Admin/Partials/OngoingSection";
 
@@ -161,11 +161,11 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                     <td className="py-3.5 px-5 text-sm font-semibold text-primary-700 whitespace-nowrap">{t.joined}/{t.capacity}</td>
                                     <td className="py-3.5 px-5 text-sm whitespace-nowrap">
                                         {t.rating_avg != null ? (
-                                            <span className="inline-flex items-center gap-1.5 text-neutral-700">
-                                                <FaStar className="text-warning-500" size={13} />
-                                                <span className="font-bold">{Number(t.rating_avg).toFixed(1)}</span>
-                                                <span className="text-xs text-neutral-400">({t.rating_count})</span>
-                                            </span>
+                                            <StarRating
+                                                rating={t.rating_avg}
+                                                reviews={t.rating_count}
+                                                className="text-sm"
+                                            />
                                         ) : (
                                             <span className="text-xs text-neutral-400">—</span>
                                         )}
