@@ -5,6 +5,7 @@ import axios from "axios";
 
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import PaymentMethodSelector from "@/Components/PaymentMethodSelector";
 import MainLayout from "@/Layouts/MainLayout";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -19,6 +20,7 @@ export default function Checkout({
     items: initialItems,
     summary,
     midtrans_client_key,
+    wallet_balance = 0,
 }) {
     const { t } = useTranslation();
 
@@ -28,6 +30,7 @@ export default function Checkout({
     const [isProcessing, setIsProcessing] = useState(false);
     const [snapReady, setSnapReady] = useState(false);
     const [snapToken, setSnapToken] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState("midtrans");
 
     // Load Midtrans Snap script — identik dengan checkout trip (terbukti bekerja)
     useEffect(() => {
@@ -130,6 +133,40 @@ export default function Checkout({
     const handlePayment = async () => {
         if (items.length === 0) return;
 
+        const payload = {
+            items: items.map((it) => ({
+                item_id: it.item_id,
+                variant_id: it.variant_id,
+                quantity: it.quantity,
+            })),
+        };
+
+        // Bayar dari saldo: tidak lewat Snap sama sekali — server memotong saldo
+        // lalu langsung melunasi pesanan.
+        if (paymentMethod === "wallet") {
+            setIsProcessing(true);
+            try {
+                const response = await axios.post("/jastip/payment", {
+                    ...payload,
+                    payment_method: "wallet",
+                });
+
+                if (response.data?.paid) {
+                    router.visit(`/jastip/success/${response.data.transaction_id}`);
+                    return;
+                }
+
+                throw new Error("Respons pembayaran saldo tidak dikenali.");
+            } catch (error) {
+                // 422 dari server membawa alasan yang berguna (mis. saldo/stok kurang)
+                const msg =
+                    error?.response?.data?.error || t("jastip.checkout.error");
+                toast.error(msg);
+                setIsProcessing(false);
+            }
+            return;
+        }
+
         if (!snapReady || !window.snap) {
             toast.warning(t("jastip.checkout.not_ready"));
             return;
@@ -143,11 +180,8 @@ export default function Checkout({
         setIsProcessing(true);
         try {
             const response = await axios.post("/jastip/payment", {
-                items: items.map((it) => ({
-                    item_id: it.item_id,
-                    variant_id: it.variant_id,
-                    quantity: it.quantity,
-                })),
+                ...payload,
+                payment_method: "midtrans",
             });
 
             const { snap_token } = response.data || {};
@@ -406,6 +440,18 @@ export default function Checkout({
                                 </span>
                             </div>
 
+                            {/* Metode pembayaran — dikunci setelah token Snap dibuat
+                                agar pilihan tidak berubah di tengah transaksi */}
+                            <div className="mb-6">
+                                <PaymentMethodSelector
+                                    value={paymentMethod}
+                                    onChange={setPaymentMethod}
+                                    balance={wallet_balance}
+                                    total={total}
+                                    disabled={isProcessing || snapToken !== null}
+                                />
+                            </div>
+
                             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 mb-6">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-2xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed">
@@ -417,8 +463,9 @@ export default function Checkout({
                                 onClick={handlePayment}
                                 disabled={
                                     isProcessing ||
-                                    !snapReady ||
-                                    items.length === 0
+                                    items.length === 0 ||
+                                    // Snap hanya jadi syarat saat memang membayar lewat Midtrans
+                                    (paymentMethod === "midtrans" && !snapReady)
                                 }
                                 type="button"
                                 size="md"

@@ -578,10 +578,14 @@ class ChatController extends Controller
             return [];
         }
 
+        // Saldo dibaca sekali di luar loop — dipakai kartu untuk menawarkan
+        // pembayaran lewat dompet, dan sama untuk semua tagihan di percakapan.
+        $balance = (float) \App\Models\Wallet::forUser((int) $user->id)->balance;
+
         return \App\Models\SplitBill::with(['shares.user:id,full_name,profile_image'])
             ->whereIn('id', $ids)
             ->get()
-            ->mapWithKeys(function ($bill) use ($user) {
+            ->mapWithKeys(function ($bill) use ($user, $balance) {
                 $isCreator = (int) $bill->creator_id === (int) $user->id;
                 $mine = $bill->shares->firstWhere('user_id', $user->id);
 
@@ -594,6 +598,9 @@ class ChatController extends Controller
                     'is_creator' => $isCreator,
                     'paid_count' => $bill->shares->where('status', \App\Models\SplitBillShare::STATUS_PAID)->count(),
                     'share_count' => $bill->shares->count(),
+                    // Saldo penonton kartu — menentukan apakah tombol bayar
+                    // lewat dompet ditawarkan.
+                    'wallet_balance' => $balance,
                     // Bagian milik penonton kartu — dasar tombol "Bayar".
                     'my_share' => $mine ? [
                         'id' => $mine->id,

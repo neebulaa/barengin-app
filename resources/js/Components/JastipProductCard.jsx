@@ -9,11 +9,12 @@ const STATUS_STYLE = {
     sold_out: "bg-red-600 text-white",
 };
 
-// Badge siklus hidup jastiper (draft/published/buy_time/finished)
+// Badge siklus hidup jastiper (draft/published/buy_time/pickup_time/finished)
 const LIFECYCLE_STYLE = {
     draft: "bg-neutral-800 text-white",
     published: "bg-green-600 text-white",
     buy_time: "bg-amber-500 text-white",
+    pickup_time: "bg-purple-600 text-white",
     finished: "bg-primary-700 text-white",
 };
 
@@ -117,7 +118,7 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 <FiRefreshCw size={15} />
                             </button>
                         )}
-                        {/* Hapus diblokir mulai H-1 batas pemesanan (can_delete dari server) */}
+                        {/* Hanya draft yang bisa dihapus (can_delete dari server) */}
                         {(item.can_delete ?? true) && (
                             <button
                                 type="button"

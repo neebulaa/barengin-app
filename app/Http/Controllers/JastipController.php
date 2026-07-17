@@ -412,6 +412,7 @@ class JastipController extends Controller
             // Token Snap dibuat dengan server key; popup snap.js hanya bisa
             // merender token dari merchant yang sama.
             'midtrans_client_key' => config('midtrans.client_key'),
+            'wallet_balance' => (float) \App\Models\Wallet::forUser((int) $request->user()->id)->balance,
         ]);
     }
 
@@ -428,7 +429,11 @@ class JastipController extends Controller
             'items.*.item_id'      => ['required', 'integer'],
             'items.*.variant_id'   => ['required', 'integer'],
             'items.*.quantity'     => ['required', 'integer', 'min:1'],
+            'payment_method'       => ['nullable', 'in:wallet,midtrans'],
         ]);
+
+        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
+        $payWithWallet = ($data['payment_method'] ?? null) === 'wallet';
 
         // Susun ulang harga dari DB (jangan percaya harga dari client)
         $lines = $this->resolveCartLines($data['items']);
@@ -453,22 +458,37 @@ class JastipController extends Controller
             $lines,
         )) + self::SERVICE_FEE;
 
+        // Saldo dicek lebih dulu agar tidak meninggalkan pesanan menggantung saat
+        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di
+        // Wallet::debit() yang mengunci baris dompet.
+        if ($payWithWallet) {
+            $wallet = \App\Models\Wallet::forUser((int) $user->id);
+            if (! $wallet->hasSufficientBalance($totalAmount)) {
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Silakan isi saldo terlebih dahulu.',
+                    'balance' => (float) $wallet->balance,
+                    'required' => (float) $totalAmount,
+                ], 422);
+            }
+        }
+
         $transactionId = (string) Str::uuid();
+        $jastipOrderId = null;
 
         try {
-            DB::transaction(function () use ($transactionId, $user, $totalAmount, $lines) {
+            DB::transaction(function () use ($transactionId, $user, $totalAmount, $lines, $payWithWallet, &$jastipOrderId) {
                 DB::table('transactions')->insert([
                     'id'             => $transactionId,
                     'user_id'        => $user->id,
                     'total_amount'   => $totalAmount,
                     'type'           => 'jastip',
-                    'payment_method' => 'Midtrans',
+                    'payment_method' => $payWithWallet ? 'Wallet' : 'Midtrans',
                     'expired_at'     => now()->addHours(24),
                     'created_at'     => now(),
                     'updated_at'     => now(),
                 ]);
 
-                $orderId = DB::table('jastip_orders')->insertGetId([
+                $orderId = $jastipOrderId = DB::table('jastip_orders')->insertGetId([
                     'transaction_id'   => $transactionId,
                     'use_shipping'     => false,
                     'shipping_address' => '-',
@@ -518,6 +538,36 @@ class JastipController extends Controller
             '/profile-history?tab=transactions',
             'order.created:trx:' . $transactionId,
         );
+
+        // Bayar dari saldo: tidak ada popup Snap — pesanan langsung dilunasi
+        // lewat jalur pelunasan yang sama dengan Midtrans (termasuk notifikasi
+        // ke jastiper bahwa produknya terbayar).
+        if ($payWithWallet) {
+            try {
+                (new \App\Services\WalletPayment())->settle(
+                    (int) $user->id,
+                    $transactionId,
+                    (float) $totalAmount,
+                    'Pembelian jastip: ' . ($first['name'] ?? 'Barang'),
+                    'jastip_order',
+                    (int) $jastipOrderId,
+                );
+            } catch (\App\Exceptions\InsufficientBalanceException $e) {
+                DB::table('jastip_orders')->where('transaction_id', $transactionId)->delete();
+                DB::table('transactions')->where('id', $transactionId)->delete();
+
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
+                ], 422);
+            }
+
+            $request->session()->forget(self::CART_KEY);
+
+            return response()->json([
+                'paid'           => true,
+                'transaction_id' => $transactionId,
+            ]);
+        }
 
         // Konfigurasi Midtrans
         \Midtrans\Config::$serverKey    = config('midtrans.server_key');

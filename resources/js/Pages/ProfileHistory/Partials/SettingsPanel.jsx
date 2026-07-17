@@ -14,6 +14,7 @@ const NOTIF_CATEGORIES = [
     "group",
     "order",
     "payment",
+    "wallet",
     "split_bill",
     "jastip_request",
     "selling",

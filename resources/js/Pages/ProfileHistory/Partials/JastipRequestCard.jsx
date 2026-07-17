@@ -19,18 +19,36 @@ const STATUS_BADGE = {
 const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
 // Kartu satu request titipan di tab "Titipan Saya". Saat statusnya `quoted`,
-// menampilkan rincian penawaran + tombol bayar (Midtrans Snap via onPay).
-export default function JastipRequestCard({ request, onPay }) {
+// menampilkan rincian penawaran + tombol bayar (saldo dompet atau Midtrans Snap).
+export default function JastipRequestCard({ request, onPay, walletBalance = 0 }) {
     const { t } = useTranslation();
     const [cancelOpen, setCancelOpen] = useState(false);
     const [paying, setPaying] = useState(false);
 
     const canCancel = ["pending", "quoted"].includes(request.status);
 
-    const handlePay = async () => {
+    // payable_total sudah termasuk biaya layanan (dihitung server), jadi keputusan
+    // "saldo cukup" di sini memakai angka yang sama dengan yang akan dipotong.
+    const canPayWithWallet =
+        request.payable_total != null &&
+        Number(walletBalance) >= Number(request.payable_total);
+
+    const handlePay = async (method) => {
         setPaying(true);
         try {
-            const { data } = await axios.post(`/jastip/requests/${request.id}/pay`);
+            const { data } = await axios.post(`/jastip/requests/${request.id}/pay`, {
+                payment_method: method,
+            });
+
+            if (method === "wallet") {
+                if (data.paid) {
+                    // Saldo & status request berubah di server — muat ulang keduanya.
+                    router.reload({ only: ["jastip_requests", "wallet"] });
+                    return;
+                }
+                throw new Error("Respons pembayaran saldo tidak dikenali.");
+            }
+
             if (!data.snap_token) {
                 toast.error(data.error || t("jastip.request.pay_failed"));
                 return;
@@ -159,16 +177,37 @@ export default function JastipRequestCard({ request, onPay }) {
 
                 {/* Aksi */}
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    {request.status === "quoted" && (
+                    {/* Bayar dari saldo hanya ditawarkan bila saldo cukup;
+                        server tetap memvalidasi ulang saat ditekan. */}
+                    {request.status === "quoted" && canPayWithWallet && (
                         <Button
                             type="primary"
                             size="sm"
                             rounded={false}
                             className="rounded-lg"
-                            onClick={handlePay}
+                            onClick={() => handlePay("wallet")}
                             disabled={paying}
                         >
-                            {paying ? t("jastip.request.pay_loading") : t("jastip.request.pay_now")}
+                            {paying
+                                ? t("jastip.request.pay_loading")
+                                : t("split_bill.pay_wallet")}
+                        </Button>
+                    )}
+                    {request.status === "quoted" && (
+                        <Button
+                            type={canPayWithWallet ? "neutral" : "primary"}
+                            variant={canPayWithWallet ? "outline" : "solid"}
+                            size="sm"
+                            rounded={false}
+                            className="rounded-lg"
+                            onClick={() => handlePay("midtrans")}
+                            disabled={paying}
+                        >
+                            {paying
+                                ? t("jastip.request.pay_loading")
+                                : canPayWithWallet
+                                  ? t("split_bill.pay_midtrans")
+                                  : t("jastip.request.pay_now")}
                         </Button>
                     )}
                     {canCancel && (

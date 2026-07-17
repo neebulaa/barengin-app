@@ -40,6 +40,36 @@ export default function SplitBillCard({ reference, state, clientKey }) {
     const mine = state.my_share;
     const isPaid = mine?.status === "paid";
 
+    const canPayWithWallet =
+        mine && Number(state.wallet_balance ?? 0) >= Number(mine.amount);
+
+    // Bayar dari saldo: tidak lewat Snap — server memotong saldo lalu melunasi
+    // bagian ini, jadi cukup muat ulang untuk melihat status terbaru.
+    const payWithWallet = async () => {
+        if (busy || !mine) return;
+        setError(null);
+        setBusy(true);
+
+        try {
+            const { data } = await axios.post(`/split-bill/shares/${mine.id}/pay`, {
+                payment_method: "wallet",
+            });
+
+            if (data?.paid) {
+                router.reload();
+                return;
+            }
+
+            throw new Error("Respons pembayaran saldo tidak dikenali.");
+        } catch (e) {
+            setError(
+                e?.response?.data?.error ??
+                    t("split_bill.pay_failed", "Pembayaran gagal."),
+            );
+            setBusy(false);
+        }
+    };
+
     const pay = async () => {
         if (busy || !mine) return;
         setError(null);
@@ -51,7 +81,9 @@ export default function SplitBillCard({ reference, state, clientKey }) {
 
         setBusy(true);
         try {
-            const { data } = await axios.post(`/split-bill/shares/${mine.id}/pay`);
+            const { data } = await axios.post(`/split-bill/shares/${mine.id}/pay`, {
+                payment_method: "midtrans",
+            });
 
             // snap.pay() hanya membuka popup lalu langsung kembali — jadi status
             // "busy" dilepas di callback-nya, bukan di `finally`. Kalau dilepas di
@@ -156,16 +188,39 @@ export default function SplitBillCard({ reference, state, clientKey }) {
                             {t("split_bill.paid", "Lunas")}
                         </p>
                     ) : (
-                        <button
-                            type="button"
-                            onClick={pay}
-                            disabled={busy}
-                            className="mt-2 w-full rounded-lg bg-primary-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-800 disabled:opacity-60"
-                        >
-                            {busy
-                                ? t("split_bill.processing", "Memproses...")
-                                : `${t("split_bill.pay", "Bayar")} ${rupiah(mine.amount)}`}
-                        </button>
+                        <div className="mt-2 space-y-1.5">
+                            {/* Bayar dari saldo hanya ditawarkan bila saldo cukup;
+                                server tetap memvalidasi ulang saat ditekan. */}
+                            {canPayWithWallet ? (
+                                <button
+                                    type="button"
+                                    onClick={payWithWallet}
+                                    disabled={busy}
+                                    className="w-full rounded-lg bg-primary-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-800 disabled:opacity-60"
+                                >
+                                    {busy
+                                        ? t("split_bill.processing", "Memproses...")
+                                        : `${t("split_bill.pay_wallet", "Bayar dengan Saldo")} ${rupiah(mine.amount)}`}
+                                </button>
+                            ) : null}
+
+                            <button
+                                type="button"
+                                onClick={pay}
+                                disabled={busy}
+                                className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+                                    canPayWithWallet
+                                        ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                                        : "bg-primary-700 text-white hover:bg-primary-800"
+                                }`}
+                            >
+                                {busy
+                                    ? t("split_bill.processing", "Memproses...")
+                                    : canPayWithWallet
+                                      ? t("split_bill.pay_midtrans", "Bayar via Midtrans")
+                                      : `${t("split_bill.pay", "Bayar")} ${rupiah(mine.amount)}`}
+                            </button>
+                        </div>
                     )}
                 </div>
             ) : null}

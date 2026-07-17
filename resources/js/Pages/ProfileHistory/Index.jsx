@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "@inertiajs/react";
+import axios from "axios";
 import { toast } from "@/lib/toast";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
@@ -198,6 +199,38 @@ export default function ProfileHistory({
         });
     };
 
+    // Isi saldo dompet: buat transaksi Snap, lalu muat ulang dompet setelah
+    // popup ditutup agar saldo yang baru masuk langsung terlihat.
+    //
+    // Wajib lewat axios, bukan fetch: aplikasi ini tidak punya <meta name="csrf-token">,
+    // sehingga token hanya bisa didapat dari cookie XSRF-TOKEN — dan itu ditangani
+    // otomatis oleh axios. Memakai fetch membuat permintaan ditolak 419.
+    const handleTopUp = async (amount) => {
+        if (!snapReady || !window.snap) {
+            toast.warning(t("ph.pay_not_ready"));
+            return;
+        }
+
+        try {
+            const { data } = await axios.post("/wallet/top-up", { amount });
+
+            const reload = () => router.reload({ only: ["wallet", "transactions"] });
+            window.snap.pay(data.snap_token, {
+                onSuccess: reload,
+                onPending: reload,
+                onError: reload,
+                onClose: reload,
+            });
+        } catch (e) {
+            // 422 membawa pesan validasi yang berguna (mis. nominal di bawah minimal)
+            const message =
+                e?.response?.data?.error ??
+                e?.response?.data?.message ??
+                t("wallet.topup_failed");
+            toast.error(message);
+        }
+    };
+
     // Bayar request titipan yang sudah ditawar — muat ulang tab Titipan Saya
     const handlePayRequest = (snapToken) => {
         if (!snapToken) return;
@@ -241,6 +274,7 @@ export default function ProfileHistory({
                             profile={profile}
                             wallet={wallet}
                             onEdit={() => setEditing(true)}
+                            onTopUp={handleTopUp}
                         />
                     )}
                 </aside>
@@ -339,6 +373,7 @@ export default function ProfileHistory({
                                         key={req.id}
                                         request={req}
                                         onPay={handlePayRequest}
+                                        walletBalance={wallet?.balance ?? 0}
                                     />
                                 ))}
                             </div>

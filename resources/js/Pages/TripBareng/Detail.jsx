@@ -162,7 +162,9 @@ export default function Detail({ trip }) {
     };
 
     return (
-        <div className="min-h-screen bg-white pb-32">
+        // Ruang bawah hanya perlu disisakan saat bar pemesanan tampil; pemilik trip
+        // tidak melihat bar itu, jadi tanpa ini halamannya berakhir dengan celah kosong.
+        <div className={`min-h-screen bg-white ${isOwner ? "pb-12" : "pb-32"}`}>
             <Head title={`Trip ${currentTrip.title} - Barengin`} />
 
             <Container className="pt-6">
@@ -460,12 +462,23 @@ export default function Detail({ trip }) {
                                     {t("trip.detail.price_note")}
                                 </p>
                             </div>
+
+                            {/* Pemandu tidak melihat bar pemesanan, jadi keterangan ini
+                                yang menjelaskan kenapa tripnya tidak bisa dipesan.
+                                Gayanya disamakan dengan kartu serupa di Pergi Bareng. */}
+                            {isOwner && (
+                                <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-center text-sm text-neutral-600">
+                                    {t("trip.detail.you_organizer")}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </Container>
 
-            {/* STICKY BOTTOM BAR */}
+            {/* STICKY BOTTOM BAR — pemandu tidak bisa memesan tripnya sendiri,
+                jadi bar pemesanan (termasuk tombol suka) tidak ditampilkan untuknya. */}
+            {!isOwner && (
             <div className="fixed bottom-0 left-0 w-full bg-white border-t border-neutral-200 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] z-[60]">
                 <Container className="py-4 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="hidden md:block">
@@ -511,6 +524,7 @@ export default function Detail({ trip }) {
                     </div>
                 </Container>
             </div>
+            )}
 
             <ImageLightbox
                 images={lightbox.images}

@@ -57,6 +57,12 @@ class MidtransController extends Controller
                     ->orWhereIn('t.id', DB::table('split_bill_shares')
                         ->where('status', 'pending')
                         ->whereNotNull('transaction_id')
+                        ->select('transaction_id'))
+                    // Isi saldo yang menunggu pembayaran — tanpa ini saldo baru
+                    // bertambah ketika webhook datang, yang tidak pernah terjadi
+                    // di localhost.
+                    ->orWhereIn('t.id', DB::table('wallet_topups')
+                        ->where('status', 'pending')
                         ->select('transaction_id'));
             })
             ->pluck('t.id');
@@ -147,12 +153,50 @@ class MidtransController extends Controller
                 ->update(['transaction_id' => null, 'status' => 'unpaid', 'updated_at' => now()]);
         }
 
+        // Isi saldo: lunas → tambah saldo dompet; gagal → tandai agar tidak terus
+        // ikut tersinkron setiap halaman dibuka.
+        if ($orderStatus === 'paid') {
+            self::settleWalletTopup($orderId);
+        } elseif ($orderStatus === 'unpaid') {
+            DB::table('wallet_topups')
+                ->where('transaction_id', $orderId)
+                ->where('status', 'pending')
+                ->update(['status' => 'unpaid', 'updated_at' => now()]);
+        }
+
         // Saat lunas: buat peserta trip & masukkan pembeli ke grup chat
         if ($orderStatus === 'paid') {
             self::fulfillPaidTripOrders($orderId);
             self::notifyPaid($orderId);
             self::notifySellersOfPaidJastip($orderId);
         }
+    }
+
+    /**
+     * Tandai isi saldo lunas lalu tambahkan nominalnya ke dompet.
+     *
+     * Idempotent berlapis: baris yang sudah 'paid' dilewati, dan Wallet::credit()
+     * menolak kredit kedua dari sumber (wallet_topup, id) yang sama — webhook
+     * Midtrans memang datang berkali-kali untuk transaksi yang sama.
+     */
+    private static function settleWalletTopup(string $transactionId): void
+    {
+        $topup = \App\Models\WalletTopup::with('wallet')
+            ->where('transaction_id', $transactionId)
+            ->first();
+
+        if (! $topup || $topup->status === \App\Models\WalletTopup::STATUS_PAID) {
+            return;
+        }
+
+        $topup->forceFill(['status' => \App\Models\WalletTopup::STATUS_PAID])->save();
+
+        $topup->wallet?->credit(
+            (float) $topup->amount,
+            'Isi saldo dompet',
+            'wallet_topup',
+            (int) $topup->id,
+        );
     }
 
     /**

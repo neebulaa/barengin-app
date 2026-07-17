@@ -47,6 +47,8 @@ export function formatNotification(t, notification) {
         requester: data.requester,
         quantity: data.quantity,
         amount: data.amount != null ? rupiah(data.amount) : "",
+        // Saldo dompet setelah mutasi (notifikasi wallet.*)
+        balance: data.balance != null ? rupiah(data.balance) : "",
     };
 
     // order.created punya kalimat berbeda per jenis pesanan.
@@ -67,5 +69,6 @@ export function notificationIconKey(type) {
     if (type?.startsWith("split_bill.")) return "split_bill";
     if (type?.startsWith("jastip_request.")) return "jastip_request";
     if (type?.startsWith("selling.")) return "selling";
+    if (type?.startsWith("wallet.")) return "wallet";
     return "default";
 }

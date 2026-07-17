@@ -61,8 +61,19 @@ class ProfileHistoryController extends Controller
     /* ===================== DATA BUILDERS ===================== */
 
     /**
-     * Dompet pengguna: saldo + mutasi terakhir. Saldo bertambah ketika anggota
-     * melunasi bagian split bill dari pergi bareng yang ia selenggarakan.
+     * Tautan ke profil publik seorang pengguna. Null bila username tidak diketahui,
+     * sehingga pemanggil bisa menampilkan namanya sebagai teks biasa alih-alih
+     * tautan yang menuju halaman 404.
+     */
+    private function userProfileUrl(?string $username): ?string
+    {
+        return $username ? '/forum/users/' . $username : null;
+    }
+
+    /**
+     * Dompet pengguna: saldo + mutasi terakhir. Saldo bertambah saat pengguna
+     * mengisi saldo, dan saat anggota melunasi bagian split bill dari pergi
+     * bareng yang ia selenggarakan.
      */
     private function walletPayload(User $user): array
     {
@@ -70,9 +81,11 @@ class ProfileHistoryController extends Controller
 
         return [
             'balance' => (float) $wallet->balance,
+            // Daftar mutasi di kartu dompet tingginya dibatasi & bisa digulir, jadi
+            // aman mengirim lebih dari sekadar segelintir baris terakhir.
             'entries' => $wallet->wallet_transactions()
                 ->latest()
-                ->take(5)
+                ->take(20)
                 ->get()
                 ->map(fn ($w) => [
                     'id' => $w->id,
@@ -214,11 +227,13 @@ class ProfileHistoryController extends Controller
                 'seller'         => [
                     'name'   => $creator?->full_name ?? 'Penyelenggara',
                     'avatar' => $creatorAvatar,
+                    'url'    => $this->userProfileUrl($creator?->username),
                 ],
                 'items'          => [[
                     'name'  => $bill?->title ?? 'Patungan',
                     'image' => $image,
                     'slot'  => 1,
+                    'url'   => $trip ? '/pergi-bareng/' . $trip->id : null,
                 ]],
                 'shipping'       => null,
                 'fees'           => [
@@ -245,7 +260,7 @@ class ProfileHistoryController extends Controller
         $subtotal  = max(0, (float) $t->total_amount - $service - $insurance);
 
         $guide = $trip
-            ? DB::table('users')->where('id', $trip->guider_id)->first(['id', 'full_name', 'profile_image'])
+            ? DB::table('users')->where('id', $trip->guider_id)->first(['id', 'full_name', 'username', 'profile_image'])
             : null;
 
         $guideAvatar = $this->resolveImage($guide?->profile_image, asset('assets/default-profile.png'));
@@ -270,11 +285,13 @@ class ProfileHistoryController extends Controller
                 'seller'         => [
                     'name'   => $guide?->full_name ?? 'Penyelenggara',
                     'avatar' => $guideAvatar,
+                    'url'    => $this->userProfileUrl($guide?->username),
                 ],
                 'items'          => [[
                     'name'  => $trip?->name ?? 'Trip',
                     'image' => $image,
                     'slot'  => $qty,
+                    'url'   => $trip ? '/trip-bareng/' . $trip->id : null,
                 ]],
                 'shipping'       => null,
                 'fees'           => [
@@ -306,6 +323,14 @@ class ProfileHistoryController extends Controller
         $itemCount  = $order?->jastip_order_items?->count() ?? 1;
         $status     = $this->normalizeStatus('jastip', $order?->order_status);
 
+        // Jastip yang lunas masih 'in_progress' selama jastiper belum selesai
+        // membelikan & menyerahkan barang. Pesanan baru benar-benar selesai
+        // setelah masa pengambilan SELURUH itemnya lewat — tanpa ini, pesanan
+        // jastip tidak pernah bisa berstatus selesai sama sekali.
+        if ($status === 'in_progress' && $this->jastipOrderFinished($order)) {
+            $status = 'completed';
+        }
+
         $image = $this->resolveImage($firstImage, '/assets/default-image.png');
 
         $items = $order?->jastip_order_items?->map(function ($oi) {
@@ -314,8 +339,16 @@ class ProfileHistoryController extends Controller
                 'name'  => $oi->jastip_item?->name ?? 'Item',
                 'image' => $this->resolveImage($img, '/assets/default-image.png'),
                 'slot'  => (int) $oi->quantity,
+                'url'   => $oi->jastip_item ? '/jastip/' . $oi->jastip_item->id : null,
             ];
         })->values()->all() ?? [];
+
+        // Penjual pesanan ini = jastiper pemilik item pertama. Sebelumnya sengaja
+        // dikosongkan, sehingga detail jastip satu-satunya yang tidak menampilkan
+        // lawan transaksinya.
+        $jastiper = $firstItem
+            ? DB::table('users')->where('id', $firstItem->user_id)->first(['id', 'full_name', 'username', 'profile_image'])
+            : null;
 
         $fees = $order
             ? DB::table('jastip_orders_fees')
@@ -343,11 +376,16 @@ class ProfileHistoryController extends Controller
                 'date_label'     => Carbon::parse($t->created_at)->translatedFormat('d F Y'),
                 'status_heading' => $this->statusHeading($status),
                 'payment_method' => $t->payment_method,
-                'seller'         => null,
+                'seller'         => $jastiper ? [
+                    'name'   => $jastiper->full_name ?? 'Jastiper',
+                    'avatar' => $this->resolveImage($jastiper->profile_image, asset('assets/default-profile.png')),
+                    'url'    => $this->userProfileUrl($jastiper->username),
+                ] : null,
                 'items'          => count($items) > 0 ? $items : [[
                     'name'  => $firstItem?->name ?? 'Jastip',
                     'image' => $image,
                     'slot'  => (int) $itemCount,
+                    'url'   => $firstItem ? '/jastip/' . $firstItem->id : null,
                 ]],
                 'shipping'       => $order && $order->use_shipping
                     ? ['address' => $order->shipping_address]
@@ -507,6 +545,25 @@ class ProfileHistoryController extends Controller
      * Status ternormalisasi untuk UI:
      * completed | waiting_payment | in_progress
      */
+    /**
+     * Seluruh item pada pesanan jastip sudah lewat masa pengambilannya.
+     *
+     * Satu pesanan bisa memuat beberapa item dengan jadwal berbeda; pesanan baru
+     * dianggap selesai kalau tidak ada lagi barang yang menunggu diambil.
+     */
+    private function jastipOrderFinished($order): bool
+    {
+        $items = $order?->jastip_order_items
+            ?->map(fn ($oi) => $oi->jastip_item)
+            ->filter();
+
+        if (! $items || $items->isEmpty()) {
+            return false;
+        }
+
+        return $items->every(fn ($item) => $item->lifecycleStatus() === 'finish');
+    }
+
     private function normalizeStatus(string $kind, ?string $orderStatus): string
     {
         if ($orderStatus === 'paid') {
@@ -757,6 +814,12 @@ class ProfileHistoryController extends Controller
                 'quoted_item_price' => $req->quoted_item_price !== null ? (float) $req->quoted_item_price : null,
                 'quoted_fee'  => $req->quoted_fee !== null ? (float) $req->quoted_fee : null,
                 'quoted_total' => in_array($req->status, ['quoted', 'paid'], true) ? $req->quotedTotal() : null,
+                // Yang benar-benar ditagih = penawaran + biaya layanan. Dikirim dari
+                // server agar klien tidak perlu menduplikasi nilai biaya layanan
+                // saat memutuskan apakah saldo cukup.
+                'payable_total' => $req->status === \App\Models\JastipRequest::STATUS_QUOTED
+                    ? $req->quotedTotal() + \App\Http\Controllers\JastipRequestController::SERVICE_FEE
+                    : null,
                 'created_label' => $req->created_at->translatedFormat('d M Y'),
                 'destination' => $item?->purchase_city ?: $item?->purchase_province,
                 'pickup_city' => $item?->pickup_city ?: $item?->pickup_province,

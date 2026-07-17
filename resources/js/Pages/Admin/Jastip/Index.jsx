@@ -16,17 +16,18 @@ const STATUS_BADGE = {
     refunded: "bg-red-100 text-red-600",
 };
 
-// Badge status siklus hidup jastip (jastiper): draft/published/buy_time/finished
+// Badge status siklus hidup jastip (jastiper): draft/published/buy_time/pickup_time/finished
 const JASTIPER_STATUS_BADGE = {
     draft: "bg-neutral-100 text-neutral-600",
     published: "bg-green-100 text-green-700",
     buy_time: "bg-amber-100 text-amber-700",
+    pickup_time: "bg-purple-100 text-purple-700",
     finished: "bg-blue-100 text-primary-700",
 };
 
 export default function Index({ items = {}, orders = {}, filters = {} }) {
     const { t } = useTranslation();
-    const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "", hasPaidOrders: false });
+    const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
     const [publishModal, setPublishModal] = useState({ open: false, id: null, name: "" });
     const [reopenModal, setReopenModal] = useState({ open: false, id: null, name: "" });
 
@@ -79,7 +80,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
     const confirmDelete = () =>
         router.delete(`/admin/jastip/${deleteModal.id}`, {
             preserveScroll: true,
-            onSuccess: () => setDeleteModal({ open: false, id: null, name: "", hasPaidOrders: false }),
+            onSuccess: () => setDeleteModal({ open: false, id: null, name: "" }),
         });
 
     const confirmPublish = () =>
@@ -98,7 +99,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
         <>
             <ConfirmModal
                 open={deleteModal.open}
-                onClose={() => setDeleteModal({ open: false, id: null, name: "", hasPaidOrders: false })}
+                onClose={() => setDeleteModal({ open: false, id: null, name: "" })}
                 onConfirm={confirmDelete}
                 icon={<FiAlertCircle size={26} />}
                 iconClass="bg-red-100 text-red-500"
@@ -106,11 +107,6 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                 description={
                     <>
                         {t("jastip.delete_desc_prefix")} <span className="font-semibold text-neutral-700">{deleteModal.name}</span>{t("jastip.delete_desc_suffix")}
-                        {deleteModal.hasPaidOrders && (
-                            <span className="mt-2 block rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
-                                {t("jastip.delete_refund_warning")}
-                            </span>
-                        )}
                     </>
                 }
                 confirmLabel={t("jastip.delete_confirm")}
@@ -185,6 +181,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                     { value: "draft", label: t("jastip.jastiper_status.draft") },
                     { value: "published", label: t("jastip.jastiper_status.published") },
                     { value: "buy_time", label: t("jastip.jastiper_status.buy_time") },
+                    { value: "pickup_time", label: t("jastip.jastiper_status.pickup_time") },
                     { value: "finished", label: t("jastip.jastiper_status.finished") },
                 ].map((opt) => {
                     const active = ui.status === opt.value;
@@ -221,7 +218,7 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                         onGroupChat={() => router.post(`/chat/jastip/${item.id}/group`)}
                         onReopen={() => setReopenModal({ open: true, id: item.id, name: item.name })}
                         onToggleRequests={() => router.post(`/admin/jastip/${item.id}/toggle-requests`, {}, { preserveScroll: true })}
-                        onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name, hasPaidOrders: item.has_paid_orders })}
+                        onDelete={() => setDeleteModal({ open: true, id: item.id, name: item.name })}
                     />
                 ))}
 

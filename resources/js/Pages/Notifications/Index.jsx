@@ -8,7 +8,7 @@ import {
     FaWallet,
 } from "react-icons/fa";
 import { FiCheckCircle, FiInbox } from "react-icons/fi";
-import { MdOutlineDoneAll } from "react-icons/md";
+import { MdOutlineDoneAll, MdAccountBalanceWallet } from "react-icons/md";
 
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
@@ -29,6 +29,7 @@ const ICONS = {
     split_bill: FaWallet,
     jastip_request: FiInbox,
     selling: FaStore,
+    wallet: MdAccountBalanceWallet,
     default: FaRegBell,
 };
 

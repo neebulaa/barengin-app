@@ -91,22 +91,13 @@ class JastipItem extends Model
     }
 
     /**
-     * Jastip boleh dihapus selama belum memasuki H-1 batas pemesanan.
-     * Draft selalu boleh; published diblokir mulai (end_date - 1 hari),
-     * yang sekaligus memblokir fase buy_time/finished.
+     * Hanya draft yang boleh dihapus — sejalan dengan Trip Bareng. Begitu
+     * dipublish, jastip tampil di etalase dan bisa dipesan, sehingga jastiper
+     * dianggap sudah berkomitmen membelikan barang.
      */
     public function canBeDeleted(): bool
     {
-        if ($this->isDraft()) {
-            return true;
-        }
-        if (! $this->end_date) {
-            return false;
-        }
-
-        return \Carbon\Carbon::today()->lt(
-            \Carbon\Carbon::parse($this->end_date)->subDay()->startOfDay()
-        );
+        return $this->isDraft();
     }
 
     /** Harga total = harga dasar + biaya jastip (belum termasuk varian). */
@@ -116,14 +107,16 @@ class JastipItem extends Model
     }
 
     /**
-     * Status untuk jastiper (pemilik jastip), 4 tahap:
-     *  - draft     : masih draft
-     *  - published : masa pemesanan masih buka (hari ini <= end_date)
-     *  - buy_time  : masa pemesanan tutup, sebelum pengambilan dibuka
-     *                (setelah end_date, sebelum pickup_start_date) → saatnya membelikan
-     *  - finished  : sudah masuk/melewati masa pengambilan → bisa di-reopen
+     * Status untuk jastiper (pemilik jastip), 5 tahap:
+     *  - draft       : masih draft
+     *  - published   : masa pemesanan masih buka (hari ini <= end_date)
+     *  - buy_time    : masa pemesanan tutup, sebelum pengambilan dibuka
+     *                  (setelah end_date, sebelum pickup_start_date) → saatnya membelikan
+     *  - pickup_time : masa pengambilan sedang berjalan
+     *                  (pickup_start_date .. pickup_end_date) → serahkan barang ke pembeli
+     *  - finished    : masa pengambilan sudah lewat → bisa di-reopen
      */
-    public static function jastiperStatusOf(?string $status, $endDate, $pickupStartDate): string
+    public static function jastiperStatusOf(?string $status, $endDate, $pickupStartDate, $pickupEndDate = null): string
     {
         if ($status === self::STATUS_DRAFT) {
             return 'draft';
@@ -135,12 +128,20 @@ class JastipItem extends Model
         if ($pickupStartDate && $today->lt(\Carbon\Carbon::parse($pickupStartDate))) {
             return 'buy_time';
         }
+        if ($pickupEndDate && $today->lte(\Carbon\Carbon::parse($pickupEndDate))) {
+            return 'pickup_time';
+        }
         return 'finished';
     }
 
     public function jastiperStatus(): string
     {
-        return self::jastiperStatusOf($this->status, $this->end_date, $this->pickup_start_date);
+        return self::jastiperStatusOf(
+            $this->status,
+            $this->end_date,
+            $this->pickup_start_date,
+            $this->pickup_end_date,
+        );
     }
 
     /**
@@ -187,14 +188,29 @@ class JastipItem extends Model
     }
 
     /**
-     * Filter status jastiper (draft/published/buy_time/finished) di SQL.
+     * Filter status jastiper (draft/published/buy_time/pickup_time/finished) di SQL.
      * Harus mencerminkan jastiperStatusOf() persis, termasuk kasus tanggal NULL:
      * published butuh end_date terisi dan >= hari ini; item published dengan
-     * end_date NULL jatuh ke buy_time/finished — sama seperti versi PHP.
+     * end_date NULL jatuh ke buy_time/pickup_time/finished — sama seperti versi PHP.
      */
     public function scopeJastiperStatus($query, ?string $status)
     {
         $today = \Carbon\Carbon::today();
+
+        // Sudah lewat masa pemesanan — prasyarat buy_time/pickup_time/finished.
+        $orderClosed = function ($q) use ($today) {
+            $q->where('jastip_items.status', self::STATUS_PUBLISHED)
+                ->where(function ($w) use ($today) {
+                    $w->whereNull('end_date')->orWhereDate('end_date', '<', $today);
+                });
+        };
+
+        // Masa pengambilan sudah dibuka — prasyarat pickup_time/finished.
+        $pickupOpened = function ($q) use ($today) {
+            $q->where(function ($w) use ($today) {
+                $w->whereNull('pickup_start_date')->orWhereDate('pickup_start_date', '<=', $today);
+            });
+        };
 
         return match ($status) {
             'draft' => $query->where('jastip_items.status', self::STATUS_DRAFT),
@@ -203,19 +219,19 @@ class JastipItem extends Model
                 ->whereNotNull('end_date')
                 ->whereDate('end_date', '>=', $today),
             'buy_time' => $query
-                ->where('jastip_items.status', self::STATUS_PUBLISHED)
-                ->where(function ($q) use ($today) {
-                    $q->whereNull('end_date')->orWhereDate('end_date', '<', $today);
-                })
+                ->tap($orderClosed)
                 ->whereNotNull('pickup_start_date')
                 ->whereDate('pickup_start_date', '>', $today),
+            'pickup_time' => $query
+                ->tap($orderClosed)
+                ->tap($pickupOpened)
+                ->whereNotNull('pickup_end_date')
+                ->whereDate('pickup_end_date', '>=', $today),
             'finished' => $query
-                ->where('jastip_items.status', self::STATUS_PUBLISHED)
+                ->tap($orderClosed)
+                ->tap($pickupOpened)
                 ->where(function ($q) use ($today) {
-                    $q->whereNull('end_date')->orWhereDate('end_date', '<', $today);
-                })
-                ->where(function ($q) use ($today) {
-                    $q->whereNull('pickup_start_date')->orWhereDate('pickup_start_date', '<=', $today);
+                    $q->whereNull('pickup_end_date')->orWhereDate('pickup_end_date', '<', $today);
                 }),
             default => $query,
         };

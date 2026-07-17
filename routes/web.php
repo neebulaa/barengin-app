@@ -285,6 +285,11 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('share')->name('split-bill.share.pay');
 });
 
+// Isi saldo dompet lewat Midtrans Snap
+Route::middleware('auth')->group(function () {
+    Route::post('/wallet/top-up', [\App\Http\Controllers\WalletController::class, 'topUp'])->name('wallet.top-up');
+});
+
 // Leaderboard
 Route::get('/leaderboard', [\App\Http\Controllers\LeaderboardController::class, 'index'])->name('leaderboard');
 

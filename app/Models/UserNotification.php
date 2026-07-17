@@ -21,6 +21,7 @@ class UserNotification extends Model
     public const CATEGORY_SPLIT_BILL     = 'split_bill';
     public const CATEGORY_JASTIP_REQUEST = 'jastip_request';
     public const CATEGORY_SELLING        = 'selling';
+    public const CATEGORY_WALLET         = 'wallet';
 
     /** Semua kategori yang bisa dimatikan pengguna, berikut tipe di dalamnya. */
     public const CATEGORIES = [
@@ -42,6 +43,9 @@ class UserNotification extends Model
         ],
         // Sisi penjual: ada yang membeli / menitip padaku.
         self::CATEGORY_SELLING => ['selling.order_paid', 'selling.request_received'],
+        // Uang masuk/keluar dompet — dipicu dari Wallet::credit()/debit(), jadi
+        // setiap perubahan saldo dari sumber mana pun ikut terkabarkan.
+        self::CATEGORY_WALLET => ['wallet.credited', 'wallet.debited'],
     ];
 
     protected $fillable = [

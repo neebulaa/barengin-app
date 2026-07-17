@@ -86,6 +86,7 @@ class AdminJastipController extends Controller
                 'jastip_items.status as item_status',
                 'jastip_items.end_date as item_end_date',
                 'jastip_items.pickup_start_date as item_pickup_start_date',
+                'jastip_items.pickup_end_date as item_pickup_end_date',
                 'jastip_item_variants.var_value as variant',
                 'jastip_order_items.quantity',
                 'users.full_name as buyer_name',
@@ -104,7 +105,12 @@ class AdminJastipController extends Controller
                 'qty'      => (int) $o->quantity,
                 'shipping' => (bool) $o->use_shipping,
                 'status'   => $o->order_status,
-                'jastiper_status' => JastipItem::jastiperStatusOf($o->item_status, $o->item_end_date, $o->item_pickup_start_date),
+                'jastiper_status' => JastipItem::jastiperStatusOf(
+                    $o->item_status,
+                    $o->item_end_date,
+                    $o->item_pickup_start_date,
+                    $o->item_pickup_end_date,
+                ),
             ]);
 
         return Inertia::render('Admin/Jastip/Index', [
@@ -229,43 +235,23 @@ class AdminJastipController extends Controller
         $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
         $name = $item->name;
 
-        // Jastip yang sudah dipublish boleh dihapus, KECUALI mulai H-1 sebelum
-        // batas pemesanan (end_date) — sejak saat itu jastiper dianggap sudah
-        // berkomitmen membelikan barang. Ini otomatis memblokir fase
-        // buy_time/finished karena end_date-nya sudah lewat.
+        // Hanya draft yang bisa dihapus — sejalan dengan Trip Bareng. Karena draft
+        // belum pernah tampil di etalase, ia tidak mungkin punya pesanan, sehingga
+        // penghapusan tidak perlu menyentuh dana pembeli sama sekali.
         if (! $item->canBeDeleted()) {
             return back()->with('flash', [
                 'type' => 'error',
-                'message' => 'Jastip tidak dapat dihapus mulai H-1 sebelum batas pemesanan berakhir.',
+                'message' => 'Jastip yang sudah dipublish tidak dapat dihapus.',
             ]);
         }
 
-        $refunded = DB::transaction(function () use ($item) {
-            // Simulasi pengembalian dana: tandai pesanan yang sudah/masih
-            // berjalan sebagai 'refunded' agar riwayat pembeli tetap utuh.
-            $orderIds = DB::table('jastip_order_items')
-                ->where('jastip_item_id', $item->id)
-                ->pluck('jastip_order_id');
+        // Soft delete: baris tetap ada agar referensi lama tidak putus.
+        // File gambar sengaja tidak dihapus.
+        $item->delete();
 
-            $refunded = DB::table('jastip_orders')
-                ->whereIn('id', $orderIds)
-                ->whereIn('order_status', ['paid', 'pending'])
-                ->update(['order_status' => 'refunded', 'updated_at' => now()]);
+        ActivityLog::record('Menghapus draft jastip: ' . $name);
 
-            // Soft delete: baris tetap ada sehingga riwayat transaksi pembeli,
-            // aktivitas penjualan, dan analitik tidak kehilangan referensi.
-            // File gambar sengaja tidak dihapus agar riwayat tetap tampil.
-            $item->delete();
-
-            return $refunded;
-        });
-
-        ActivityLog::record(
-            'Menghapus jastip: ' . $name
-            . ($refunded > 0 ? " (dana {$refunded} pesanan ditandai dikembalikan)" : '')
-        );
-
-        return back()->with('flash', ['type' => 'success', 'message' => 'Jastip berhasil dihapus.']);
+        return back()->with('flash', ['type' => 'success', 'message' => 'Draft jastip berhasil dihapus.']);
     }
 
     public function publish($id)
@@ -479,7 +465,6 @@ class AdminJastipController extends Controller
             'jastiper_status' => $item->jastiperStatus(),
             'is_draft'    => $item->isDraft(),
             'can_delete'  => $item->canBeDeleted(),
-            'has_paid_orders' => $sold > 0,
             'allow_requests' => (bool) $item->allow_requests,
             'image'       => $item->relationLoaded('jastip_item_images') && $item->jastip_item_images->isNotEmpty()
                 ? $this->resolveImageUrl($item->jastip_item_images->first()->image_name)

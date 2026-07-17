@@ -15,7 +15,7 @@ import AvatarEditor from "./AvatarEditor";
 import WalletCard from "./WalletCard";
 import { useTranslation } from "@/lib/useTranslation";
 
-export default function ProfileSidebar({ profile, wallet, onEdit }) {
+export default function ProfileSidebar({ profile, wallet, onEdit, onTopUp }) {
     const { t } = useTranslation();
     const { auth } = usePage().props;
     const streak = auth?.user?.streak_count ?? 0;
@@ -122,7 +122,7 @@ export default function ProfileSidebar({ profile, wallet, onEdit }) {
             {/* Dompet: informasi tingkat akun, jadi menemani profil di sidebar dan
                 bukan salah satu tab riwayat. Ditaruh tepat setelah tombol Edit agar
                 saldo terbaca tanpa perlu menggulir melewati streak & kontak. */}
-            <WalletCard wallet={wallet} />
+            <WalletCard wallet={wallet} onTopUp={onTopUp} />
 
             {/* Streak Nyala */}
             <div className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-left">
