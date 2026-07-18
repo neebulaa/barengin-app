@@ -5,6 +5,7 @@ import { toast } from "@/lib/toast";
 import MainLayout from "@/Layouts/MainLayout";
 import Container from "@/Components/Container";
 import Button from "@/Components/Button";
+import StarRating from "@/Components/StarRating";
 import { useTranslation } from "@/lib/useTranslation";
 import { DEFAULT_IMAGE } from "@/lib/images";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
@@ -13,7 +14,7 @@ import L from 'leaflet';
 
 import {
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
-    FaMapMarkerAlt, FaCar, FaInfoCircle, FaStar, FaHeart, FaRegHeart,
+    FaMapMarkerAlt, FaCar, FaInfoCircle, FaHeart, FaRegHeart,
     FaMinus, FaPlus, FaLock
 } from "react-icons/fa";
 import { BsChatDots, BsPeople } from "react-icons/bs";
@@ -113,6 +114,35 @@ export default function Show({ trip }) {
                 preserveScroll: true,
                 preserveState: true,
                 onError: () => setFollowing((v) => !v),
+            },
+        );
+    };
+
+    // Status "diikuti" per peserta, di-key per username. Peserta multi-kursi
+    // muncul beberapa baris, jadi state per-username menjaga semua barisnya tetap
+    // selaras saat tombol Ikuti/Mengikuti ditekan.
+    const [participantFollows, setParticipantFollows] = useState(() => {
+        const map = {};
+        for (const p of trip.participants ?? []) {
+            if (p.username) map[p.username] = Boolean(p.is_following);
+        }
+        return map;
+    });
+
+    const toggleParticipantFollow = (username) => {
+        if (!username) return;
+        setParticipantFollows((m) => ({ ...m, [username]: !m[username] }));
+        router.post(
+            `/forum/users/${username}/follow`,
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () =>
+                    setParticipantFollows((m) => ({
+                        ...m,
+                        [username]: !m[username],
+                    })),
             },
         );
     };
@@ -238,9 +268,12 @@ export default function Show({ trip }) {
                                         <div className="flex items-center gap-1 font-semibold text-neutral-700">
                                             {trip.organizer.name} {trip.organizer.verified && <FaCheckCircle className="text-primary-500 text-sm"/>}
                                         </div>
-                                        <div className="text-xs text-neutral-500 flex items-center gap-1">
-                                            <FaStar className="text-warning-500"/> {trip.organizer.rating} ({trip.organizer.reviews} {t("common.reviews")})
-                                        </div>
+                                        <StarRating
+                                            rating={trip.organizer.rating}
+                                            reviews={trip.organizer.reviews}
+                                            withReviewsLabel
+                                            className="text-xs"
+                                        />
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2">
                                         {trip.organizer?.is_self ? (
@@ -345,23 +378,31 @@ export default function Show({ trip }) {
                             <div className="space-y-3">
                                 {/* Organizer */}
                                 <div className="flex items-center justify-between p-3 border border-neutral-100 rounded-xl bg-neutral-50">
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <img src={trip.organizer.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-semibold flex items-center gap-1">{trip.organizer.name} <FaCheckCircle className="text-primary-500 text-xs"/></p>
-                                            <p className="text-xs text-neutral-500">{t("pb.show.organizer")}</p>
+                                    {trip.organizer.username ? (
+                                        <Link
+                                            href={`/forum/users/${trip.organizer.username}`}
+                                            className="flex items-center gap-3 flex-1 min-w-0"
+                                        >
+                                            <img src={trip.organizer.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold flex items-center gap-1 truncate">{trip.organizer.name} <FaCheckCircle className="text-primary-500 text-xs shrink-0"/></p>
+                                                <p className="text-xs text-neutral-500">{t("pb.show.organizer")}</p>
+                                            </div>
+                                        </Link>
+                                    ) : (
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <img src={trip.organizer.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold flex items-center gap-1 truncate">{trip.organizer.name} <FaCheckCircle className="text-primary-500 text-xs shrink-0"/></p>
+                                                <p className="text-xs text-neutral-500">{t("pb.show.organizer")}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 ml-2">
-                                        <div className="text-xs text-neutral-600 flex items-center gap-0.5 whitespace-nowrap">
-                                            <FaStar className="text-warning-500"/> {trip.organizer.rating}
-                                        </div>
-                                    </div>
+                                    )}
                                     {!trip.organizer?.is_self && (
                                         <Button
                                             size="xs"
-                                            variant={following ? "solid" : "outline"}
-                                            className="ml-2"
+                                            variant={following ? "outline" : "solid"}
+                                            className="ml-2 shrink-0"
                                             onClick={handleToggleFollow}
                                         >
                                             {following ? t("lb.following") : t("lb.follow")}
@@ -372,20 +413,36 @@ export default function Show({ trip }) {
                                 {/* Participants (sudah diperluas sesuai jumlah kursi yang dipesan) */}
                                 {trip.participants.map((p, i) => (
                                     <div key={i} className="flex items-center justify-between p-3 border border-neutral-100 rounded-xl hover:bg-neutral-50 transition">
-                                        <div className="flex items-center gap-3 flex-1">
-                                            <img src={p.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-semibold flex items-center gap-1">{p.name} {p.verified && <FaCheckCircle className="text-primary-500 text-xs"/>}</p>
-                                                <p className="text-xs text-neutral-500">{p.seat_label || t("pb.show.participant")}</p>
+                                        {p.username ? (
+                                            <Link
+                                                href={`/forum/users/${p.username}`}
+                                                className="flex items-center gap-3 flex-1 min-w-0"
+                                            >
+                                                <img src={p.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold flex items-center gap-1 truncate">{p.name} {p.verified && <FaCheckCircle className="text-primary-500 text-xs shrink-0"/>}</p>
+                                                    <p className="text-xs text-neutral-500">{p.seat_label || t("pb.show.participant")}</p>
+                                                </div>
+                                            </Link>
+                                        ) : (
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <img src={p.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold flex items-center gap-1 truncate">{p.name} {p.verified && <FaCheckCircle className="text-primary-500 text-xs shrink-0"/>}</p>
+                                                    <p className="text-xs text-neutral-500">{p.seat_label || t("pb.show.participant")}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 ml-2">
-                                            <div className="text-xs text-neutral-600 flex items-center gap-0.5 whitespace-nowrap">
-                                                <FaStar className="text-warning-500"/> {Number(p.rating).toFixed(1)}
-                                            </div>
-                                        </div>
-                                        {p.username && (
-                                            <Button isButtonLink href={`/forum/users/${p.username}`} size="xs" variant="outline" className="ml-2">{t("common.view_profile")}</Button>
+                                        )}
+                                        {/* Tombol ikuti/mengikuti — tidak tampil untuk diri sendiri */}
+                                        {p.username && !p.is_self && (
+                                            <Button
+                                                size="xs"
+                                                variant={participantFollows[p.username] ? "outline" : "solid"}
+                                                className="ml-2 shrink-0"
+                                                onClick={() => toggleParticipantFollow(p.username)}
+                                            >
+                                                {participantFollows[p.username] ? t("lb.following") : t("lb.follow")}
+                                            </Button>
                                         )}
                                     </div>
                                 ))}

@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { usePage, Link } from "@inertiajs/react";
-import { FiMenu, FiLogOut } from "react-icons/fi";
+import { FiMenu, FiLogOut, FiSettings } from "react-icons/fi";
+import { FaPaperPlane } from "react-icons/fa";
 import { MdHome } from "react-icons/md";
 import { HiOutlineDocumentText } from "react-icons/hi";
-import LanguageSwitcher from "@/Components/LanguageSwitcher.jsx";
+import Button from "@/Components/Button.jsx";
+import NotificationBell from "@/Components/NotificationBell.jsx";
 import StreakBadge from "@/Components/StreakBadge.jsx";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -52,17 +54,32 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                 </div>
             </div>
 
-            {/* Bagian Kanan Navbar (Bahasa, Streak, User Profile) */}
+            {/* Bagian Kanan Navbar (Notifikasi, Streak, Chat, User Profile) */}
             <div className="flex items-center gap-2 sm:gap-3">
-                <LanguageSwitcher className="hidden sm:block" />
+                {/* Pemilih bahasa tidak di sini — hidup di tab Pengaturan (Riwayat
+                    Profil), jadi lonceng notifikasi menggantikannya seperti di
+                    navbar halaman depan. */}
+                <NotificationBell />
 
                 <Link href="/profile-history" aria-label="Streak Nyala">
                     <StreakBadge count={user?.streak_count ?? 0} />
                 </Link>
 
+                <Button
+                    isButtonLink
+                    href="/chat"
+                    type="primary"
+                    variant="solid"
+                    size="sm"
+                    className="gap-2"
+                >
+                    <FaPaperPlane className="w-4 h-4" />
+                    <span className="hidden sm:inline">{t("nav.chat")}</span>
+                </Button>
+
                 {/* Wrapper khusus profil: ref hanya membungkus tombol + menu profil,
-                    supaya klik di luar (mis. pemilih bahasa) menutup dropdown ini
-                    dan tidak saling menumpuk. */}
+                    supaya klik di luar (mis. lonceng notifikasi) menutup dropdown
+                    ini dan tidak saling menumpuk. */}
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setIsProfileOpen((v) => !v)}
@@ -94,6 +111,16 @@ export default function AdminNavbar({ title, subtitle, setIsMobileOpen }) {
                             >
                                 <HiOutlineDocumentText className="w-5 h-5 text-current shrink-0" />
                                 <span>{t("nav.profile_history")}</span>
+                            </Link>
+
+                            {/* Pengaturan hidup sebagai tab di Riwayat Profil */}
+                            <Link
+                                href="/profile-history?tab=settings"
+                                className="w-full flex items-center gap-3 px-5 py-4 text-base font-medium text-neutral-600 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-neutral-200"
+                                onClick={() => setIsProfileOpen(false)}
+                            >
+                                <FiSettings className="w-5 h-5 text-current shrink-0" />
+                                <span>{t("settings.title")}</span>
                             </Link>
 
                             {/* Logout menggunakan POST method sesuai bawaan Laravel Breeze/Jetstream */}

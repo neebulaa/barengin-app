@@ -8,35 +8,43 @@ use Illuminate\Database\Eloquent\Model;
 class PergiBareng extends Model
 {
 
-    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name'];
+    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name', 'finished_at'];
 
     /**
      * Status berdasarkan waktu janji (tak ada tanggal selesai terpisah):
-     *  - will_start : sebelum hari janji
-     *  - ongoing    : pada hari janji
-     *  - finish     : setelah hari janji → bisa diulas
+     *  - will_start : sebelum JAM janji (bukan sekadar sebelum harinya)
+     *  - ongoing    : sejak jam janji, dan TETAP berlangsung sampai penyelenggara
+     *                 menekan "Selesaikan"
+     *  - finish     : hanya setelah penyelenggara menyelesaikannya (`finished_at`)
+     *
+     * Divalidasi hingga jam, bukan hanya tanggal: perjalanan pukul 23:40 baru
+     * "berlangsung" pada 23:40, bukan sejak 00:00 hari itu.
+     *
+     * TIDAK ADA transisi otomatis ke `finish` di tengah malam — satu-satunya
+     * jalan menuju selesai adalah penyelenggara mengisi `finished_at`. Selama itu
+     * belum terjadi, perjalanan tetap `ongoing` walau harinya sudah lewat.
      */
     public function status(): string
     {
+        if ($this->finished_at) {
+            return 'finish';
+        }
+
         if (! $this->time_appointment) {
             return 'will_start';
         }
 
-        $now  = Carbon::now();
-        $appt = Carbon::parse($this->time_appointment);
-
-        if ($now->lt($appt->copy()->startOfDay())) {
-            return 'will_start';
-        }
-        if ($now->lte($appt->copy()->endOfDay())) {
-            return 'ongoing';
-        }
-        return 'finish';
+        // Belum sampai jam keberangkatan → masih menunggu; sejak jam itu →
+        // berlangsung, tanpa batas akhir otomatis.
+        return Carbon::now()->lt(Carbon::parse($this->time_appointment))
+            ? 'will_start'
+            : 'ongoing';
     }
 
     protected function casts(){
         return [
-            'time_appointment'=> 'datetime'
+            'time_appointment'=> 'datetime',
+            'finished_at' => 'datetime',
         ];
     }
 
@@ -58,6 +66,10 @@ class PergiBareng extends Model
 
     public function conversations(){
         return $this->hasOne(Conversation::class);
+    }
+
+    public function split_bills(){
+        return $this->hasMany(SplitBill::class);
     }
 
 }

@@ -17,8 +17,12 @@ use Inertia\Inertia;
  */
 class JastipRequestController extends Controller
 {
-    /** Biaya layanan tetap — selaras dengan checkout jastip biasa. */
-    private const SERVICE_FEE = 5000;
+    /**
+     * Biaya layanan tetap — selaras dengan checkout jastip biasa. Public agar
+     * ProfileHistoryController bisa menghitung total tagihan yang sama persis
+     * tanpa menyalin angkanya.
+     */
+    public const SERVICE_FEE = 5000;
 
     /**
      * Halaman "Request Titipan": jastip published yang menerima request,
@@ -104,7 +108,7 @@ class JastipRequestController extends Controller
             $imageName = $request->file('image')->store('jastip-request-images', 'public');
         }
 
-        JastipRequest::create([
+        $req = JastipRequest::create([
             'jastip_item_id' => $item->id,
             'user_id'   => $request->user()->id,
             'item_name' => $validated['item_name'],
@@ -115,6 +119,20 @@ class JastipRequestController extends Controller
             'image_name' => $imageName,
             'status'    => JastipRequest::STATUS_PENDING,
         ]);
+
+        // Aba-aba bagi jastiper untuk memberi penawaran — pasangan dari
+        // notifikasi 'jastip_request.quoted' yang nanti diterima pemohon.
+        \App\Models\UserNotification::send(
+            (int) $item->user_id,
+            'selling.request_received',
+            [
+                'name' => $req->item_name,
+                'requester' => $request->user()->full_name,
+                'quantity' => (int) $req->quantity,
+            ],
+            '/admin/jastip/requests',
+            'selling.request_received:req:' . $req->id,
+        );
 
         return back()->with('flash', [
             'type' => 'success',
@@ -130,16 +148,21 @@ class JastipRequestController extends Controller
     {
         $user = $request->user();
 
-        $req = JastipRequest::with('jastip')
-            ->where('user_id', $user->id)
-            ->findOrFail($id);
+        // Tanpa eager load: relasinya bernama `jastipItem` (bukan `jastip`, yang
+        // membuat endpoint ini selalu 500), dan method ini toh hanya memakai kolom
+        // milik request itu sendiri.
+        $req = JastipRequest::where('user_id', $user->id)->findOrFail($id);
 
         if ($req->status !== JastipRequest::STATUS_QUOTED) {
             return response()->json(['error' => 'Request ini belum/tidak bisa dibayar.'], 422);
         }
 
+        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
+        $payWithWallet = $request->input('payment_method') === 'wallet';
+
         // Masih ada transaksi berjalan? Pakai ulang snap token-nya bila belum kedaluwarsa.
-        if ($req->transaction_id) {
+        // Hanya berlaku untuk Midtrans — pembayaran saldo tidak memakai token.
+        if (! $payWithWallet && $req->transaction_id) {
             $existing = DB::table('transactions')->where('id', $req->transaction_id)->first();
             if ($existing && $existing->snap_token && now()->lt($existing->expired_at)) {
                 return response()->json([
@@ -156,16 +179,30 @@ class JastipRequestController extends Controller
         $qty       = (int) $req->quantity;
         $totalAmount = $itemPrice * $qty + $fee + self::SERVICE_FEE;
 
+        // Saldo dicek lebih dulu agar tidak meninggalkan transaksi menggantung saat
+        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di Wallet::debit()
+        // yang mengunci baris dompet.
+        if ($payWithWallet) {
+            $wallet = \App\Models\Wallet::forUser((int) $user->id);
+            if (! $wallet->hasSufficientBalance($totalAmount)) {
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Silakan isi saldo terlebih dahulu.',
+                    'balance' => (float) $wallet->balance,
+                    'required' => (float) $totalAmount,
+                ], 422);
+            }
+        }
+
         $transactionId = (string) Str::uuid();
 
         try {
-            DB::transaction(function () use ($transactionId, $user, $totalAmount, $req) {
+            DB::transaction(function () use ($transactionId, $user, $totalAmount, $req, $payWithWallet) {
                 DB::table('transactions')->insert([
                     'id'             => $transactionId,
                     'user_id'        => $user->id,
                     'total_amount'   => $totalAmount,
                     'type'           => 'jastip_request',
-                    'payment_method' => 'Midtrans',
+                    'payment_method' => $payWithWallet ? 'Wallet' : 'Midtrans',
                     'expired_at'     => now()->addHours(24),
                     'created_at'     => now(),
                     'updated_at'     => now(),
@@ -176,6 +213,33 @@ class JastipRequestController extends Controller
         } catch (\Throwable $e) {
             Log::error('[BARENGIN] Gagal insert transaksi request titipan: ' . $e->getMessage());
             return response()->json(['error' => 'Gagal menyimpan transaksi.'], 500);
+        }
+
+        // Bayar dari saldo: tidak ada popup Snap — request langsung dilunasi lewat
+        // jalur pelunasan yang sama dengan Midtrans.
+        if ($payWithWallet) {
+            try {
+                (new \App\Services\WalletPayment())->settle(
+                    (int) $user->id,
+                    $transactionId,
+                    (float) $totalAmount,
+                    'Titipan: ' . $req->item_name,
+                    'jastip_request',
+                    (int) $req->id,
+                );
+            } catch (\App\Exceptions\InsufficientBalanceException $e) {
+                $req->update(['transaction_id' => null]);
+                DB::table('transactions')->where('id', $transactionId)->delete();
+
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
+                ], 422);
+            }
+
+            return response()->json([
+                'paid'           => true,
+                'transaction_id' => $transactionId,
+            ]);
         }
 
         \Midtrans\Config::$serverKey    = config('midtrans.server_key');

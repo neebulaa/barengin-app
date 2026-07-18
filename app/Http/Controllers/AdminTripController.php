@@ -36,13 +36,16 @@ class AdminTripController extends Controller
             ->groupBy('trip_orders.trip_id')
             ->select('trip_orders.trip_id', DB::raw('COUNT(DISTINCT trip_orders.user_id) as joined'));
 
+        // withAvg/withCount HARUS setelah select(): select() mengganti seluruh
+        // daftar kolom, jadi bila dipanggil lebih dulu, kolom rating_avg &
+        // rating_count ikut terhapus dan selalu NULL.
         $query = Trip::query()
             ->with(['detail_trips', 'histories'])
             ->leftJoinSub($joinedSub, 'j', 'j.trip_id', '=', 'trips.id')
             ->where('trips.guider_id', Auth::id())
+            ->select('trips.*', DB::raw('COALESCE(j.joined, 0) as joined_count'))
             ->withAvg('ratings as rating_avg', 'rating_amount')
-            ->withCount('ratings as rating_count')
-            ->select('trips.*', DB::raw('COALESCE(j.joined, 0) as joined_count'));
+            ->withCount('ratings as rating_count');
 
         if ($search !== '') {
             FuzzySearch::apply($query, $search, ['trips.name', 'trips.location'], 'trips.id');
@@ -83,8 +86,136 @@ class AdminTripController extends Controller
 
         return Inertia::render('Admin/Trip/Index', [
             'trips' => $trips,
+            'ongoing' => $this->ongoingTrips(),
             'filters' => ['search' => $search, 'sort' => $sort],
         ]);
+    }
+
+    /**
+     * Trip yang sedang berlangsung milik pemandu — seksi tersendiri di atas
+     * tabel agar tombol "Selesaikan" mudah dijangkau.
+     */
+    private function ongoingTrips()
+    {
+        return Trip::query()
+            ->where('guider_id', Auth::id())
+            ->where('status', Trip::STATUS_ONGOING)
+            ->whereNull('finished_at')
+            ->orderBy('end_date')
+            ->get()
+            ->map(fn ($trip) => [
+                'id' => $trip->id,
+                'name' => $trip->name,
+                'location' => $trip->location,
+                'image' => $this->resolveImage($trip->image),
+                'period_label' => Carbon::parse($trip->start_date)->translatedFormat('d M Y')
+                    . ' – ' . Carbon::parse($trip->end_date)->translatedFormat('d M Y'),
+                'end_label' => Carbon::parse($trip->end_date)->translatedFormat('d M Y'),
+            ])
+            ->values();
+    }
+
+    /**
+     * Selesaikan trip lebih cepat dari `end_date`. Hanya pemandu pemilik trip,
+     * dan hanya saat trip sedang berlangsung.
+     */
+    public function finish($id)
+    {
+        $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
+
+        if ($trip->status === Trip::STATUS_DONE) {
+            return back()->with('flash', ['type' => 'info', 'message' => 'Trip ini sudah selesai.']);
+        }
+
+        if ($trip->status !== Trip::STATUS_ONGOING) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Hanya trip yang sedang berlangsung yang bisa diselesaikan.',
+            ]);
+        }
+
+        $trip->update([
+            'status' => Trip::STATUS_DONE,
+            // Menahan Trip::refreshStatuses() agar tidak mengembalikan status ke
+            // 'ongoing' selama end_date belum lewat.
+            'finished_at' => now(),
+        ]);
+
+        \App\Models\ActivityLog::record('Menyelesaikan trip: ' . $trip->name);
+
+        return back()->with('flash', [
+            'type' => 'success',
+            'message' => 'Trip "' . $trip->name . '" ditandai selesai.',
+        ]);
+    }
+
+    /**
+     * Daftar peserta trip (pembeli berbayar pada run aktif) — bisa dikeluarkan
+     * pemandu dengan pengembalian dana. Setara halaman "Permintaan Bergabung"
+     * milik pergi bareng, tetapi trip tidak punya alur persetujuan.
+     */
+    public function participants($id)
+    {
+        $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
+        $runStart = $trip->current_run_started_at;
+
+        // Satu baris per pembeli (jumlahkan kursi & total dari pesanannya).
+        $rows = DB::table('trip_orders')
+            ->join('users', 'trip_orders.user_id', '=', 'users.id')
+            ->where('trip_orders.trip_id', $trip->id)
+            ->where('trip_orders.order_status', 'paid')
+            ->when($runStart, fn ($q) => $q->where('trip_orders.created_at', '>=', $runStart))
+            ->groupBy('users.id', 'users.full_name', 'users.username', 'users.profile_image')
+            ->select(
+                'users.id',
+                'users.full_name',
+                'users.username',
+                'users.profile_image',
+                DB::raw('SUM(trip_orders.quantity) as seats'),
+                DB::raw('SUM(trip_orders.total) as total_paid'),
+                DB::raw('MIN(trip_orders.created_at) as joined_at'),
+            )
+            ->orderBy('joined_at')
+            ->get();
+
+        $participants = $rows->map(fn ($r) => [
+            'user_id' => (int) $r->id,
+            'name' => $r->full_name ?? 'Peserta',
+            'username' => $r->username,
+            'avatar' => $this->resolveAvatarUrl($r->profile_image),
+            'seats' => (int) $r->seats,
+            'total_paid' => (float) $r->total_paid,
+            'joined_label' => Carbon::parse($r->joined_at)->translatedFormat('d M Y, H:i'),
+        ])->values();
+
+        $joined = $participants->count();
+
+        return Inertia::render('Admin/Trip/Participants', [
+            'trip' => [
+                'id' => $trip->id,
+                'name' => $trip->name,
+                'location' => $trip->location,
+                'joined' => $joined,
+                'capacity' => (int) $trip->people_amount,
+                'remaining' => max(0, (int) $trip->people_amount - $joined),
+            ],
+            'participants' => $participants,
+        ]);
+    }
+
+    /**
+     * Keluarkan peserta trip: kembalikan dana ke dompetnya, bebaskan kursi, lepas
+     * dari grup chat. Hanya pemandu pemilik trip.
+     */
+    public function kickParticipant($id, $userId)
+    {
+        $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
+
+        $refunded = (new \App\Services\ParticipantRemoval())->fromTrip($trip, (int) $userId);
+
+        return back()->with('flash', $refunded
+            ? ['type' => 'success', 'message' => 'Peserta dikeluarkan & dananya dikembalikan ke dompetnya.']
+            : ['type' => 'info', 'message' => 'Tidak ada pesanan berbayar peserta ini pada trip berjalan.']);
     }
 
     public function create()
@@ -336,6 +467,9 @@ class AdminTripController extends Controller
                     : $trip->image,
                 'status'        => Trip::statusFromDates($validated['start_date'], $validated['end_date']),
                 'current_run_started_at' => now(),
+                // Run baru: lepaskan tanda "selesai manual" milik run sebelumnya,
+                // agar status kembali mengikuti tanggal.
+                'finished_at'   => null,
             ]);
 
             $this->syncFacilities($trip, $validated['facilities'] ?? []);

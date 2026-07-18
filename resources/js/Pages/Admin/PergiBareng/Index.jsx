@@ -8,13 +8,17 @@ import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
 import { DEFAULT_IMAGE } from "@/lib/images";
-import { FiSearch, FiTrash2, FiPlus, FiUsers, FiRefreshCw } from "react-icons/fi";
+import { FiSearch, FiTrash2, FiPlus, FiUsers, FiRefreshCw, FiNavigation } from "react-icons/fi";
 import { FaCarSide } from "react-icons/fa";
 import { BsChatDots } from "react-icons/bs";
+import { MdReceiptLong } from "react-icons/md";
+import OngoingSection from "@/Pages/Admin/Partials/OngoingSection";
+import SplitBillModal from "./Partials/SplitBillModal";
 
-export default function Index({ trips = {}, filters = {} }) {
+export default function Index({ trips = {}, ongoing = [], filters = {} }) {
     const { t: translate } = useTranslation();
     const rows = trips.data ?? [];
+    const [billModal, setBillModal] = useState({ open: false, trip: null });
     const { values, set, goPage } = useServerTable("/admin/pergi-bareng", {
         search: filters.search ?? "",
         sort: filters.sort ?? "latest",
@@ -22,6 +26,10 @@ export default function Index({ trips = {}, filters = {} }) {
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
 
     const openGroupChat = (id) => router.post(`/chat/pergi-bareng/${id}/group`);
+
+    // Pantau perjalanan: bagikan kartu ke grup lalu buka peta live. Server yang
+    // memvalidasi statusnya (harus "berlangsung") dan mengarahkan ke peta.
+    const trackTrip = (id) => router.post(`/admin/pergi-bareng/${id}/track`);
 
     const confirmDelete = () => {
         router.delete(`/admin/pergi-bareng/${deleteModal.id}`, {
@@ -43,6 +51,33 @@ export default function Index({ trips = {}, filters = {} }) {
                 <h1 className="text-2xl font-bold text-neutral-700">{translate("admin.pergi.index_title")}</h1>
                 <p className="text-neutral-500 text-sm">{translate("admin.pergi.index_subtitle")}</p>
             </div>
+
+            {/* Sedang berlangsung — penyelenggara bisa menyelesaikan lebih cepat */}
+            <OngoingSection
+                items={ongoing.map((o) => ({
+                    id: o.id,
+                    title: o.name,
+                    subtitle: o.destination,
+                    image: o.image,
+                    meta: `${o.date_label} · ${o.time_label} · ${o.joined}/${o.capacity}`,
+                }))}
+                finishUrl={(id) => `/admin/pergi-bareng/${id}/finish`}
+                title={translate("admin.pergi.ongoing_title")}
+                emptyText={translate("admin.pergi.ongoing_empty")}
+                finishLabel={translate("admin.ongoing.finish")}
+                confirmTitle={translate("admin.pergi.finish_title")}
+                confirmDescription={translate("admin.pergi.finish_desc")}
+                confirmLabel={translate("admin.ongoing.finish_confirm")}
+                onTrack={trackTrip}
+                trackLabel={translate("admin.pergi.action_track")}
+            />
+
+            <SplitBillModal
+                open={billModal.open}
+                trip={billModal.trip}
+                onClose={() => setBillModal({ open: false, trip: null })}
+            />
+
         <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
             <Head title="Managemen Pergi Bareng" />
 
@@ -151,6 +186,16 @@ export default function Index({ trips = {}, filters = {} }) {
                                                         </span>
                                                     )}
                                                 </Link>
+                                                {/* Pantau perjalanan — hanya saat berlangsung */}
+                                                {t.status === "ongoing" && (
+                                                    <button
+                                                        onClick={() => trackTrip(t.id)}
+                                                        className="p-2 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg transition-colors"
+                                                        title={translate("admin.pergi.action_track")}
+                                                    >
+                                                        <FiNavigation size={16} />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => openGroupChat(t.id)}
                                                     className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
@@ -158,6 +203,22 @@ export default function Index({ trips = {}, filters = {} }) {
                                                 >
                                                     <BsChatDots size={16} />
                                                 </button>
+                                                {/* Bagi tagihan hanya masuk akal
+                                                    setelah perjalanan selesai */}
+                                                {t.status === "finish" && (
+                                                    <button
+                                                        onClick={() => setBillModal({ open: true, trip: t })}
+                                                        disabled={t.has_split_bill}
+                                                        className="p-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50"
+                                                        title={
+                                                            t.has_split_bill
+                                                                ? translate("admin.pergi.action_split_bill_done")
+                                                                : translate("admin.pergi.action_split_bill")
+                                                        }
+                                                    >
+                                                        <MdReceiptLong size={16} />
+                                                    </button>
+                                                )}
                                                 {t.status === "finish" && (
                                                     <Link
                                                         href={`/admin/pergi-bareng/${t.id}/reopen`}

@@ -7,6 +7,7 @@ import Container from "@/Components/Container";
 import Input from "@/Components/Input";
 import Button from "@/Components/Button";
 import MainLayout from "@/Layouts/MainLayout";
+import PaymentMethodSelector from "@/Components/PaymentMethodSelector";
 import { useTranslation } from "@/lib/useTranslation";
 
 import { FaChevronLeft, FaUserFriends, FaMinus, FaPlus } from "react-icons/fa";
@@ -27,7 +28,7 @@ const validatePhone = (raw) => {
     return null;
 };
 
-export default function Checkout({ trip, midtrans_client_key }) {
+export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0 }) {
     const { t } = useTranslation();
     // storageKey harus didefinisikan PERTAMA sebelum dipakai di useState
     const storageKey = `trip_${trip.id}_participants`;
@@ -59,6 +60,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
     const [snapReady,    setSnapReady]    = useState(false);
     const [snapToken,    setSnapToken]    = useState(null);
     const [errors,       setErrors]       = useState([]);
+    const [paymentMethod, setPaymentMethod] = useState("midtrans");
 
     // ── EFFECTS ────────────────────────────────────────────
 
@@ -153,24 +155,52 @@ export default function Checkout({ trip, midtrans_client_key }) {
             return;
         }
 
-        // 2. Cek Snap siap
+        // 2. Bayar dari saldo: tidak lewat Snap sama sekali — server memotong
+        //    saldo lalu langsung melunasi pesanan.
+        if (paymentMethod === "wallet") {
+            setIsProcessing(true);
+            try {
+                const response = await axios.post(`/trip-bareng/${trip.id}/payment`, {
+                    quantity,
+                    participants,
+                    payment_method: "wallet",
+                });
+
+                if (response.data?.paid) {
+                    localStorage.removeItem(storageKey);
+                    router.visit(`/trip-bareng/${trip.id}/success`);
+                    return;
+                }
+
+                throw new Error("Respons pembayaran saldo tidak dikenali.");
+            } catch (error) {
+                // 422 dari server membawa alasan yang berguna (mis. saldo kurang)
+                const message = error?.response?.data?.error;
+                toast.error(message || "Terjadi kesalahan sistem. Coba beberapa saat lagi.");
+                setIsProcessing(false);
+            }
+            return;
+        }
+
+        // 3. Cek Snap siap
         if (!snapReady || !window.snap) {
             toast.warning("Sistem pembayaran belum siap. Coba refresh halaman.");
             return;
         }
 
-        // 3. Buka kembali popup jika token sudah ada
+        // 4. Buka kembali popup jika token sudah ada
         if (snapToken) {
             openMidtransPopup(snapToken);
             return;
         }
 
-        // 4. Buat transaksi baru
+        // 5. Buat transaksi baru
         setIsProcessing(true);
         try {
             const response = await axios.post(`/trip-bareng/${trip.id}/payment`, {
                 quantity,
                 participants,
+                payment_method: "midtrans",
             });
 
             const { snap_token } = response.data || {};
@@ -384,6 +414,18 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                 <span className="text-lg font-bold text-neutral-700">Rp {Number(total).toLocaleString("id-ID")}</span>
                             </div>
 
+                            {/* Metode pembayaran — dikunci setelah token Snap dibuat
+                                agar pilihan tidak berubah di tengah transaksi */}
+                            <div className="mb-6">
+                                <PaymentMethodSelector
+                                    value={paymentMethod}
+                                    onChange={setPaymentMethod}
+                                    balance={wallet_balance}
+                                    total={total}
+                                    disabled={isProcessing || snapToken !== null}
+                                />
+                            </div>
+
                             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 mb-6">
                                 <IoMdInformationCircleOutline className="text-orange-600 text-2xl shrink-0 mt-0.5" />
                                 <p className="text-xs text-orange-800 leading-relaxed">
@@ -393,7 +435,12 @@ export default function Checkout({ trip, midtrans_client_key }) {
 
                             <Button
                                 onClick={handlePayment}
-                                disabled={isProcessing || !snapReady || quantity < 1}
+                                disabled={
+                                    isProcessing ||
+                                    quantity < 1 ||
+                                    // Snap hanya jadi syarat saat memang membayar lewat Midtrans
+                                    (paymentMethod === "midtrans" && !snapReady)
+                                }
                                 type="button"
                                 size="md"
                                 className="w-full font-bold flex justify-center text-white py-3 rounded-lg disabled:opacity-70 disabled:cursor-not-allowed"
@@ -401,7 +448,7 @@ export default function Checkout({ trip, midtrans_client_key }) {
                                 {isProcessing ? t("common.processing") : snapToken ? t("trip.checkout.reopen_payment") : t("trip.checkout.pay_now")}
                             </Button>
 
-                            {!snapReady && (
+                            {paymentMethod === "midtrans" && !snapReady && (
                                 <p className="text-xs text-neutral-400 mt-3 text-center">
                                     {t("trip.checkout.loading_payment")}
                                 </p>

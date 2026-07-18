@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Trip;
-use App\Support\FuzzySearch;
+use App\Support\LocationFilter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -28,8 +28,10 @@ class TripsController extends Controller
             ->whereDate('trips.end_date', '>=', now()) // sembunyikan trip yang sudah lewat
             ->where('trips.status', '!=', 'draft'); // hanya trip yang sudah dipublish
 
+        // Pencarian longgar: "Bromo" ikut menemukan trip yang lokasinya ditulis
+        // sebagai provinsinya ("Jawa Timur"), termasuk trip lain di kota yang sama.
         if ($tujuan !== '') {
-            FuzzySearch::apply($query, $tujuan, ['trips.location', 'trips.name'], 'trips.id');
+            LocationFilter::freeText($query, $tujuan, ['trips.location', 'trips.name'], 'trips.id');
         }
         if ($startDate) {
             $query->whereDate('trips.start_date', '>=', $startDate);
@@ -169,7 +171,10 @@ class TripsController extends Controller
             ->where('type', 'trip_bareng')
             ->avg('rating_amount');
 
-        $ratingText = $guiderRating ? number_format($guiderRating, 1) : 'Baru';
+        $guiderReviews = DB::table('user_ratings')
+            ->where('rated_user_id', $trip->host_id)
+            ->where('type', 'trip_bareng')
+            ->count();
 
         // 3. Ambil activities (itinerary)
         $activitiesDB = DB::table('trip_activities')->where('trip_id', $id)->orderBy('activity_order', 'asc')->get();
@@ -218,11 +223,13 @@ class TripsController extends Controller
             'participants' => $participants,
             'price'       => (float) $trip->price,
             'description' => $trip->description,
+            // Guider apa adanya: nama, rating & jumlah ulasan asli dari
+            // user_ratings. rating null = belum pernah diulas (bukan 0).
             'host' => [
                 'id' => $trip->guider_id,
                 'name' => $trip->guide_name,
-                'role' => 'Pemilik',
-                'badge' => 'Expert Guide - ★ ' . $ratingText,
+                'rating' => $guiderRating ? round((float) $guiderRating, 1) : null,
+                'reviews' => $guiderReviews,
                 'avatar' => $this->resolveAvatar($trip->profile_image),
             ],
             'itinerary'   => $itinerary,
@@ -248,10 +255,20 @@ class TripsController extends Controller
         ]);
     }
 
-    public function checkout($id)
+    public function checkout(Request $request, $id)
     {
         $trip = DB::table('trips')->where('id', $id)->first();
         if (!$trip) abort(404);
+
+        // Pemandu tidak bisa memesan tripnya sendiri. Bar pemesanan memang sudah
+        // disembunyikan di halaman detail, tetapi URL checkout tetap bisa dibuka
+        // langsung — jadi penjagaannya harus ada di sini juga.
+        if ((int) $trip->guider_id === (int) $request->user()->id) {
+            return redirect()->route('trip-bareng.show', $trip->id)->with('flash', [
+                'type' => 'error',
+                'message' => 'Anda adalah pemandu trip ini.',
+            ]);
+        }
 
         // Jumlah peserta = user unik yang sudah membayar (konsisten dgn detail & index)
         $joined = $this->joinedCount($trip->id);
@@ -270,6 +287,7 @@ class TripsController extends Controller
             'trip' => $trip_check_out,
             // Client key pasangan MIDTRANS_SERVER_KEY — wajib sama merchant
             'midtrans_client_key' => config('midtrans.client_key'),
+            'wallet_balance' => (float) \App\Models\Wallet::forUser((int) $request->user()->id)->balance,
         ]);
     }
 
@@ -284,8 +302,16 @@ class TripsController extends Controller
             return response()->json(['error' => 'Silakan login terlebih dahulu.'], 401);
         }
 
+        // Penjagaan sebenarnya: halaman checkout boleh saja dilewati, tetapi
+        // pesanan tidak boleh terbentuk untuk trip milik sendiri.
+        if ((int) $trip->guider_id === (int) $user->id) {
+            return response()->json(['error' => 'Anda adalah pemandu trip ini.'], 403);
+        }
+
         $quantity     = (int) $request->input('quantity', 1);
         $participants = $request->input('participants', []);
+        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
+        $payWithWallet = $request->input('payment_method') === 'wallet';
 
         // Validasi sisa kuota
         $joined    = $this->joinedCount($id);
@@ -300,7 +326,22 @@ class TripsController extends Controller
         $insuranceFee = 5000 * $quantity;
         $totalAmount  = (int) round(($trip->price * $quantity) + $serviceFee + $insuranceFee);
 
+        // Saldo dicek lebih dulu agar tidak meninggalkan pesanan menggantung saat
+        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di Wallet::debit()
+        // yang mengunci baris dompet.
+        if ($payWithWallet) {
+            $wallet = \App\Models\Wallet::forUser((int) $user->id);
+            if (! $wallet->hasSufficientBalance($totalAmount)) {
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Silakan isi saldo terlebih dahulu.',
+                    'balance' => (float) $wallet->balance,
+                    'required' => (float) $totalAmount,
+                ], 422);
+            }
+        }
+
         $transactionId = (string) \Illuminate\Support\Str::uuid();
+        $tripOrderId = null;
 
         // Insert ke DB — TANPA va_number (kolom itu tidak ada di tabel)
         try {
@@ -309,14 +350,14 @@ class TripsController extends Controller
                 'user_id'        => $user->id,
                 'total_amount'   => $totalAmount,
                 'type'           => 'trip',
-                'payment_method' => 'Midtrans',
+                'payment_method' => $payWithWallet ? 'Wallet' : 'Midtrans',
                 // TIDAK ADA va_number
                 'expired_at'     => now()->addHours(24),
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
 
-            DB::table('trip_orders')->insert([
+            $tripOrderId = DB::table('trip_orders')->insertGetId([
                 'transaction_id' => $transactionId,
                 'trip_id'        => $id,
                 'user_id'        => $user->id,
@@ -332,6 +373,41 @@ class TripsController extends Controller
             return response()->json([
                 'error'  => 'Gagal menyimpan transaksi: ' . $e->getMessage(),
             ], 500);
+        }
+
+        \App\Models\UserNotification::send(
+            (int) $user->id,
+            'order.created',
+            ['name' => $trip->name, 'kind' => 'trip', 'amount' => (float) $totalAmount],
+            '/profile-history?tab=transactions',
+            'order.created:trx:' . $transactionId,
+        );
+
+        // Bayar dari saldo: tidak ada popup Snap — pesanan langsung dilunasi
+        // lewat jalur pelunasan yang sama dengan Midtrans.
+        if ($payWithWallet) {
+            try {
+                (new \App\Services\WalletPayment())->settle(
+                    (int) $user->id,
+                    $transactionId,
+                    (float) $totalAmount,
+                    'Pembelian trip: ' . $trip->name,
+                    'trip_order',
+                    (int) $tripOrderId,
+                );
+            } catch (\App\Exceptions\InsufficientBalanceException $e) {
+                DB::table('trip_orders')->where('transaction_id', $transactionId)->delete();
+                DB::table('transactions')->where('id', $transactionId)->delete();
+
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
+                ], 422);
+            }
+
+            return response()->json([
+                'paid'           => true,
+                'transaction_id' => $transactionId,
+            ]);
         }
 
         // Konfigurasi Midtrans — pakai config(), bukan env() langsung

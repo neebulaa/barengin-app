@@ -14,6 +14,7 @@ use App\Http\Controllers\ForumPeopleController;
 use App\Http\Controllers\ForumProfileController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\MidtransController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PergiBarengController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PostController;
@@ -230,6 +231,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile-history', [ProfileHistoryController::class, 'update'])->name('profile-history.update');
     Route::post('/profile-history/image', [ProfileHistoryController::class, 'updateProfileImage'])->name('profile-history.image.update');
     Route::delete('/profile-history/image', [ProfileHistoryController::class, 'removeProfileImage'])->name('profile-history.image.remove');
+
+    // Notifikasi. Urutan penting: /notifications/poll didaftarkan sebelum rute
+    // ber-parameter agar "poll" tidak tertangkap sebagai id (sepola /chat/poll).
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/poll', [NotificationController::class, 'poll'])->name('notifications.poll');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('/notifications/preferences', [NotificationController::class, 'updatePreferences'])->name('notifications.preferences');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->whereNumber('id')->name('notifications.read');
 });
 
 // Group Route untuk Pergi Bareng (publik: daftar & detail)
@@ -241,6 +250,8 @@ Route::prefix('pergi-bareng')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::post('/{id}/join', [PergiBarengController::class, 'store'])->name('pergi-bareng.store');
         Route::get('/{id}/request-sent', [PergiBarengController::class, 'requestSent'])->name('pergi-bareng.request-sent');
+        // Peta pantau perjalanan live — hanya anggota grup
+        Route::get('/{id}/track', [PergiBarengController::class, 'track'])->whereNumber('id')->name('pergi-bareng.track');
     });
 });
 
@@ -269,6 +280,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat/exp', function(){
         return inertia('Chat/Index2');
     })->name('chat.exp');
+});
+
+// Pembayaran bagian split bill oleh anggota (dipanggil dari kartu tagihan di grup chat)
+Route::middleware('auth')->group(function () {
+    Route::post('/split-bill/shares/{share}/pay', [\App\Http\Controllers\SplitBillController::class, 'pay'])
+        ->whereNumber('share')->name('split-bill.share.pay');
+});
+
+// Isi saldo dompet lewat Midtrans Snap
+Route::middleware('auth')->group(function () {
+    Route::post('/wallet/top-up', [\App\Http\Controllers\WalletController::class, 'topUp'])->name('wallet.top-up');
 });
 
 // Leaderboard
@@ -337,8 +359,12 @@ Route::prefix('admin')->group(function () {
         Route::post('/', [AdminTripController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [AdminTripController::class, 'edit'])->whereNumber('id')->name('edit');
         Route::get('/{id}/reopen', [AdminTripController::class, 'reopen'])->whereNumber('id')->name('reopen');
+        // Daftar peserta trip + keluarkan peserta (kembalikan dana)
+        Route::get('/{id}/participants', [AdminTripController::class, 'participants'])->whereNumber('id')->name('participants');
+        Route::delete('/{id}/participants/{userId}', [AdminTripController::class, 'kickParticipant'])->whereNumber('id')->whereNumber('userId')->name('participants.kick');
         Route::post('/{id}', [AdminTripController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/publish', [AdminTripController::class, 'publish'])->whereNumber('id')->name('publish');
+        Route::post('/{id}/finish', [AdminTripController::class, 'finish'])->whereNumber('id')->name('finish');
         Route::post('/{id}/retrip', [AdminTripController::class, 'retrip'])->whereNumber('id')->name('retrip');
         Route::delete('/{id}', [AdminTripController::class, 'destroy'])->whereNumber('id')->name('destroy');
     });
@@ -351,10 +377,22 @@ Route::prefix('admin')->group(function () {
         Route::post('/', [AdminPergiBarengController::class, 'store'])->name('store');
         Route::delete('/{id}', [AdminPergiBarengController::class, 'destroy'])->whereNumber('id')->name('destroy');
 
+        Route::post('/{id}/finish', [AdminPergiBarengController::class, 'finish'])->whereNumber('id')->name('finish');
+
+        // Pantau perjalanan: bagikan kartu ke grup lalu buka peta live
+        Route::post('/{id}/track', [AdminPergiBarengController::class, 'shareTrack'])->whereNumber('id')->name('track');
+
+        // Bagi tagihan (split bill) untuk pergi bareng yang sudah selesai
+        Route::get('/{id}/split-bill', [\App\Http\Controllers\SplitBillController::class, 'create'])->whereNumber('id')->name('split-bill.create');
+        Route::post('/{id}/split-bill', [\App\Http\Controllers\SplitBillController::class, 'store'])->whereNumber('id')->name('split-bill.store');
+
         Route::get('/{id}/reopen', [AdminPergiBarengController::class, 'reopen'])->whereNumber('id')->name('reopen');
         Route::get('/{id}/requests', [AdminPergiBarengController::class, 'requests'])->whereNumber('id')->name('requests');
         Route::post('/{id}/requests/{requestId}/approve', [AdminPergiBarengController::class, 'approve'])->whereNumber('id')->whereNumber('requestId')->name('requests.approve');
         Route::delete('/{id}/requests/{requestId}', [AdminPergiBarengController::class, 'reject'])->whereNumber('id')->whereNumber('requestId')->name('requests.reject');
+
+        // Keluarkan peserta yang sudah disetujui (dari pergi bareng & grup chat)
+        Route::delete('/{id}/participants/{userId}', [AdminPergiBarengController::class, 'kickParticipant'])->whereNumber('id')->whereNumber('userId')->name('participants.kick');
     });
 
     // Manajemen Jastip (jastiper) — terbuka untuk semua user yang login

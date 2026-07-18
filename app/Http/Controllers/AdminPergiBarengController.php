@@ -36,6 +36,16 @@ class AdminPergiBarengController extends Controller
         return $this->resolveStoredImage($path);
     }
 
+    /**
+     * Status untuk tabel manajemen. PergiBareng::status() memakai kosakata
+     * 'will_start', sedangkan halaman ini (dan Riwayat Jalan Bareng) memakai
+     * 'waiting' untuk keadaan yang sama.
+     */
+    private function statusOf(PergiBareng $trip): string
+    {
+        return $trip->status() === 'will_start' ? 'waiting' : $trip->status();
+    }
+
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
@@ -46,11 +56,16 @@ class AdminPergiBarengController extends Controller
             ->groupBy('pergi_bareng_id')
             ->select('pergi_bareng_id', DB::raw('COALESCE(SUM(quantity),0) as joined'));
 
+        // PENTING: withCount() harus dipanggil SETELAH select(). select() mengganti
+        // seluruh daftar kolom, jadi kalau withCount dipanggil lebih dulu, kolom
+        // hitungannya ikut terhapus dan hasilnya selalu NULL → 0. Ini yang membuat
+        // lencana permintaan & penonaktifan ikon bagi tagihan tak pernah muncul.
         $query = PergiBareng::query()
             ->leftJoinSub($joinedSub, 'p', 'p.pergi_bareng_id', '=', 'pergi_barengs.id')
             ->where('pergi_barengs.initiator_id', Auth::id())
+            ->select('pergi_barengs.*', DB::raw('COALESCE(p.joined,0) as joined_count'))
             ->withCount('pergi_bareng_requests')
-            ->select('pergi_barengs.*', DB::raw('COALESCE(p.joined,0) as joined_count'));
+            ->withCount('split_bills');
 
         if ($search !== '') {
             FuzzySearch::apply(
@@ -73,11 +88,9 @@ class AdminPergiBarengController extends Controller
                 $date = $trip->time_appointment;
 
                 // Status selaras dengan Riwayat "Jalan Bareng" (ProfileHistory):
-                // waiting (belum mulai) | ongoing (hari-H) | finish (sudah lewat)
-                $now = Carbon::now();
-                $status = $now->lt($date->copy()->startOfDay())
-                    ? 'waiting'
-                    : ($now->lte($date->copy()->endOfDay()) ? 'ongoing' : 'finish');
+                // waiting (belum mulai) | ongoing (hari-H) | finish (sudah lewat
+                // atau diselesaikan manual oleh penyelenggara).
+                $status = $this->statusOf($trip);
 
                 return [
                     'id' => $trip->id,
@@ -92,13 +105,152 @@ class AdminPergiBarengController extends Controller
                     'capacity' => $trip->people_amount,
                     'status' => $status,
                     'pending_requests' => (int) $trip->pergi_bareng_requests_count,
+                    // Sudah pernah dibagi tagihan → tombol bagi tagihan dinonaktifkan
+                    // agar anggota tidak ditagih dua kali untuk grup yang sama.
+                    'has_split_bill' => (int) $trip->split_bills_count > 0,
                 ];
             });
 
         return Inertia::render('Admin/PergiBareng/Index', [
             'trips' => $trips,
+            'ongoing' => $this->ongoingTrips(),
             'filters' => ['search' => $search, 'sort' => $sort],
         ]);
+    }
+
+    /**
+     * Pergi bareng yang sedang berlangsung milik penyelenggara — ditampilkan
+     * sebagai seksi tersendiri di atas tabel agar tombol "Selesaikan" mudah
+     * dijangkau. Berlangsung = JAM janji sudah lewat dan belum diselesaikan
+     * (konsisten dengan PergiBareng::status()). Karena tidak ada penyelesaian
+     * otomatis, perjalanan lama yang belum ditutup penyelenggara tetap muncul
+     * di sini — justru mengingatkan agar segera menekan "Selesaikan".
+     */
+    private function ongoingTrips()
+    {
+        return PergiBareng::query()
+            ->where('initiator_id', Auth::id())
+            ->whereNull('finished_at')
+            // Jam janji sudah tiba — sebelum ini masih "menunggu", bukan berlangsung.
+            ->where('time_appointment', '<=', Carbon::now())
+            ->withSum('pergi_bareng_participants as joined_count', 'quantity')
+            ->orderBy('time_appointment')
+            ->get()
+            ->map(fn ($trip) => [
+                'id' => $trip->id,
+                'code' => $this->shortCode($trip->id),
+                'name' => $trip->name,
+                'destination' => $trip->destination_loc,
+                'departure' => $trip->departure_loc,
+                'image' => $this->resolvePergiImage($trip->img_name),
+                'date_label' => $trip->time_appointment->translatedFormat('d M Y'),
+                'time_label' => $trip->time_appointment->format('H:i'),
+                'joined' => (int) ($trip->joined_count ?? 0),
+                'capacity' => $trip->people_amount,
+            ])
+            ->values();
+    }
+
+    /**
+     * Selesaikan pergi bareng lebih cepat dari waktu janji. Hanya penyelenggara,
+     * dan hanya saat sedang berlangsung — yang belum mulai tidak bisa diselesaikan.
+     */
+    public function finish($id)
+    {
+        $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        if ($trip->finished_at) {
+            return back()->with('flash', [
+                'type' => 'info',
+                'message' => 'Pergi bareng ini sudah selesai.',
+            ]);
+        }
+
+        if ($trip->status() !== 'ongoing') {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Hanya pergi bareng yang sedang berlangsung yang bisa diselesaikan.',
+            ]);
+        }
+
+        $trip->forceFill(['finished_at' => now()])->save();
+
+        \App\Models\ActivityLog::record('Menyelesaikan pergi bareng: ' . $trip->name);
+
+        return back()->with('flash', [
+            'type' => 'success',
+            'message' => 'Pergi bareng "' . $trip->name . '" ditandai selesai. Kamu sekarang bisa membagi tagihan ke anggota.',
+        ]);
+    }
+
+    /**
+     * Mulai "pantau perjalanan": bagikan kartu pemantauan ke grup chat (sekali
+     * saja, seperti bagi tagihan) lalu arahkan penyelenggara ke peta live.
+     * Hanya bisa saat perjalanan sedang berlangsung — sebelum itu tak ada yang
+     * perlu dipantau, sesudah selesai perjalanannya sudah usai.
+     */
+    public function shareTrack($id)
+    {
+        $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        if ($trip->status() !== 'ongoing') {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Pantau perjalanan hanya tersedia saat perjalanan sedang berlangsung.',
+            ]);
+        }
+
+        $this->postTrackCardToGroup($trip);
+
+        \App\Models\ActivityLog::record('Membagikan pantau perjalanan: ' . $trip->name);
+
+        // Penyelenggara langsung dibawa ke peta; kartu sudah nangkring di grup
+        // untuk anggota lain.
+        return redirect()->route('pergi-bareng.track', $trip->id);
+    }
+
+    /**
+     * Kirim kartu "pantau perjalanan" ke grup chat pergi bareng — idempoten:
+     * kalau kartunya sudah pernah dibagikan untuk perjalanan ini, tidak dikirim
+     * lagi agar grup tidak dibanjiri kartu duplikat setiap tombol ditekan.
+     */
+    private function postTrackCardToGroup(PergiBareng $trip): void
+    {
+        $conversation = Conversation::where('pergi_bareng_id', $trip->id)
+            ->where('is_group', true)
+            ->first();
+
+        if (! $conversation) {
+            return;
+        }
+
+        $alreadyShared = $conversation->messages()
+            ->whereNotNull('reference')
+            ->get(['reference'])
+            ->contains(function ($m) use ($trip) {
+                $ref = $m->reference;
+                return ($ref['type'] ?? null) === 'pergi_track'
+                    && (int) ($ref['id'] ?? 0) === (int) $trip->id;
+            });
+
+        if ($alreadyShared) {
+            return;
+        }
+
+        $message = \App\Models\Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $trip->initiator_id,
+            'message_text' => '',
+            'reference' => [
+                'type' => 'pergi_track',
+                'id' => (int) $trip->id,
+                'title' => $trip->name,
+                'subtitle' => $trip->destination_loc,
+                'url' => '/pergi-bareng/' . $trip->id . '/track',
+            ],
+        ]);
+
+        broadcast(new \App\Events\MessageSent($message))->toOthers();
     }
 
     public function analytics()
@@ -222,9 +374,9 @@ class AdminPergiBarengController extends Controller
             ->where('initiator_id', Auth::id())
             ->findOrFail($id);
 
-        // Hanya yang berstatus "selesai" (waktu janji sudah lewat) yang bisa dibuka ulang
-        $isFinished = Carbon::now()->gt($trip->time_appointment->copy()->endOfDay());
-        if (! $isFinished) {
+        // Hanya yang berstatus "selesai" (penyelenggara sudah menekan "Selesaikan")
+        // yang bisa dibuka ulang — tidak ada lagi penyelesaian otomatis by tanggal.
+        if ($trip->status() !== 'finish') {
             return redirect()->route('admin.pergi-bareng.index')->with('flash', [
                 'type' => 'info',
                 'message' => 'Hanya pergi bareng yang sudah selesai yang dapat dibuka ulang.',
@@ -258,7 +410,7 @@ class AdminPergiBarengController extends Controller
 
     public function requests($id)
     {
-        $trip = PergiBareng::with(['pergi_bareng_participants', 'pergi_bareng_requests.user'])
+        $trip = PergiBareng::with(['pergi_bareng_participants.user', 'pergi_bareng_requests.user'])
             ->where('initiator_id', Auth::id())
             ->findOrFail($id);
 
@@ -276,6 +428,17 @@ class AdminPergiBarengController extends Controller
             ],
         ])->values();
 
+        // Peserta yang sudah disetujui — bisa dikeluarkan penyelenggara.
+        $participants = $trip->pergi_bareng_participants
+            ->filter(fn ($p) => $p->user)
+            ->map(fn ($p) => [
+                'user_id' => (int) $p->user_id,
+                'quantity' => (int) $p->quantity,
+                'name' => $p->user->full_name ?? 'Peserta',
+                'username' => $p->user->username,
+                'avatar' => $p->user->public_profile_image ?? '/assets/default-profile.png',
+            ])->values();
+
         return Inertia::render('Admin/PergiBareng/Requests', [
             'trip' => [
                 'id' => $trip->id,
@@ -287,7 +450,23 @@ class AdminPergiBarengController extends Controller
                 'remaining' => max(0, $trip->people_amount - $joined),
             ],
             'requests' => $requests,
+            'participants' => $participants,
         ]);
+    }
+
+    /**
+     * Keluarkan seorang peserta dari pergi bareng: hapus dari peserta & grup chat.
+     * Hanya penyelenggara.
+     */
+    public function kickParticipant($id, $userId)
+    {
+        $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        $removed = (new \App\Services\ParticipantRemoval())->fromPergiBareng($trip, (int) $userId);
+
+        return back()->with('flash', $removed
+            ? ['type' => 'success', 'message' => 'Peserta dikeluarkan dari pergi bareng & grup chat.']
+            : ['type' => 'info', 'message' => 'Peserta tidak ditemukan.']);
     }
 
     public function approve($id, $requestId)
@@ -318,6 +497,14 @@ class AdminPergiBarengController extends Controller
         // Undang user ke grup chat pergi bareng
         $this->ensureGroupAndAttach($trip, $req->user_id);
 
+        \App\Models\UserNotification::send(
+            (int) $req->user_id,
+            'pergi_bareng.approved',
+            ['name' => $trip->name],
+            '/pergi-bareng/' . $trip->id,
+            'pergi_bareng.approved:req:' . $req->id,
+        );
+
         \App\Models\ActivityLog::record('Menyetujui permintaan pergi bareng: ' . $trip->name);
 
         return back()->with('flash', [
@@ -330,9 +517,25 @@ class AdminPergiBarengController extends Controller
     {
         $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
 
+        // Pemohon dibaca sebelum dihapus — sesudahnya tidak ada lagi yang bisa
+        // memberi tahu siapa yang harus dikabari.
+        $req = PergiBarengRequest::where('pergi_bareng_id', $trip->id)
+            ->where('id', $requestId)
+            ->first();
+
         PergiBarengRequest::where('pergi_bareng_id', $trip->id)
             ->where('id', $requestId)
             ->delete();
+
+        if ($req) {
+            \App\Models\UserNotification::send(
+                (int) $req->user_id,
+                'pergi_bareng.rejected',
+                ['name' => $trip->name],
+                '/pergi-bareng/' . $trip->id,
+                'pergi_bareng.rejected:req:' . $req->id,
+            );
+        }
 
         \App\Models\ActivityLog::record('Menolak permintaan pergi bareng: ' . $trip->name);
 
@@ -354,6 +557,20 @@ class AdminPergiBarengController extends Controller
 
         foreach ($memberIds->diff($existingIds) as $uid) {
             $conversation->participants()->attach($uid, ['last_read_at' => now()]);
+
+            // Hanya anggota yang benar-benar baru masuk yang dikabari — diff()
+            // di atas sudah menyaring yang sudah tergabung. Penyelenggara ikut
+            // ter-attach di sini, tapi dia tidak perlu diberi tahu soal grupnya
+            // sendiri.
+            if ((int) $uid !== (int) $trip->initiator_id) {
+                \App\Models\UserNotification::send(
+                    (int) $uid,
+                    'group.joined',
+                    ['name' => $trip->name, 'kind' => 'pergi_bareng'],
+                    '/chat?conversation=' . $conversation->id,
+                    'group.joined:conv:' . $conversation->id . ':user:' . $uid,
+                );
+            }
         }
     }
 }

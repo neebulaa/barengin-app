@@ -14,9 +14,10 @@ import Avatar from "./Partials/Avatar";
 import ImageLightbox from "@/Components/ImageLightbox";
 import NewChatModal from "./Partials/NewChatModal";
 import GroupMembersModal from "./Partials/GroupMembersModal";
+import { GROUP_TYPE_STYLES } from "./Partials/groupType";
 
 import { BiMessageSquareAdd, BiSearch } from "react-icons/bi";
-import { FiArrowLeft, FiChevronRight, FiFilter, FiPaperclip, FiSend, FiX, FiCornerUpLeft } from "react-icons/fi";
+import { FiArrowLeft, FiChevronRight, FiExternalLink, FiFilter, FiPaperclip, FiSend, FiX, FiCornerUpLeft } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
 import axios from "axios";
@@ -39,6 +40,8 @@ export default function ChatShow({
     conversation,
     messages = [],
     pendingReference = null,
+    splitBills = {},
+    midtrans_client_key = null,
 }) {
     const { t } = useTranslation();
     const authUser = usePage().props?.auth?.user;
@@ -69,6 +72,11 @@ export default function ChatShow({
     const headerTitle = getConversationTitle(conversation);
     const headerAvatar = getConversationAvatar(conversation);
     const peer = getConversationPeer(conversation);
+
+    // Grup trip / pergi bareng / jastip: tampilkan penanda jenis di header dan
+    // tautkan ke halaman induknya.
+    const groupTypeStyle = GROUP_TYPE_STYLES[conversation?.group_type];
+    const groupTypeLink = conversation?.group_url ?? null;
 
     const [tab, setTab] = useState(() => {
         const fromUrl = new URLSearchParams(window.location.search).get("tab");
@@ -111,6 +119,18 @@ export default function ChatShow({
         );
     }, [sidebarConversations]);
 
+    // Jumlah chat dengan pesan belum dibaca per tab, untuk lencana di Segment.
+    const { personalUnread, groupUnread } = useMemo(() => {
+        let personal = 0;
+        let groups = 0;
+        for (const c of sidebarConversations ?? []) {
+            if (Number(c.unread ?? 0) <= 0) continue;
+            if (c.is_group) groups += 1;
+            else personal += 1;
+        }
+        return { personalUnread: personal, groupUnread: groups };
+    }, [sidebarConversations]);
+
     const filtered = useMemo(() => {
     return (sidebarConversations ?? [])
         .filter((c) => {
@@ -129,6 +149,12 @@ export default function ChatShow({
 
     const [localMessages, setLocalMessages] = useState(messages ?? []);
     useEffect(() => setLocalMessages(messages ?? []), [conversation?.id]);
+
+    // Status tagihan patungan disimpan sebagai state agar bisa disegarkan tiap
+    // poll (bukan hanya saat halaman dimuat). Tetap ikut prop saat berpindah
+    // percakapan atau setelah router.reload().
+    const [liveSplitBills, setLiveSplitBills] = useState(splitBills ?? {});
+    useEffect(() => setLiveSplitBills(splitBills ?? {}), [splitBills]);
 
     // Referensi pesan terkini untuk menghitung id terakhir saat polling.
     const messagesRef = useRef(localMessages);
@@ -353,6 +379,10 @@ export default function ChatShow({
 
                 if (data.peer_last_read_at) setPeerLastReadAt(data.peer_last_read_at);
                 setPollPeerOnline(!!data.peer_online);
+
+                // Status tagihan patungan ikut disegarkan tiap tick, jadi tombol
+                // "Bayar" hilang & rekap penyelenggara berubah tanpa refresh.
+                if (data.splitBills) setLiveSplitBills(data.splitBills);
             } catch {
                 /* diamkan; coba lagi tick berikutnya */
             }
@@ -607,7 +637,12 @@ export default function ChatShow({
                         </div>
 
                         <div className="mt-6">
-                            <Segment value={tab} onChange={setTab} />
+                            <Segment
+                                value={tab}
+                                onChange={setTab}
+                                personalUnread={personalUnread}
+                                groupUnread={groupUnread}
+                            />
                         </div>
 
                         <div className="mt-6">
@@ -661,6 +696,7 @@ export default function ChatShow({
                                     title={getConversationTitle(c)}
                                     subtitle={c.subtitle}
                                     badgeLabel={c.group_meta}
+                                    groupType={c.group_type}
                                     time={formatTime(c.last_message_at)}
                                     unread={c.unread}
                                 />
@@ -703,7 +739,50 @@ export default function ChatShow({
                                     </div>
                                     <FiChevronRight className="h-5 w-5 shrink-0 text-neutral-400 transition group-hover:text-neutral-600" />
                                 </button>
-                            ) : (
+                            ) : null}
+
+                            {/* Penanda jenis grup + pintasan ke halaman induknya
+                                (trip / pergi bareng / jastip). Sengaja diletakkan
+                                sebagai saudara tombol anggota, bukan di dalamnya,
+                                agar tidak ada tautan bersarang di dalam tombol. */}
+                            {conversation?.is_group && groupTypeStyle ? (
+                                groupTypeLink ? (
+                                    <Link
+                                        href={groupTypeLink}
+                                        className={cn(
+                                            "ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition hover:brightness-95",
+                                            groupTypeStyle.chip,
+                                        )}
+                                        title={t("chat.open_group_source")}
+                                    >
+                                        <groupTypeStyle.icon className="h-3.5 w-3.5" />
+                                        <span className="hidden sm:inline">
+                                            {t(
+                                                groupTypeStyle.key,
+                                                groupTypeStyle.fallback,
+                                            )}
+                                        </span>
+                                        <FiExternalLink className="h-3.5 w-3.5" />
+                                    </Link>
+                                ) : (
+                                    <span
+                                        className={cn(
+                                            "ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
+                                            groupTypeStyle.chip,
+                                        )}
+                                    >
+                                        <groupTypeStyle.icon className="h-3.5 w-3.5" />
+                                        <span className="hidden sm:inline">
+                                            {t(
+                                                groupTypeStyle.key,
+                                                groupTypeStyle.fallback,
+                                            )}
+                                        </span>
+                                    </span>
+                                )
+                            ) : null}
+
+                            {!conversation?.is_group ? (
                                 <div className="min-w-0">
                                     <div className="truncate text-lg font-semibold text-neutral-700">
                                         {headerTitle}
@@ -720,7 +799,7 @@ export default function ChatShow({
                                         </span>
                                     </div>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
 
                         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
@@ -760,6 +839,12 @@ export default function ChatShow({
                                             onImageClick={openLightbox}
                                             reply={m.reply_to}
                                             reference={m.reference}
+                                            splitBillState={
+                                                m.reference?.type === "split_bill"
+                                                    ? liveSplitBills?.[m.reference.id]
+                                                    : undefined
+                                            }
+                                            midtransClientKey={midtrans_client_key}
                                             onReplyQuoteClick={
                                                 m.reply_to?.id
                                                     ? () => scrollToMessage(m.reply_to.id)
@@ -911,6 +996,7 @@ export default function ChatShow({
                 members={participants}
                 ownerId={conversation?.owner_id}
                 isOwner={!!conversation?.is_owner}
+                groupType={conversation?.group_type}
                 authUserId={authUser?.id}
                 onRemoved={(userId) =>
                     setParticipants((prev) =>

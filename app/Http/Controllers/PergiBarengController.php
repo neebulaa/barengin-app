@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\PergiBareng;
 use App\Models\PergiBarengRequest;
-use App\Support\FuzzySearch;
+use App\Support\LocationFilter;
+use App\Support\RegionResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -41,6 +42,17 @@ class PergiBarengController extends Controller
             ? $trip->pergi_bareng_requests->contains('user_id', $authId)
             : false;
 
+        // Siapa saja (di antara peserta) yang sudah diikuti user ini — satu query
+        // agar tombol Ikuti/Mengikuti tiap baris tidak memicu N+1.
+        $participantIds = $trip->pergi_bareng_participants->pluck('user_id')->filter()->unique();
+        $followedIds = $authId && $participantIds->isNotEmpty()
+            ? DB::table('follows')
+                ->where('follower_id', $authId)
+                ->whereIn('following_id', $participantIds)
+                ->pluck('following_id')
+                ->flip()
+            : collect();
+
         return [
             'id' => $trip->id,
             'trip_id' => 'PERBAR-' . str_pad($trip->id, 6, '0', STR_PAD_LEFT),
@@ -73,14 +85,16 @@ class PergiBarengController extends Controller
                 'is_self' => $authId === $trip->initiator?->id,
             ],
             // Tiap partisipan diperluas sebanyak kuantitas kursi yang dipesan
-            'participants' => $trip->pergi_bareng_participants->flatMap(function ($p) {
+            'participants' => $trip->pergi_bareng_participants->flatMap(function ($p) use ($authId, $followedIds) {
                 $entry = [
                     'user_id' => $p->user_id,
                     'name' => $p->user?->full_name ?? 'Partisipan',
                     'username' => $p->user?->username,
-                    'rating' => 5.0,
                     'avatar' => $p->user?->public_profile_image ?? '/assets/default-profile.png',
                     'verified' => (bool) $p->user_id,
+                    // Untuk tombol Ikuti/Mengikuti per baris.
+                    'is_self' => $authId !== null && (int) $p->user_id === (int) $authId,
+                    'is_following' => $followedIds->has($p->user_id),
                 ];
 
                 $qty = max(1, (int) $p->quantity);
@@ -112,11 +126,24 @@ class PergiBarengController extends Controller
         $query = PergiBareng::with(['initiator.received_ratings', 'pergi_bareng_participants'])
             ->where('time_appointment', '>=', now()); // sembunyikan yang sudah lewat
 
-        if ($dari !== '') {
-            FuzzySearch::apply($query, $dari, ['departure_loc']);
-        }
-        if ($ke !== '') {
-            FuzzySearch::apply($query, $ke, ['destination_loc']);
+        // Pergi bareng hanya melayani perjalanan di dalam Indonesia. Lokasi yang
+        // TERBUKTI asing dikosongkan hasilnya (teks yang gagal di-geocode tetap
+        // diproses agar pencarian tak ikut mati saat Nominatim bermasalah).
+        $resolver = new RegionResolver();
+        $foreignLocation = ($dari !== '' && $resolver->isForeign($dari))
+            || ($ke !== '' && $resolver->isForeign($ke));
+
+        if ($foreignLocation) {
+            $query->whereRaw('1 = 0');
+        } else {
+            // Pencarian longgar: bila tak ada yang tepat di titik itu, tampilkan
+            // yang masih satu kabupaten/kota (lihat App\Support\LocationFilter).
+            if ($dari !== '') {
+                LocationFilter::freeText($query, $dari, ['departure_loc']);
+            }
+            if ($ke !== '') {
+                LocationFilter::freeText($query, $ke, ['destination_loc']);
+            }
         }
         if ($tanggal) {
             $query->whereDate('time_appointment', $tanggal);
@@ -213,6 +240,8 @@ class PergiBarengController extends Controller
         // 5. Kirim data ke halaman Index.jsx
         return Inertia::render('PergiBareng/Index', [
             'trips' => $paginatedTrips,
+            // Peringatan di daftar saat user mengetik lokasi di luar Indonesia.
+            'foreignLocation' => $foreignLocation,
             'filters' => [
                 'dari'    => $dari,
                 'ke'      => $ke,
@@ -284,11 +313,33 @@ class PergiBarengController extends Controller
             'quantity.max' => 'Jumlah kursi melebihi kuota yang tersisa.',
         ]);
 
-        PergiBarengRequest::create([
+        $req = PergiBarengRequest::create([
             'pergi_bareng_id' => $trip->id,
             'user_id' => $userId,
             'quantity' => $validated['quantity'],
         ]);
+
+        \App\Models\UserNotification::send(
+            (int) $userId,
+            'order.created',
+            ['name' => $trip->name, 'kind' => 'pergi_bareng', 'quantity' => (int) $validated['quantity']],
+            '/pergi-bareng/' . $trip->id,
+            'order.created:pb_req:' . $req->id,
+        );
+
+        // Sisi penyelenggara: tanpa ini dia tidak tahu ada permintaan yang
+        // menunggu persetujuan kecuali membuka halaman permintaan sendiri.
+        \App\Models\UserNotification::send(
+            (int) $trip->initiator_id,
+            'pergi_bareng.requested',
+            [
+                'name' => $trip->name,
+                'requester' => Auth::user()?->full_name,
+                'quantity' => (int) $validated['quantity'],
+            ],
+            '/admin/pergi-bareng/' . $trip->id . '/requests',
+            'pergi_bareng.requested:pb_req:' . $req->id,
+        );
 
         return redirect()->route('pergi-bareng.request-sent', $trip->id);
     }
@@ -314,6 +365,33 @@ class PergiBarengController extends Controller
 
         return Inertia::render('PergiBareng/RequestSent', [
             'trip' => $data,
+        ]);
+    }
+
+    /**
+     * Peta "pantau perjalanan" live. Hanya anggota grup (penyelenggara atau
+     * peserta yang sudah disetujui) yang boleh melihat lokasi live satu sama
+     * lain — sama seperti akses grup chat pergi bareng.
+     */
+    public function track($id)
+    {
+        $trip = PergiBareng::with('pergi_bareng_participants')->findOrFail($id);
+
+        $userId = (int) Auth::id();
+        $isMember = (int) $trip->initiator_id === $userId
+            || $trip->pergi_bareng_participants->contains('user_id', $userId);
+
+        abort_unless($isMember, 403, 'Kamu bukan anggota perjalanan ini.');
+
+        return Inertia::render('PergiBareng/Track', [
+            'trip' => [
+                'id' => (int) $trip->id,
+                'name' => $trip->name,
+                'departure_loc' => $trip->departure_loc,
+                'destination_loc' => $trip->destination_loc,
+                'status' => $trip->status(),
+                'is_creator' => (int) $trip->initiator_id === $userId,
+            ],
         ]);
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JastipCategory;
 use App\Models\JastipItem;
 use App\Support\FuzzySearch;
+use App\Support\LocationFilter;
 use App\Support\RegionResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -36,7 +37,17 @@ class JastipController extends Controller
         $priceMax   = $request->query('price_max');
         $schedule   = trim((string) $request->query('schedule', ''));   // '', 'ongoing', atau 'upcoming'
 
-        $paginated = $this->buildIndexQuery($search, $fromQ, $toQ, $categories, $province, $priceMin, $priceMax, $schedule)
+        // Lokasi pengambilan hanya dilayani di Indonesia (lokasi pembelian bebas).
+        // Hanya menolak bila lokasi TERBUKTI asing — teks yang gagal di-geocode
+        // tetap diproses agar pencarian tak ikut mati saat Nominatim bermasalah.
+        $foreignPickup = $toQ !== '' && (new RegionResolver())->isForeign($toQ);
+
+        $indexQuery = $this->buildIndexQuery($search, $fromQ, $toQ, $categories, $province, $priceMin, $priceMax, $schedule);
+        if ($foreignPickup) {
+            $indexQuery->whereRaw('1 = 0');
+        }
+
+        $paginated = $indexQuery
             ->paginate(9)
             ->withQueryString();
 
@@ -59,6 +70,9 @@ class JastipController extends Controller
         return Inertia::render('Jastip/Index', [
             'products'   => $paginated,
             'suggestion' => $suggestion,
+            // Ditampilkan sebagai peringatan di etalase saat user mengetik lokasi
+            // pengambilan di luar negeri.
+            'foreignPickup' => $foreignPickup,
             'filters'    => [
                 'search'     => $search,
                 'from_q'     => $fromQ,
@@ -70,9 +84,6 @@ class JastipController extends Controller
                 'schedule'   => $schedule,
             ],
             'categories' => JastipCategory::orderBy('name')->get(['id', 'name', 'slug']),
-            // Sugesti lokasi untuk kolom "Dari" & "Ke" (datalist)
-            'fromOptions' => $this->distinctLocations(['purchase_province', 'purchase_city']),
-            'toOptions'   => $this->distinctLocations(['pickup_province', 'pickup_city']),
             // Provinsi lokasi ambil yang benar-benar punya produk (untuk filter sidebar)
             'provinces'  => JastipItem::query()
                 ->where('status', JastipItem::STATUS_PUBLISHED)
@@ -107,9 +118,9 @@ class JastipController extends Controller
             // hasil yang mirip (bukan sekadar saran "mungkin maksud Anda").
             FuzzySearch::apply($query, $search, ['jastip_items.name'], 'jastip_items.id');
         }
-        // "Dari" — tempat barang dibeli (negara/kota/alamat pembelian)
+        // "Dari" — tempat barang dibeli. Boleh di luar negeri (mis. Kuala Lumpur).
         if ($fromQ !== '') {
-            $this->applyLocationFilter(
+            LocationFilter::structured(
                 $query,
                 $fromQ,
                 'purchase_province',
@@ -117,9 +128,10 @@ class JastipController extends Controller
                 "CONCAT_WS(' ', COALESCE(purchase_province,''), COALESCE(purchase_city,''), COALESCE(purchase_address,''))",
             );
         }
-        // "Ke" — tempat pembeli mengambil barang (jastiper kembali)
+        // "Ke" — tempat pembeli mengambil barang (jastiper kembali). Wajib di
+        // Indonesia; teks luar negeri ditolak agar tidak memberi hasil menyesatkan.
         if ($toQ !== '') {
-            $this->applyLocationFilter(
+            LocationFilter::structured(
                 $query,
                 $toQ,
                 'pickup_province',
@@ -141,48 +153,6 @@ class JastipController extends Controller
         }
 
         return $query;
-    }
-
-    /**
-     * Filter lokasi berbasis kabupaten/kota. Teks bebas ("Jawa Barat", "Bandung",
-     * "Rumah Talenta BCA Sentul") di-resolve ke { province, city } lalu dicocokkan:
-     *   - provinsi saja → semua listing di provinsi itu (semua kabupaten/kota),
-     *   - provinsi+kota → kabupaten/kota tsb (LIKE inti nama, toleran "Kabupaten/Kota"),
-     * dengan fallback LIKE gabungan kolom bila resolusi gagal (mis. lokasi luar negeri).
-     */
-    private function applyLocationFilter($query, string $q, string $provinceCol, string $cityCol, string $concatExpr): void
-    {
-        $region = (new RegionResolver())->resolve($q);
-
-        if (! empty($region['city'])) {
-            // Radius "cukup dekat" = satu kabupaten/kota. Cocokkan inti nama kota
-            // (LIKE) sehingga "Kabupaten Bogor" & "Kota Bogor" sama-sama masuk, tapi
-            // TIDAK melebar ke seluruh provinsi.
-            $core = RegionResolver::core($region['city']);
-
-            $query->where(function ($sub) use ($cityCol, $core, $concatExpr, $q) {
-                if ($core !== '') {
-                    $sub->whereRaw("LOWER($cityCol) LIKE ?", ['%' . $core . '%']);
-                }
-                // Jaring pengaman: cocokkan teks asli pada gabungan kolom.
-                $sub->orWhereRaw("$concatExpr LIKE ?", ['%' . $q . '%']);
-            });
-
-            return;
-        }
-
-        if (! empty($region['province'])) {
-            $province = $region['province'];
-            $query->where(function ($sub) use ($provinceCol, $province, $concatExpr, $q) {
-                $sub->where($provinceCol, $province)
-                    ->orWhereRaw("$concatExpr LIKE ?", ['%' . $q . '%']);
-            });
-
-            return;
-        }
-
-        // Resolusi gagal → perilaku lama (LIKE substring pada gabungan kolom).
-        $query->whereRaw("$concatExpr LIKE ?", ['%' . $q . '%']);
     }
 
     /** Nama produk terdekat dengan kata kunci (untuk saran "mungkin maksud Anda"). */
@@ -214,23 +184,6 @@ class JastipController extends Controller
         }
 
         return $best;
-    }
-
-    /** Nilai unik untuk sugesti lokasi (datalist "Dari"/"Ke"). */
-    private function distinctLocations(array $columns)
-    {
-        $values = collect();
-        foreach ($columns as $col) {
-            $values = $values->merge(
-                JastipItem::where('status', JastipItem::STATUS_PUBLISHED)
-                    ->whereNotNull($col)
-                    ->where($col, '!=', '')
-                    ->distinct()
-                    ->pluck($col),
-            );
-        }
-
-        return $values->unique()->sort()->values();
     }
 
     /** ID item jastip yang di-like user saat ini. */
@@ -459,6 +412,7 @@ class JastipController extends Controller
             // Token Snap dibuat dengan server key; popup snap.js hanya bisa
             // merender token dari merchant yang sama.
             'midtrans_client_key' => config('midtrans.client_key'),
+            'wallet_balance' => (float) \App\Models\Wallet::forUser((int) $request->user()->id)->balance,
         ]);
     }
 
@@ -475,7 +429,11 @@ class JastipController extends Controller
             'items.*.item_id'      => ['required', 'integer'],
             'items.*.variant_id'   => ['required', 'integer'],
             'items.*.quantity'     => ['required', 'integer', 'min:1'],
+            'payment_method'       => ['nullable', 'in:wallet,midtrans'],
         ]);
+
+        // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
+        $payWithWallet = ($data['payment_method'] ?? null) === 'wallet';
 
         // Susun ulang harga dari DB (jangan percaya harga dari client)
         $lines = $this->resolveCartLines($data['items']);
@@ -500,22 +458,37 @@ class JastipController extends Controller
             $lines,
         )) + self::SERVICE_FEE;
 
+        // Saldo dicek lebih dulu agar tidak meninggalkan pesanan menggantung saat
+        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di
+        // Wallet::debit() yang mengunci baris dompet.
+        if ($payWithWallet) {
+            $wallet = \App\Models\Wallet::forUser((int) $user->id);
+            if (! $wallet->hasSufficientBalance($totalAmount)) {
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Silakan isi saldo terlebih dahulu.',
+                    'balance' => (float) $wallet->balance,
+                    'required' => (float) $totalAmount,
+                ], 422);
+            }
+        }
+
         $transactionId = (string) Str::uuid();
+        $jastipOrderId = null;
 
         try {
-            DB::transaction(function () use ($transactionId, $user, $totalAmount, $lines) {
+            DB::transaction(function () use ($transactionId, $user, $totalAmount, $lines, $payWithWallet, &$jastipOrderId) {
                 DB::table('transactions')->insert([
                     'id'             => $transactionId,
                     'user_id'        => $user->id,
                     'total_amount'   => $totalAmount,
                     'type'           => 'jastip',
-                    'payment_method' => 'Midtrans',
+                    'payment_method' => $payWithWallet ? 'Wallet' : 'Midtrans',
                     'expired_at'     => now()->addHours(24),
                     'created_at'     => now(),
                     'updated_at'     => now(),
                 ]);
 
-                $orderId = DB::table('jastip_orders')->insertGetId([
+                $orderId = $jastipOrderId = DB::table('jastip_orders')->insertGetId([
                     'transaction_id'   => $transactionId,
                     'use_shipping'     => false,
                     'shipping_address' => '-',
@@ -546,6 +519,54 @@ class JastipController extends Controller
         } catch (\Throwable $e) {
             \Log::error('[BARENGIN] Gagal insert transaksi jastip: ' . $e->getMessage());
             return response()->json(['error' => 'Gagal menyimpan transaksi.'], 500);
+        }
+
+        // Keranjang bisa berisi banyak item: kirim nama item pertama + sisa
+        // jumlahnya sebagai PARAMETER, biar kalimat "X + 2 lainnya" dirakit di
+        // frontend sesuai bahasa aktif.
+        $first = reset($lines);
+
+        \App\Models\UserNotification::send(
+            (int) $user->id,
+            'order.created',
+            [
+                'name' => $first['name'] ?? null,
+                'more' => max(0, count($lines) - 1),
+                'kind' => 'jastip',
+                'amount' => (float) $totalAmount,
+            ],
+            '/profile-history?tab=transactions',
+            'order.created:trx:' . $transactionId,
+        );
+
+        // Bayar dari saldo: tidak ada popup Snap — pesanan langsung dilunasi
+        // lewat jalur pelunasan yang sama dengan Midtrans (termasuk notifikasi
+        // ke jastiper bahwa produknya terbayar).
+        if ($payWithWallet) {
+            try {
+                (new \App\Services\WalletPayment())->settle(
+                    (int) $user->id,
+                    $transactionId,
+                    (float) $totalAmount,
+                    'Pembelian jastip: ' . ($first['name'] ?? 'Barang'),
+                    'jastip_order',
+                    (int) $jastipOrderId,
+                );
+            } catch (\App\Exceptions\InsufficientBalanceException $e) {
+                DB::table('jastip_orders')->where('transaction_id', $transactionId)->delete();
+                DB::table('transactions')->where('id', $transactionId)->delete();
+
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
+                ], 422);
+            }
+
+            $request->session()->forget(self::CART_KEY);
+
+            return response()->json([
+                'paid'           => true,
+                'transaction_id' => $transactionId,
+            ]);
         }
 
         // Konfigurasi Midtrans

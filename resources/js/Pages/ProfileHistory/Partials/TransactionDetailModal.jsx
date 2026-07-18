@@ -15,6 +15,38 @@ const STATUS_LABEL = {
     refunded: "ph.status_refunded",
 };
 
+const STATUS_TONE = {
+    completed: "bg-success-100 text-success-700",
+    waiting_payment: "bg-warning-100 text-warning-700",
+    in_progress: "bg-warning-100 text-warning-700",
+    refunded: "bg-neutral-100 text-neutral-600",
+};
+
+/** Judul seksi: kecil & kalem, jadi isinya yang menonjol — bukan labelnya. */
+function SectionTitle({ children }) {
+    return (
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            {children}
+        </h4>
+    );
+}
+
+/**
+ * Bungkus tautan opsional. Sengaja tanpa efek hover — tautan di modal ini hanya
+ * perlu bisa diklik, bukan menarik perhatian dari isi transaksinya.
+ */
+function MaybeLink({ href, className, children }) {
+    if (!href) {
+        return <span className={className}>{children}</span>;
+    }
+
+    return (
+        <Link href={href} className={className}>
+            {children}
+        </Link>
+    );
+}
+
 export default function TransactionDetailModal({ transaction, onClose, onReview }) {
     const { t } = useTranslation();
     const d = transaction.detail;
@@ -29,6 +61,10 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
         transaction.review_target &&
         onReview;
 
+    const statusLabel = STATUS_LABEL[transaction.status]
+        ? t(STATUS_LABEL[transaction.status])
+        : d.status_heading;
+
     return (
         <>
         <div
@@ -40,30 +76,34 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="sticky top-0 flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4">
-                    <h2 className="text-xl font-bold text-neutral-900">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4">
+                    <h2 className="text-lg font-semibold text-neutral-900">
                         {t("ph.detail_title")}
                     </h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+                        className="rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
                         aria-label={t("ph.close")}
                     >
-                        <FaTimes className="h-5 w-5" />
+                        <FaTimes className="h-4 w-4" />
                     </button>
                 </div>
 
-                <div className="space-y-6 px-6 py-5">
-                    {/* Status + actions */}
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 className="mb-3 text-lg font-bold text-neutral-900">
-                                {STATUS_LABEL[transaction.status]
-                                    ? t(STATUS_LABEL[transaction.status])
-                                    : d.status_heading}
-                            </h3>
-                            <div className="space-y-1.5 text-sm">
+                <div className="divide-y divide-neutral-100 px-6">
+                    {/* Status + aksi */}
+                    <div className="flex items-start justify-between gap-4 py-6">
+                        <div className="min-w-0">
+                            <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                    STATUS_TONE[transaction.status] ??
+                                    "bg-neutral-100 text-neutral-600"
+                                }`}
+                            >
+                                {statusLabel}
+                            </span>
+
+                            <dl className="mt-4 space-y-2 text-sm">
                                 <DetailRow
                                     label={t("ph.detail_order_no")}
                                     value={d.order_no}
@@ -72,7 +112,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                                     label={t("ph.detail_purchase_date")}
                                     value={d.date_label}
                                 />
-                            </div>
+                            </dl>
                         </div>
 
                         {transaction.status === "completed" && (
@@ -108,36 +148,40 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                     </div>
 
                     {/* Detail Pesanan */}
-                    <div>
-                        <div className="mb-3 flex items-center justify-between">
-                            <h4 className="font-bold text-neutral-900">
-                                {t("ph.detail_order_detail")}
-                            </h4>
-                            {d.seller && (
-                                <div className="flex items-center gap-2 text-sm text-neutral-700">
-                                    <img
-                                        src={d.seller.avatar}
-                                        alt={d.seller.name}
-                                        className="h-6 w-6 rounded-full object-cover"
-                                        onError={(e) => {
-                                            e.target.src =
-                                                "/assets/default-profile.png";
-                                        }}
-                                    />
-                                    <span className="font-medium">
-                                        {d.seller.name}
-                                    </span>
-                                    <FaChevronRight className="h-3 w-3 text-neutral-400" />
-                                </div>
-                            )}
-                        </div>
+                    <div className="py-6">
+                        <SectionTitle>{t("ph.detail_order_detail")}</SectionTitle>
 
-                        <div className="space-y-3">
+                        {d.seller && (
+                            <MaybeLink
+                                href={d.seller.url}
+                                className="mb-4 flex items-center gap-2.5 text-sm text-neutral-700"
+                            >
+                                <img
+                                    src={d.seller.avatar}
+                                    alt={d.seller.name}
+                                    className="h-7 w-7 rounded-full object-cover"
+                                    onError={(e) => {
+                                        e.target.src =
+                                            "/assets/default-profile.png";
+                                    }}
+                                />
+                                <span className="min-w-0 truncate font-medium">
+                                    {d.seller.name}
+                                </span>
+                                {d.seller.url && (
+                                    <FaChevronRight className="h-2.5 w-2.5 shrink-0 text-neutral-400" />
+                                )}
+                            </MaybeLink>
+                        )}
+
+                        <div className="space-y-4">
                             {d.items.map((item, idx) => (
                                 <div
                                     key={idx}
-                                    className="flex items-center gap-3"
+                                    className="flex items-center gap-4"
                                 >
+                                    {/* Gambar membuka lightbox; namanya menuju
+                                        halaman detail — dua aksi yang berbeda. */}
                                     <button
                                         type="button"
                                         onClick={() =>
@@ -148,7 +192,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                                         <img
                                             src={item.image}
                                             alt={item.name}
-                                            className="h-12 w-12 cursor-zoom-in object-cover transition hover:opacity-90"
+                                            className="h-14 w-14 cursor-zoom-in object-cover"
                                             onError={(e) => {
                                                 e.target.src =
                                                     "/assets/default-image.png";
@@ -156,10 +200,18 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                                         />
                                     </button>
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate font-semibold text-neutral-900">
-                                            {item.name}
-                                        </p>
-                                        <p className="text-sm text-neutral-500">
+                                        <MaybeLink
+                                            href={item.url}
+                                            className="flex items-center gap-1.5 text-[15px] font-medium text-neutral-900"
+                                        >
+                                            <span className="min-w-0 truncate">
+                                                {item.name}
+                                            </span>
+                                            {item.url && (
+                                                <FaChevronRight className="h-2.5 w-2.5 shrink-0 text-neutral-400" />
+                                            )}
+                                        </MaybeLink>
+                                        <p className="mt-0.5 text-sm text-neutral-500">
                                             {item.slot} {t("ph.slot")}
                                         </p>
                                     </div>
@@ -170,10 +222,10 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
 
                     {/* Info Pengiriman (jastip) */}
                     {d.shipping && (
-                        <div>
-                            <h4 className="mb-3 font-bold text-neutral-900">
+                        <div className="py-6">
+                            <SectionTitle>
                                 {t("ph.detail_shipping_info")}
-                            </h4>
+                            </SectionTitle>
                             <div className="flex gap-3 text-sm">
                                 <span className="w-20 shrink-0 text-neutral-500">
                                     {t("ph.detail_address")}
@@ -186,40 +238,43 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                     )}
 
                     {/* Rincian Pembayaran */}
-                    <div>
-                        <h4 className="mb-3 font-bold text-neutral-900">
+                    <div className="py-6">
+                        <SectionTitle>
                             {t("ph.detail_payment_detail")}
-                        </h4>
-                        <div className="mb-3 flex items-center justify-between text-sm">
-                            <span className="text-neutral-500">
-                                {t("ph.detail_payment_method")}
-                            </span>
-                            <span className="font-semibold text-neutral-900">
-                                {d.payment_method}
-                            </span>
+                        </SectionTitle>
+
+                        <div className="space-y-2.5 text-sm">
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="text-neutral-500">
+                                    {t("ph.detail_payment_method")}
+                                </span>
+                                <span className="font-medium text-neutral-900">
+                                    {d.payment_method}
+                                </span>
+                            </div>
+
+                            {d.fees.map((fee, idx) => (
+                                <div
+                                    key={idx}
+                                    className="flex items-center justify-between gap-4"
+                                >
+                                    <span className="text-neutral-500">
+                                        {fee.label}
+                                    </span>
+                                    <span className="text-neutral-800">
+                                        {rupiah(fee.amount)}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
 
-                        {d.fees.length > 0 && (
-                            <div className="space-y-2 border-t border-neutral-100 pt-3 text-sm">
-                                {d.fees.map((fee, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-center justify-between"
-                                    >
-                                        <span className="text-neutral-500">
-                                            {fee.label}
-                                        </span>
-                                        <span className="text-neutral-800">
-                                            {rupiah(fee.amount)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="mt-3 flex items-center justify-between border-t border-neutral-200 pt-3 font-bold text-neutral-900">
-                            <span>{t("ph.detail_total")}</span>
-                            <span>{rupiah(d.total)}</span>
+                        <div className="mt-4 flex items-center justify-between gap-4 border-t border-neutral-200 pt-4">
+                            <span className="text-sm font-medium text-neutral-600">
+                                {t("ph.detail_total")}
+                            </span>
+                            <span className="text-lg font-semibold text-neutral-900">
+                                {rupiah(d.total)}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -239,8 +294,8 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
 function DetailRow({ label, value }) {
     return (
         <div className="flex items-center justify-between gap-8">
-            <span className="text-neutral-500">{label}</span>
-            <span className="font-medium text-neutral-900">{value}</span>
+            <dt className="text-neutral-500">{label}</dt>
+            <dd className="font-medium text-neutral-900">{value}</dd>
         </div>
     );
 }

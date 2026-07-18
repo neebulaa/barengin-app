@@ -72,6 +72,12 @@ class ChatController extends Controller
             ->get()
             ->map(fn ($m) => $this->mapMessage($m));
 
+        // Tanpa webhook publik (localhost), status pembayaran Midtrans tidak
+        // pernah masuk sendiri. Sinkronkan bagian split bill yang masih menunggu
+        // di percakapan ini setiap kali chat dibuka/dimuat ulang, sehingga status
+        // "lunas" dan kredit dompet penyelenggara langsung terlihat.
+        $this->syncPendingSplitBills($messages);
+
         $headerAvatar = $conversation->is_group
             ? ($this->groupAvatar($conversation) ?? asset('assets/default-profile.png'))
             : ($peer?->public_profile_image ?? asset('assets/default-profile.png'));
@@ -91,6 +97,12 @@ class ChatController extends Controller
 
         return Inertia::render('Chat/Show', [
             'conversations' => $conversations,
+            // Status terkini tiap tagihan yang kartunya muncul di percakapan ini.
+            // Kartu pada pesan hanya menyimpan ringkasan (judul), sedangkan
+            // lunas/belum berubah seiring waktu — jadi dikirim terpisah.
+            'splitBills' => $this->splitBillStates($messages, $user),
+            // Untuk popup pembayaran Midtrans pada kartu tagihan.
+            'midtrans_client_key' => config('midtrans.client_key'),
             'conversation' => [
                 'id' => $conversation->id,
                 'is_group' => (bool) $conversation->is_group,
@@ -103,6 +115,9 @@ class ChatController extends Controller
                 // sama — mis. beberapa "Pergi Bareng" ke rute yang sama — bisa
                 // dibedakan.
                 'group_meta' => $conversation->is_group ? $this->groupMeta($conversation) : null,
+                // Penanda & tautan induk grup (trip / pergi bareng / jastip).
+                'group_type' => $conversation->is_group ? $this->groupType($conversation) : null,
+                'group_url' => $conversation->is_group ? $this->groupUrl($conversation) : null,
                 'participants' => $conversation->participants->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->full_name,
@@ -137,8 +152,8 @@ class ChatController extends Controller
                 'integer',
                 Rule::exists('messages', 'id')->where('conversation_id', $conversation->id),
             ],
-            // Kartu referensi opsional (Trip / Pergi Bareng) untuk pesan pertama.
-            'reference_type' => ['nullable', 'in:trip,pergi_bareng'],
+            // Kartu referensi opsional (Trip / Pergi Bareng / Jastip) untuk pesan pertama.
+            'reference_type' => ['nullable', 'in:trip,pergi_bareng,jastip'],
             'reference_id' => ['nullable', 'integer'],
             // Banyak lampiran (gambar/PDF), masing-masing maksimal 5MB.
             'attachments' => ['nullable', 'array', 'max:10'],
@@ -248,6 +263,14 @@ class ChatController extends Controller
             ? Carbon::parse($peer->pivot->last_read_at)->toISOString()
             : null;
 
+        // Status tagihan patungan ikut disegarkan tiap poll (bukan hanya saat
+        // halaman dimuat ulang), sehingga tombol "Bayar" hilang dan rekap
+        // penyelenggara berubah dalam hitungan detik setelah pembayaran — tanpa
+        // perlu refresh manual. Pesan berkartu referensi jumlahnya sedikit, jadi
+        // memuatnya tiap poll murah.
+        $referenceMessages = $this->referenceMessages($conversation);
+        $this->syncPendingSplitBills($referenceMessages);
+
         return response()->json([
             'messages' => $messages->values(),
             'peer_last_read_at' => $peerLastRead,
@@ -255,7 +278,25 @@ class ChatController extends Controller
             'peer_last_seen_at' => $peer?->last_seen_at
                 ? Carbon::parse($peer->last_seen_at)->toISOString()
                 : null,
+            // Selalu dikirim (map per id tagihan). Kartu di gelembung mengambil
+            // status terkini dari sini, jadi meski kartunya pesan lama, ia tetap
+            // ikut berubah saat lunas.
+            'splitBills' => $this->splitBillStates($referenceMessages, $user),
         ]);
+    }
+
+    /**
+     * Pesan pada percakapan yang membawa kartu referensi (split bill / trip /
+     * pergi bareng), dalam bentuk yang sama dengan mapMessage. Dipakai polling
+     * untuk menghitung status tagihan tanpa memuat seluruh riwayat pesan.
+     */
+    private function referenceMessages(Conversation $conversation)
+    {
+        return $conversation->messages()
+            ->whereNotNull('reference')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn ($m) => $this->mapMessage($m));
     }
 
     /**
@@ -378,6 +419,24 @@ class ChatController extends Controller
                 'image_url' => $imageUrl,
                 'subtitle' => $pb->destination_loc ?? null,
                 'url' => '/pergi-bareng/' . $pb->id,
+            ];
+        }
+
+        if ($type === 'jastip') {
+            $item = \App\Models\JastipItem::with('jastip_item_images:id,jastip_item_id,image_name')->find($id);
+            if (! $item) {
+                return null;
+            }
+
+            return [
+                'type' => 'jastip',
+                'id' => (int) $item->id,
+                'title' => $item->name,
+                'image_url' => $this->resolveJastipImage(
+                    $item->jastip_item_images->first()?->image_name
+                ) ?? asset('assets/default-image.png'),
+                'subtitle' => $item->purchase_city ?? $item->pickup_city ?? null,
+                'url' => '/jastip/' . $item->id,
             ];
         }
 
@@ -518,6 +577,8 @@ class ChatController extends Controller
                     'avatar' => $avatar,
                     'subtitle' => $subtitle ?? '',
                     'group_meta' => $c->is_group ? $this->groupMeta($c) : null,
+                    'group_type' => $c->is_group ? $this->groupType($c) : null,
+                    'group_url' => $c->is_group ? $this->groupUrl($c) : null,
                     'last_message_at' => $lastMessage?->created_at?->toISOString(),
                     'unread' => $unread,
                 ];
@@ -547,6 +608,142 @@ class ChatController extends Controller
         if ($conversation->pergi_bareng && $conversation->pergi_bareng->time_appointment) {
             return Carbon::parse($conversation->pergi_bareng->time_appointment)
                 ->translatedFormat('d M Y, H:i');
+        }
+
+        return null;
+    }
+
+    /**
+     * Sinkronkan ke Midtrans setiap bagian split bill yang masih 'pending' pada
+     * tagihan-tagihan yang kartunya muncul di percakapan ini.
+     *
+     * Dibutuhkan di localhost yang tidak punya webhook publik: begitu ada yang
+     * membuka/memuat ulang chat, status pembayaran ikut disegarkan — bukan hanya
+     * milik penonton, melainkan seluruh bagian yang menggantung — sehingga tombol
+     * "Bayar" hilang dan dompet penyelenggara dikredit tanpa harus menunggu si
+     * pembayar membuka halaman Riwayat.
+     */
+    private function syncPendingSplitBills($messages): void
+    {
+        $ids = collect($messages)
+            ->map(fn ($m) => ($m['reference']['type'] ?? null) === 'split_bill'
+                ? (int) ($m['reference']['id'] ?? 0)
+                : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $transactionIds = \App\Models\SplitBillShare::whereIn('split_bill_id', $ids)
+            ->where('status', \App\Models\SplitBillShare::STATUS_PENDING)
+            ->whereNotNull('transaction_id')
+            ->pluck('transaction_id')
+            ->unique();
+
+        foreach ($transactionIds as $transactionId) {
+            \App\Http\Controllers\MidtransController::syncTransaction($transactionId);
+        }
+    }
+
+    /**
+     * Keadaan terkini tagihan split bill yang dirujuk pesan-pesan pada
+     * percakapan, dipetakan per id tagihan. Sudut pandangnya mengikuti $user:
+     * penyelenggara melihat rekap semua anggota, anggota hanya melihat bagiannya.
+     */
+    private function splitBillStates($messages, $user): array
+    {
+        $ids = collect($messages)
+            ->map(fn ($m) => ($m['reference']['type'] ?? null) === 'split_bill'
+                ? (int) ($m['reference']['id'] ?? 0)
+                : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        // Saldo dibaca sekali di luar loop — dipakai kartu untuk menawarkan
+        // pembayaran lewat dompet, dan sama untuk semua tagihan di percakapan.
+        $balance = (float) \App\Models\Wallet::forUser((int) $user->id)->balance;
+
+        return \App\Models\SplitBill::with(['shares.user:id,full_name,profile_image'])
+            ->whereIn('id', $ids)
+            ->get()
+            ->mapWithKeys(function ($bill) use ($user, $balance) {
+                $isCreator = (int) $bill->creator_id === (int) $user->id;
+                $mine = $bill->shares->firstWhere('user_id', $user->id);
+
+                return [$bill->id => [
+                    'id' => $bill->id,
+                    'title' => $bill->title,
+                    'note' => $bill->note,
+                    'total_amount' => (float) $bill->total_amount,
+                    'status' => $bill->status,
+                    'is_creator' => $isCreator,
+                    'paid_count' => $bill->shares->where('status', \App\Models\SplitBillShare::STATUS_PAID)->count(),
+                    'share_count' => $bill->shares->count(),
+                    // Saldo penonton kartu — menentukan apakah tombol bayar
+                    // lewat dompet ditawarkan.
+                    'wallet_balance' => $balance,
+                    // Bagian milik penonton kartu — dasar tombol "Bayar".
+                    'my_share' => $mine ? [
+                        'id' => $mine->id,
+                        'amount' => (float) $mine->amount,
+                        'status' => $mine->status,
+                    ] : null,
+                    // Rekap anggota hanya untuk penyelenggara.
+                    'shares' => $isCreator
+                        ? $bill->shares->map(fn ($s) => [
+                            'id' => $s->id,
+                            'name' => $s->user?->full_name ?? 'Pengguna',
+                            'avatar' => $s->user?->public_profile_image ?? asset('assets/default-profile.png'),
+                            'amount' => (float) $s->amount,
+                            'status' => $s->status,
+                        ])->values()
+                        : [],
+                ]];
+            })
+            ->all();
+    }
+
+    /**
+     * Jenis grup — dipakai frontend untuk menandai percakapan ini milik trip /
+     * pergi bareng / jastip, bukan grup biasa. null untuk grup tanpa induk.
+     */
+    private function groupType(Conversation $conversation): ?string
+    {
+        if ($conversation->trip) {
+            return 'trip';
+        }
+        if ($conversation->pergi_bareng) {
+            return 'pergi_bareng';
+        }
+        if ($conversation->jastip_item) {
+            return 'jastip';
+        }
+
+        return null;
+    }
+
+    /**
+     * Tautan ke halaman induk grup, agar anggota bisa melompat dari chat ke
+     * trip / pergi bareng / produk jastip terkait.
+     */
+    private function groupUrl(Conversation $conversation): ?string
+    {
+        if ($conversation->trip) {
+            return '/trip-bareng/' . $conversation->trip->id;
+        }
+        if ($conversation->pergi_bareng) {
+            return '/pergi-bareng/' . $conversation->pergi_bareng->id;
+        }
+        if ($conversation->jastip_item) {
+            return '/jastip/' . $conversation->jastip_item->id;
         }
 
         return null;
