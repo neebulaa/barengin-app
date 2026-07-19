@@ -30,114 +30,12 @@ use App\Http\Controllers\AdminJastipRequestController;
 use App\Http\Controllers\JastipRequestController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\AdminLanguageController;
-use App\Models\PostImage;
-use App\Models\Trip;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    // Ambil sebagian gambar acak dari postingan forum untuk galeri beranda
-    $galleryImages = PostImage::inRandomOrder()
-        ->limit(7)
-        ->pluck('img_name')
-        ->map(function ($name) {
-            if (str_starts_with($name, '/') || str_starts_with($name, 'http')) {
-                return $name;
-            }
-
-            return asset('storage/posts/' . $name);
-        })
-        ->values()
-        ->all();
-
-    // Trip populer (sudah dipublish) dari database, diurutkan rating tertinggi
-    $popularTrips = Trip::where('status', '!=', 'draft')
-        ->orderByDesc('rating')
-        ->limit(4)
-        ->get()
-        ->map(function ($trip) {
-            $start = \Carbon\Carbon::parse($trip->start_date);
-            $end = \Carbon\Carbon::parse($trip->end_date);
-            $nights = (int) $start->diffInDays($end);
-            $days = $nights + 1;
-
-            $img = $trip->image;
-            $image = ! $img
-                ? '/assets/trip-bareng/list-trip/gunung_bromo/trip_bareng-gunung_bromo-1.jpg'
-                : ((str_starts_with($img, 'http') || str_starts_with($img, '/')) ? $img : '/storage/' . $img);
-
-            return [
-                'id'       => $trip->id,
-                'title'    => $trip->location ?: $trip->name,
-                'duration' => $days . ' Hari, ' . $nights . ' Malam',
-                'rating'   => number_format((float) $trip->rating, 1, ',', '.'),
-                'image'    => $image,
-            ];
-        })
-        ->all();
-
-    // Jastip terbaru (published) untuk section beranda — bentuk data = props JastipCard
-    $likedJastipIds = auth()->check()
-        ? \Illuminate\Support\Facades\DB::table('favorites')
-            ->where('user_id', auth()->id())
-            ->where('favoritable_type', 'jastip')
-            ->pluck('favoritable_id')
-            ->flip()
-            ->all()
-        : [];
-
-    $latestJastip = \App\Models\JastipItem::query()
-        ->where('status', \App\Models\JastipItem::STATUS_PUBLISHED)
-        ->activeWindow() // #8: jangan tampilkan jastip yang sudah lewat
-        ->with('jastip_item_images')
-        ->latest('created_at')
-        ->limit(4)
-        ->get()
-        ->map(function ($item) use ($likedJastipIds) {
-            $owner  = \App\Models\User::find($item->user_id);
-            $rating = \Illuminate\Support\Facades\DB::table('user_ratings')
-                ->where('rated_user_id', $item->user_id)
-                ->where('type', 'jastiper')
-                ->avg('rating_amount');
-
-            $now = \Carbon\Carbon::now();
-            if ($item->start_date && $now->lt(\Carbon\Carbon::parse($item->start_date))) {
-                $tag = ['type' => 'upcoming', 'date' => \Carbon\Carbon::parse($item->start_date)->translatedFormat('d M Y')];
-            } elseif ($item->end_date) {
-                $tag = ['type' => 'ongoing', 'date' => \Carbon\Carbon::parse($item->end_date)->translatedFormat('d M Y')];
-            } else {
-                $tag = null;
-            }
-
-            $img = $item->jastip_item_images->first()?->image_name;
-            $image = ! $img
-                ? '/assets/default-image.png'
-                : ((str_starts_with($img, 'http') || str_starts_with($img, '/')) ? $img : asset('storage/' . $img));
-
-            return [
-                'id'     => $item->id,
-                'name'   => $item->name,
-                'price'  => (float) $item->base_price + (float) $item->jastip_fee,
-                'from'   => $item->purchase_city ?: $item->purchase_province,
-                'to'     => $item->pickup_city ?: $item->pickup_province,
-                'tag'    => $tag,
-                'href'   => '/jastip/' . $item->id,
-                'liked'  => isset($likedJastipIds[$item->id]),
-                'image'  => $image,
-                'author' => $owner?->full_name ?? 'Jastiper',
-                'avatar' => $owner?->public_profile_image ?? asset('assets/default-profile.png'),
-                'rating' => number_format((float) ($rating ?? 0), 1),
-            ];
-        })
-        ->all();
-
-    return inertia('Home/Index', [
-        'galleryImages' => $galleryImages,
-        'popularTrips'  => $popularTrips,
-        'latestJastip'  => $latestJastip,
-    ]);
-    })->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.store');
 
@@ -266,11 +164,16 @@ Route::middleware('auth')->group(function () {
     // /chat/{conversation} agar "poll" tidak tertangkap sebagai id percakapan.
     Route::get('/chat/poll', [ChatController::class, 'pollConversations'])->name('chat.poll');
     Route::get('/chat/unread-count', [ChatController::class, 'unreadCount'])->name('chat.unread-count');
+    // Ikut didaftarkan sebelum rute ber-parameter. Saat ini whereNumber() saja
+    // sudah cukup menyelamatkan "users" dari tertangkap sebagai id, tapi urutan
+    // ini yang sebenarnya jadi aturan (lihat /chat/poll & /notifications/poll) —
+    // menaruhnya di sini membuat rutenya tetap benar walau batasan angka itu
+    // suatu saat dilonggarkan.
+    Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
     Route::get('/chat/{conversation}/poll', [ChatController::class, 'pollMessages'])->whereNumber('conversation')->name('chat.messages.poll');
     Route::get('/chat/{conversation}', [ChatController::class, 'show'])->whereNumber('conversation')->name('chat.show');
     Route::post('/chat/{conversation}/messages', [ChatController::class, 'storeMessage'])->whereNumber('conversation')->name('chat.messages.store');
     Route::post('/chat/{conversation}/read', [ChatReadController::class, 'markAsRead'])->whereNumber('conversation')->name('chat.read');
-    Route::get('/chat/users', [ChatUserController::class, 'index'])->name('chat.users.index');
     Route::post('/chat/personal', [ChatConversationController::class, 'openOrCreatePersonal'])->name('chat.personal.open');
     Route::post('/chat/trip/{trip}/group', [ChatConversationController::class, 'openOrCreateTripGroup'])->whereNumber('trip')->name('chat.trip.group.open');
     Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');

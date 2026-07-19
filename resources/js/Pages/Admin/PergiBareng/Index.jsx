@@ -103,12 +103,15 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                         />
                     </div>
 
+                    {/* Select selebar 176px + tombol "Tambah" melewati lebar layar
+                        ponsel, jadi keduanya boleh membagi baris sebelum ukuran
+                        tetapnya kembali di sm+. */}
                     <div className="flex items-center gap-3">
-                        <div className="relative">
+                        <div className="relative min-w-0 flex-1 sm:flex-none">
                             <select
                                 value={values.sort}
                                 onChange={(e) => set("sort", e.target.value)}
-                                className="appearance-none w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
+                                className="appearance-none w-full sm:w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all"
                             >
                                 <option value="latest">{translate("admin.trip.sort_latest")}</option>
                                 <option value="seats">{translate("admin.trip.sort_seats")}</option>
@@ -129,16 +132,21 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
 
                 {/* Tabel */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[820px]">
+                    {/* Lebar kolom dalam persen, bukan piksel: dengan table-fixed +
+                        w-full tabel selalu pas selebar dasbor di layar lebar, tanpa
+                        memaksa gulir mendatar. min-w hanya jadi batas bawah supaya
+                        di ponsel kolomnya tetap terbaca dan tabel yang menggulir —
+                        bukan tulisannya yang patah tiap kata. */}
+                    <table className="w-full min-w-[940px] table-fixed text-left border-collapse">
                         <thead>
                             <tr className="bg-neutral-100 text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="py-3 px-5">{translate("admin.pergi.col_id")}</th>
-                                <th className="py-3 px-5">{translate("admin.pergi.col_destination")}</th>
-                                <th className="py-3 px-5">{translate("admin.pergi.col_departure")}</th>
-                                <th className="py-3 px-5">{translate("admin.pergi.col_time")}</th>
-                                <th className="py-3 px-5">{translate("admin.trip.col_seats")}</th>
-                                <th className="py-3 px-5">{translate("admin.trip.col_status")}</th>
-                                <th className="py-3 px-5 text-center">{translate("admin.trip.col_action")}</th>
+                                <th className="py-3 px-5 w-[8%]">{translate("admin.pergi.col_id")}</th>
+                                <th className="py-3 px-5 w-[24%]">{translate("admin.pergi.col_destination")}</th>
+                                <th className="py-3 px-5 w-[18%]">{translate("admin.pergi.col_departure")}</th>
+                                <th className="py-3 px-5 w-[13%]">{translate("admin.pergi.col_time")}</th>
+                                <th className="py-3 px-5 w-[7%]">{translate("admin.trip.col_seats")}</th>
+                                <th className="py-3 px-5 w-[10%]">{translate("admin.trip.col_status")}</th>
+                                <th className="py-3 px-2 w-[20%] text-center">{translate("admin.trip.col_action")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
@@ -154,11 +162,11 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                     className="w-11 h-11 rounded-lg object-cover border border-neutral-200"
                                                     onError={(e) => (e.target.src = DEFAULT_IMAGE)}
                                                 />
-                                                <span className="font-semibold text-neutral-700 text-sm max-w-[220px] break-words">{t.name}</span>
+                                                <span className="min-w-0 font-semibold text-neutral-700 text-sm line-clamp-2" title={t.name}>{t.name}</span>
                                             </div>
                                         </td>
-                                        <td className="py-3.5 px-5 text-sm text-neutral-600 max-w-[200px]">
-                                            <span className="line-clamp-2">{t.departure}</span>
+                                        <td className="py-3.5 px-5 text-sm text-neutral-600">
+                                            <span className="line-clamp-2" title={t.departure}>{t.departure}</span>
                                         </td>
                                         <td className="py-3.5 px-5 text-sm text-neutral-700 whitespace-nowrap">
                                             <div className="font-medium">{t.date_label}</div>
@@ -172,11 +180,15 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 {STATUS_META[t.status] ? translate(STATUS_META[t.status].key) : t.status}
                                             </span>
                                         </td>
-                                        <td className="py-3.5 px-5">
-                                            <div className="flex items-center justify-center gap-2">
+                                        <td className="py-3.5 px-2">
+                                            {/* Paling banyak lima ikon (saat status
+                                                selesai); padding & jarak dirapatkan
+                                                agar tetap satu baris pada lebar
+                                                minimum tabel. */}
+                                            <div className="flex flex-wrap items-center justify-center gap-1">
                                                 <Link
                                                     href={`/admin/pergi-bareng/${t.id}/requests`}
-                                                    className="relative p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"
+                                                    className="relative p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"
                                                     title={translate("admin.pergi.action_requests")}
                                                 >
                                                     <FiUsers size={16} />
@@ -190,7 +202,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 {t.status === "ongoing" && (
                                                     <button
                                                         onClick={() => trackTrip(t.id)}
-                                                        className="p-2 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg transition-colors"
+                                                        className="p-1.5 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg transition-colors"
                                                         title={translate("admin.pergi.action_track")}
                                                     >
                                                         <FiNavigation size={16} />
@@ -198,7 +210,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 )}
                                                 <button
                                                     onClick={() => openGroupChat(t.id)}
-                                                    className="p-2 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
+                                                    className="p-1.5 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
                                                     title={translate("admin.pergi.action_chat")}
                                                 >
                                                     <BsChatDots size={16} />
@@ -209,7 +221,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                     <button
                                                         onClick={() => setBillModal({ open: true, trip: t })}
                                                         disabled={t.has_split_bill}
-                                                        className="p-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50"
+                                                        className="p-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50"
                                                         title={
                                                             t.has_split_bill
                                                                 ? translate("admin.pergi.action_split_bill_done")
@@ -222,7 +234,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 {t.status === "finish" && (
                                                     <Link
                                                         href={`/admin/pergi-bareng/${t.id}/reopen`}
-                                                        className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                                                        className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
                                                         title={translate("admin.pergi.action_reopen")}
                                                     >
                                                         <FiRefreshCw size={16} />
@@ -230,7 +242,7 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 )}
                                                 <button
                                                     onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })}
-                                                    className="p-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                                                    className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
                                                     title={translate("admin.trip.action_delete")}
                                                 >
                                                     <FiTrash2 size={16} />

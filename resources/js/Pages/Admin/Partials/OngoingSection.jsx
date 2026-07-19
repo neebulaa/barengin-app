@@ -109,29 +109,38 @@ export default function OngoingSection({
                 {items.map((item) => (
                     <div
                         key={item.id}
-                        className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3"
+                        className={
+                            // Dua tombol tidak muat di sebelah teks pada layar
+                            // sempit, jadi barisnya dipatahkan dulu (tombol
+                            // pindah ke bawah) sebelum kembali sebaris di sm+.
+                            hasTrack
+                                ? "flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 sm:flex-row sm:items-center"
+                                : "flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3"
+                        }
                     >
-                        <img
-                            src={item.image}
-                            alt={item.title}
-                            className="h-12 w-12 shrink-0 rounded-lg border border-neutral-200 object-cover"
-                            onError={(e) => (e.target.src = DEFAULT_IMAGE)}
-                        />
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <img
+                                src={item.image}
+                                alt={item.title}
+                                className="h-12 w-12 shrink-0 rounded-lg border border-neutral-200 object-cover"
+                                onError={(e) => (e.target.src = DEFAULT_IMAGE)}
+                            />
 
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-neutral-700">
-                                {item.title}
-                            </p>
-                            {item.subtitle ? (
-                                <p className="truncate text-xs text-neutral-500">
-                                    {item.subtitle}
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-neutral-700">
+                                    {item.title}
                                 </p>
-                            ) : null}
-                            {item.meta ? (
-                                <p className="truncate text-xs text-neutral-400">
-                                    {item.meta}
-                                </p>
-                            ) : null}
+                                {item.subtitle ? (
+                                    <p className="truncate text-xs text-neutral-500">
+                                        {item.subtitle}
+                                    </p>
+                                ) : null}
+                                {item.meta ? (
+                                    <p className="truncate text-xs text-neutral-400">
+                                        {item.meta}
+                                    </p>
+                                ) : null}
+                            </div>
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2">
@@ -139,7 +148,7 @@ export default function OngoingSection({
                                 <button
                                     type="button"
                                     onClick={() => onTrack(item.id)}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-800"
+                                    className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-800 sm:flex-none"
                                 >
                                     <FiNavigation size={14} />
                                     {trackLabel}
@@ -156,7 +165,7 @@ export default function OngoingSection({
                                         name: item.title,
                                     })
                                 }
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-success-700 px-3 py-2 text-xs font-semibold text-white transition hover:brightness-95 disabled:opacity-60"
+                                className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-success-700 px-3 py-2 text-xs font-semibold text-white transition hover:brightness-95 disabled:opacity-60 sm:flex-none"
                             >
                                 <FiCheckCircle size={14} />
                                 {finishLabel}

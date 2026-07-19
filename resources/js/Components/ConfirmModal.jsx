@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { FiAlertCircle } from "react-icons/fi";
 import Button from "@/Components/Button";
 
@@ -17,11 +19,34 @@ export default function ConfirmModal({
     confirmType = "danger", // primary | danger | success | warning | neutral
     processing = false,
 }) {
+    // Esc menutup dialog — sama seperti menekan Batal, jadi aman untuk dialog
+    // hapus sekalipun. Hook di atas early return agar urutannya tetap.
+    useEffect(() => {
+        if (!open) return;
+
+        const onKeyDown = (e) => {
+            if (e.key === "Escape") onClose?.();
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [open, onClose]);
+
     if (!open) return null;
 
-    return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
+    const overlay = (
+        <div
+            // Klik di area gelap = Batal (aksi yang aman); klik di dalam panel
+            // tidak menutup karena propagasinya dihentikan.
+            onClick={onClose}
+            role="presentation"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4"
+        >
+            <div
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up"
+            >
                 <div className="p-6">
                     {/* Header: ikon + judul/deskripsi (rata kiri) */}
                     <div className="flex items-start gap-4">
@@ -61,4 +86,8 @@ export default function ConfirmModal({
             </div>
         </div>
     );
+
+    // Sama seperti FormModal: di-portal ke <body> supaya tidak terkurung stacking
+    // context milik induk (kartu/sidebar sticky, elemen ber-transform, dll).
+    return createPortal(overlay, document.body);
 }

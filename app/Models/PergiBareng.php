@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class PergiBareng extends Model
 {
 
-    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name', 'finished_at'];
+    protected $fillable = ['initiator_id', 'name', 'description', 'time_appointment', 'transportation', 'people_amount', 'departure_loc', 'destination_loc', 'img_name', 'finished_at', 'track_shared_at'];
 
     /**
      * Status berdasarkan waktu janji (tak ada tanggal selesai terpisah):
@@ -45,6 +45,7 @@ class PergiBareng extends Model
         return [
             'time_appointment'=> 'datetime',
             'finished_at' => 'datetime',
+            'track_shared_at' => 'datetime',
         ];
     }
 

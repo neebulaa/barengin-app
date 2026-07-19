@@ -20,6 +20,7 @@ import {
     FiCheckCircle,
     FiAlertCircle,
     FiMapPin,
+    FiChevronDown,
 } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -97,6 +98,10 @@ export default function Track({ trip }) {
     const [heading, setHeading] = useState(null);
     const [geoError, setGeoError] = useState(null); // 'denied' | 'unavailable' | 'unsupported'
     const [route, setRoute] = useState(null); // { line, distanceKm, durationMin }
+
+    // Kartu info menutupi sebagian besar peta di ponsel. Bisa dilipat agar peta
+    // terlihat penuh; ringkasan jarak & ETA tetap tampil saat terlipat.
+    const [sheetOpen, setSheetOpen] = useState(true);
 
     const didInitialFit = useRef(false);
     const lastRoutedRef = useRef(null);
@@ -428,10 +433,40 @@ export default function Track({ trip }) {
 
             {/* ── Bottom sheet estimasi ────────────────────────────────── */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1000] p-3 sm:p-4">
-                <div className="pointer-events-auto mx-auto w-full max-w-lg rounded-t-2xl border border-neutral-200 bg-white p-4 pb-5 shadow-2xl sm:rounded-2xl">
-                    {/* Grip bottom-sheet (visual) */}
-                    <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-neutral-200 sm:hidden" />
+                <div className="pointer-events-auto mx-auto w-full max-w-lg overflow-hidden rounded-t-2xl border border-neutral-200 bg-white shadow-2xl sm:rounded-2xl">
+                    {/* Kepala kartu = tombol lipat. Saat terlipat ia menyisakan
+                        ringkasan jarak & ETA supaya peta hampir penuh terlihat. */}
+                    <button
+                        type="button"
+                        onClick={() => setSheetOpen((open) => !open)}
+                        aria-expanded={sheetOpen}
+                        className="w-full px-4 pb-2 pt-2.5 text-left transition hover:bg-neutral-50"
+                    >
+                        <span className="mx-auto mb-2 block h-1.5 w-10 rounded-full bg-neutral-200" />
+                        <span className="flex items-center justify-between gap-3">
+                            <span className="min-w-0">
+                                <span className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                                    {arrived
+                                        ? t("track.page_title", "Pantau Perjalanan")
+                                        : t("track.remaining", "Sisa perjalanan ke tujuan")}
+                                </span>
+                                {!sheetOpen ? (
+                                    <span className="block truncate text-sm font-bold text-neutral-700">
+                                        {arrived
+                                            ? t("track.arrived", "Kamu sudah sampai di tujuan 🎉")
+                                            : `${distanceText} · ${etaText}`}
+                                    </span>
+                                ) : null}
+                            </span>
+                            <FiChevronDown
+                                className={`h-5 w-5 shrink-0 text-neutral-400 transition-transform duration-200 ${
+                                    sheetOpen ? "rotate-180" : ""
+                                }`}
+                            />
+                        </span>
+                    </button>
 
+                    <div className={sheetOpen ? "px-4 pb-5" : "hidden"}>
                     {arrived ? (
                         <div className="flex flex-col items-center py-2 text-center">
                             <span className="mb-2 inline-flex h-12 w-12 items-center justify-center rounded-full bg-success-50 text-success-700">
@@ -443,19 +478,16 @@ export default function Track({ trip }) {
                         </div>
                     ) : (
                         <>
-                            <div className="mb-3 flex items-center justify-between">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-                                    {t("track.remaining", "Sisa perjalanan ke tujuan")}
+                            {/* Judul "sisa perjalanan" sudah ada di kepala kartu
+                                yang bisa dilipat, jadi di sini cukup jam tibanya. */}
+                            {arrivalText ? (
+                                <p className="mb-3 text-xs text-neutral-500">
+                                    {t("track.arrival_prefix", "Perkiraan tiba")}{" "}
+                                    <span className="font-semibold text-neutral-700">
+                                        {arrivalText}
+                                    </span>
                                 </p>
-                                {arrivalText ? (
-                                    <p className="text-xs text-neutral-500">
-                                        {t("track.arrival_prefix", "Perkiraan tiba")}{" "}
-                                        <span className="font-semibold text-neutral-700">
-                                            {arrivalText}
-                                        </span>
-                                    </p>
-                                ) : null}
-                            </div>
+                            ) : null}
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-3">
@@ -546,6 +578,7 @@ export default function Track({ trip }) {
                                 ? t("track.you", "Lokasimu")
                                 : t("track.locating", "Mencari lokasimu…")}
                         </span>
+                    </div>
                     </div>
                 </div>
             </div>

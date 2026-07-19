@@ -61,6 +61,11 @@ class HandleInertiaRequests extends Middleware
             // Jumlah percakapan yang punya pesan belum dibaca — untuk lencana merah
             // pada tombol Chat di navbar. Dihitung sebagai satu query agregat
             // (bukan per-percakapan) karena ikut di setiap response Inertia.
+            //
+            // Menghitung PERCAKAPAN, bukan pesan: navbar menyegarkan angka ini
+            // lewat /chat/poll yang juga menghitung percakapan. Kalau keduanya
+            // beda satuan, lencana melompat (mis. 7 → 3) begitu poll pertama
+            // masuk beberapa detik setelah halaman dimuat.
             'chat_unread_count' => function () use ($request) {
                 $user = $request->user();
 
@@ -99,8 +104,6 @@ class HandleInertiaRequests extends Middleware
                 $cart = $request->session()->get('jastip_cart', []);
                 return collect($cart)->sum(fn ($line) => (int) ($line['quantity'] ?? 0));
             },
-            // Total pesan belum dibaca di semua percakapan — untuk badge di navbar.
-            'chat_unread_count' => fn () => \App\Http\Controllers\Chat\ChatController::unreadCountFor($request->user()),
             // Normalisasi flash dari berbagai pola controller -> {type, message}
             'flash' => function () use ($request) {
                 $s = $request->session();

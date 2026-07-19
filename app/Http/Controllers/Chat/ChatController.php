@@ -43,6 +43,8 @@ class ChatController extends Controller
             'Kamu bukan partisipan pada percakapan ini'
         );
 
+        $this->shareTrackCardIfOngoing($conversation);
+
         $conversations = $this->sidebarConversations($user);
 
         $conversation->load([
@@ -101,6 +103,10 @@ class ChatController extends Controller
             // Kartu pada pesan hanya menyimpan ringkasan (judul), sedangkan
             // lunas/belum berubah seiring waktu — jadi dikirim terpisah.
             'splitBills' => $this->splitBillStates($messages, $user),
+            // Sama alasannya dengan splitBills: kartu "pantau perjalanan" hanya
+            // menyimpan judul & tujuan saat dikirim, sedangkan selesai/belum
+            // berubah seiring waktu.
+            'trackStates' => $this->trackStates($messages),
             // Untuk popup pembayaran Midtrans pada kartu tagihan.
             'midtrans_client_key' => config('midtrans.client_key'),
             'conversation' => [
@@ -244,6 +250,10 @@ class ChatController extends Controller
         // Poll sekaligus jadi heartbeat kehadiran (agar lawan melihat kita online).
         $this->touchLastSeen($user);
 
+        // Dilakukan sebelum pesan diambil supaya kartunya ikut terkirim pada tick
+        // yang sama begitu perjalanan memasuki jam keberangkatan.
+        $this->shareTrackCardIfOngoing($conversation);
+
         $afterId = (int) $request->query('after', 0);
 
         $messages = $conversation->messages()
@@ -282,7 +292,66 @@ class ChatController extends Controller
             // status terkini dari sini, jadi meski kartunya pesan lama, ia tetap
             // ikut berubah saat lunas.
             'splitBills' => $this->splitBillStates($referenceMessages, $user),
+            // Kartu pantau perjalanan ikut berubah jadi "sudah selesai" tanpa
+            // perlu refresh, sama seperti kartu tagihan.
+            'trackStates' => $this->trackStates($referenceMessages),
         ]);
+    }
+
+    /**
+     * Status terkini tiap perjalanan yang kartu "pantau perjalanan"-nya muncul di
+     * percakapan, dipetakan per id perjalanan.
+     *
+     * Kartu di gelembung dikirim sekali dan isinya beku, jadi tanpa ini ia akan
+     * terus menawarkan peta live bahkan setelah perjalanan ditutup.
+     */
+    private function trackStates($messages): array
+    {
+        $ids = collect($messages)
+            ->map(fn ($m) => ($m['reference']['type'] ?? null) === 'pergi_track'
+                ? (int) ($m['reference']['id'] ?? 0)
+                : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        return \App\Models\PergiBareng::whereIn('id', $ids)
+            ->get()
+            ->mapWithKeys(fn ($trip) => [$trip->id => [
+                'status' => $trip->status(),
+            ]])
+            ->all();
+    }
+
+    /**
+     * Taruh kartu "pantau perjalanan" di grup pergi bareng begitu perjalanannya
+     * berlangsung.
+     *
+     * Sebelumnya kartu ini hanya muncul lewat command terjadwal atau saat grup
+     * dibuka dari tombol chat — jadi di hosting yang cron-nya tidak jalan,
+     * penyelenggara harus menekan "Pantau Perjalanan" di dasbor supaya anggota
+     * menerimanya. Dengan ikut dipanggil dari tampilan chat dan polling, kartunya
+     * terkirim sendiri paling lambat satu tick setelah jam keberangkatan lewat,
+     * tanpa aksi penyelenggara.
+     *
+     * PergiBarengTrackShare::share() idempoten dan sudah memeriksa status, jadi
+     * pemanggilan berulang tiap poll tidak membanjiri grup.
+     */
+    private function shareTrackCardIfOngoing(Conversation $conversation): void
+    {
+        if (! $conversation->is_group || ! $conversation->pergi_bareng_id) {
+            return;
+        }
+
+        $trip = \App\Models\PergiBareng::find($conversation->pergi_bareng_id);
+
+        if ($trip) {
+            \App\Services\Chat\PergiBarengTrackShare::share($trip);
+        }
     }
 
     /**

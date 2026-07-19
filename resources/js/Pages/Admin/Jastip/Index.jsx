@@ -152,11 +152,11 @@ export default function Index({ items = {}, orders = {}, filters = {} }) {
                     />
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="relative">
+                    <div className="relative min-w-0 flex-1 sm:flex-none">
                         <select
                             value={ui.sort}
                             onChange={(e) => update({ sort: e.target.value }, { resetPage: true })}
-                            className="w-44 appearance-none rounded-xl border border-neutral-400 bg-white py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-primary-700 cursor-pointer"
+                            className="w-full sm:w-44 appearance-none rounded-xl border border-neutral-400 bg-white py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-primary-700 cursor-pointer"
                         >
                             <option value="latest">{t("jastip.sort_latest")}</option>
                             <option value="best">{t("jastip.sort_best")}</option>

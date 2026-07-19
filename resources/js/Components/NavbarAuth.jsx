@@ -1,14 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import Button from "@/Components/Button.jsx";
 import NavDropdown from "@/Components/NavDropdown.jsx";
 import NavLink from "@/Components/NavLink.jsx";
 import NavLinkMobile from "@/Components/NavLinkMobile.jsx";
 import NavDropdownMobile from "@/Components/NavDropdownMobile.jsx";
-import StreakBadge from "@/Components/StreakBadge.jsx";
 import NotificationBell from "@/Components/NotificationBell.jsx";
 import { useTranslation } from "@/lib/useTranslation";
+import { useUnreadChats } from "@/lib/useUnreadChats";
 
 import { FaRoute, FaCarSide, FaPaperPlane } from "react-icons/fa";
 import { MdDashboard, MdHistory } from "react-icons/md";
@@ -20,67 +19,8 @@ export default function NavbarAuth() {
     const user = props?.auth?.user;
     const { t } = useTranslation();
 
-    // Jumlah percakapan dengan pesan belum dibaca. Nilai awal datang dari shared
-    // prop Inertia (hanya ikut berubah saat pindah halaman), lalu dijaga tetap
-    // hidup lewat Echo + polling di bawah.
-    const [unreadChats, setUnreadChats] = useState(
-        Number(props?.chat_unread_count ?? 0),
-    );
-    const unreadLabel = unreadChats > 99 ? "99+" : String(unreadChats);
-
-    // Selaraskan lagi setiap kunjungan Inertia (mis. setelah membuka /chat,
-    // lencana harus langsung turun tanpa menunggu poll berikutnya).
-    useEffect(() => {
-        setUnreadChats(Number(props?.chat_unread_count ?? 0));
-    }, [props?.chat_unread_count]);
-
-    // Hitung ulang dari sumber yang sama dengan halaman Chat, agar lencana dan
-    // daftar chat tidak pernah berbeda angka.
-    const refreshUnread = useCallback(async () => {
-        try {
-            const { data } = await axios.get("/chat/poll");
-            if (Array.isArray(data?.conversations)) {
-                setUnreadChats(
-                    data.conversations.filter((c) => (c.unread ?? 0) > 0).length,
-                );
-            }
-        } catch {
-            /* diamkan — lencana cukup pakai nilai terakhir */
-        }
-    }, []);
-
-    // Realtime: pesan masuk ke channel pribadi user langsung memicu hitung ulang.
-    useEffect(() => {
-        if (!window.Echo || !user?.id) return;
-
-        const channelName = `user.${user.id}`;
-        const channel = window.Echo.private(channelName);
-
-        channel.listen(".message.sent", (payload) => {
-            // Pesan sendiri (dikirim dari perangkat lain) bukan notifikasi.
-            if (Number(payload?.sender_id) === Number(user.id)) return;
-            refreshUnread();
-        });
-
-        return () => {
-            channel.stopListening(".message.sent");
-            window.Echo.leave(`private-${channelName}`);
-        };
-    }, [user?.id, refreshUnread]);
-
-    // Fallback polling — menjaga lencana tetap akurat pada hosting tanpa
-    // WebSocket, sekaligus menurunkan angka saat chat dibaca di tab lain.
-    useEffect(() => {
-        if (!user?.id) return;
-
-        const tick = () => {
-            if (document.hidden) return;
-            refreshUnread();
-        };
-        const interval = setInterval(tick, 12000);
-
-        return () => clearInterval(interval);
-    }, [user?.id, refreshUnread]);
+    // Lencana chat belum dibaca — logikanya dipakai bareng navbar dasbor.
+    const { count: unreadChats, label: unreadLabel } = useUnreadChats();
 
     const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -165,14 +105,6 @@ export default function NavbarAuth() {
                         lonceng notifikasi kebagian tempat. */}
                     <NotificationBell onNavigate={closeAll} />
 
-                    <Link
-                        href="/profile-history"
-                        onClick={closeAll}
-                        aria-label="Streak Nyala"
-                    >
-                        <StreakBadge count={user?.streak_count ?? 0} />
-                    </Link>
-
                     <div className="relative">
                         <Button
                             isButtonLink
@@ -245,14 +177,6 @@ export default function NavbarAuth() {
 
                 <div className="lg:hidden flex items-center gap-2">
                     <NotificationBell onNavigate={closeAll} />
-
-                    <Link
-                        href="/profile-history"
-                        onClick={closeAll}
-                        aria-label="Streak Nyala"
-                    >
-                        <StreakBadge count={user?.streak_count ?? 0} />
-                    </Link>
 
                     <button
                         type="button"

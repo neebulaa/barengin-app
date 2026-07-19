@@ -43,6 +43,7 @@ export default function Bubble({
     reply,
     reference,
     splitBillState,
+    trackState,
     midtransClientKey,
     onReply,
     onReplyQuoteClick,
@@ -77,14 +78,20 @@ export default function Bubble({
                 mine ? "justify-end" : "justify-start",
             )}
         >
-            {!mine ? <Avatar src={avatar} alt="avatar" className="h-9 w-9" /> : null}
+            {!mine ? (
+                <Avatar
+                    src={avatar}
+                    alt="avatar"
+                    className="h-7 w-7 shrink-0 sm:h-9 sm:w-9"
+                />
+            ) : null}
 
             {mine ? <ReplyButton /> : null}
 
-            <div className="flex max-w-[560px] items-end gap-3 break-words">
+            <div className="flex min-w-0 max-w-[80%] items-end gap-3 break-words sm:max-w-[560px]">
                 <div
                     className={cn(
-                        "rounded-xl border border-primary-700 bg-white px-4 py-3",
+                        "min-w-0 rounded-xl border border-primary-700 bg-white px-3 py-2 sm:px-4 sm:py-2.5",
                         mine ? "rounded-br-sm" : "rounded-bl-sm",
                     )}
                 >
@@ -124,7 +131,10 @@ export default function Bubble({
                                     clientKey={midtransClientKey}
                                 />
                             ) : reference.type === "pergi_track" ? (
-                                <TrackJourneyCard reference={reference} />
+                                <TrackJourneyCard
+                                    reference={reference}
+                                    state={trackState}
+                                />
                             ) : (
                                 <ReferenceCard reference={reference} />
                             )}
@@ -132,7 +142,10 @@ export default function Bubble({
                     ) : null}
 
                     {text ? (
-                        <div className="whitespace-pre-line text-sm text-neutral-700 break-words break-all">
+                        // break-all memotong di tengah kata sehingga kalimat biasa
+                        // terlihat rusak; break-words sudah cukup menahan URL atau
+                        // kata panjang tanpa mengorbankan teks normal.
+                        <div className="whitespace-pre-line break-words text-[13px] leading-snug text-neutral-700 sm:text-sm">
                             {text}
                         </div>
                     ) : null}

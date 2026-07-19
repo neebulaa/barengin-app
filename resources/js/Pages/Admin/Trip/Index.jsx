@@ -109,9 +109,9 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="relative">
+                    <div className="relative min-w-0 flex-1 sm:flex-none">
                         <select value={values.sort} onChange={(e) => set("sort", e.target.value)}
-                            className="appearance-none w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all">
+                            className="appearance-none w-full sm:w-44 pl-4 pr-10 py-2.5 rounded-xl border border-neutral-400 bg-white text-sm focus:border-primary-700 outline-none cursor-pointer transition-all">
                             <option value="latest">{translate("admin.trip.sort_latest")}</option>
                             <option value="seats">{translate("admin.trip.sort_seats")}</option>
                             <option value="status">{translate("admin.trip.sort_status")}</option>

@@ -91,7 +91,7 @@ export default function ChatIndex({ conversations = [] }) {
         <>
             <NavAuth />
             <Container className="max-w-[1400px]">
-                <div className="min-h-[calc(100vh-96px)] border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
+                <div className="min-h-[calc(100dvh-96px)] border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
                     {/* LEFT SIDEBAR */}
                     <aside className="border-neutral-200 bg-white px-6 py-6 sm:px-8 sm:py-8 md:border-r">
                         <div className="flex items-center justify-between">

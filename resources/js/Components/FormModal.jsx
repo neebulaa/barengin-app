@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { FiAlertCircle } from "react-icons/fi";
 import Button from "@/Components/Button";
 
@@ -26,15 +28,38 @@ export default function FormModal({
     processing = false,
     size = "sm", // sm | md | lg — lebar shell modal
 }) {
+    // Esc menutup modal — pasangan alami dari klik di luar. Hook harus berada di
+    // atas early return supaya urutannya tidak berubah antar render.
+    useEffect(() => {
+        if (!open) return;
+
+        const onKeyDown = (e) => {
+            if (e.key === "Escape") onClose?.();
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [open, onClose]);
+
     if (!open) return null;
 
-    return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
+    const overlay = (
+        <div
+            // Klik di area gelap menutup modal; klik di dalam panel tidak, karena
+            // handler-nya dipasang di overlay dan panel menghentikan propagasi.
+            onClick={onClose}
+            role="presentation"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4"
+        >
             {/* Sengaja bukan <form>: komponen Button memakai prop `type` untuk
                 warna sehingga tombol Batal ikut men-submit bila dibungkus form.
                 Struktur header/body/footer: body bisa di-scroll bila field panjang
                 sehingga modal tidak pernah melebihi tinggi layar. */}
-            <div className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-fade-in-up ${SIZE_MAP[size] ?? SIZE_MAP.sm}`}>
+            <div
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-fade-in-up ${SIZE_MAP[size] ?? SIZE_MAP.sm}`}
+            >
                 {/* Header: ikon + judul/deskripsi (rata kiri) */}
                 <div className="flex items-start gap-4 p-6 pb-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${iconClass}`}>
@@ -79,4 +104,9 @@ export default function FormModal({
             </div>
         </div>
     );
+
+    // Di-portal ke <body>: modal ini dipakai di dalam kartu/sidebar yang
+    // ber-position sticky, dan sticky selalu membuat stacking context baru —
+    // sehingga z-index setinggi apa pun tetap terkurung di bawah navbar.
+    return createPortal(overlay, document.body);
 }

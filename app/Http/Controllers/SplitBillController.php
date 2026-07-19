@@ -152,6 +152,96 @@ class SplitBillController extends Controller
     }
 
     /**
+     * Lunasi satu bagian tagihan memakai saldo dompet.
+     *
+     * Seluruh langkahnya — pemeriksaan status, pembuatan transaksi, pemotongan
+     * saldo, sampai pelunasan — dijalankan di dalam SATU transaksi database
+     * sambil mengunci baris bagian tagihan. Tanpa kunci itu, dua klik yang datang
+     * hampir bersamaan sama-sama lolos pemeriksaan `status === PAID` (keduanya
+     * membacanya sebelum salah satunya sempat menulis), lalu masing-masing
+     * membuat baris `transactions` sendiri. Saldo tetap aman karena
+     * `Wallet::debit()` idempoten terhadap sumbernya, tetapi hasilnya satu
+     * transaksi kembar yang ditandai lunas tanpa punya debit sendiri.
+     *
+     * Kunci dipegang sampai status menjadi `paid`, sehingga permintaan kedua baru
+     * dilepas setelah melihat status akhirnya lalu ditolak. Ini aman dilakukan
+     * justru karena jalur saldo tidak memanggil layanan luar sama sekali —
+     * berbeda dengan jalur Midtrans, yang tidak boleh memegang kunci baris selama
+     * menunggu HTTP ke Snap.
+     */
+    private function payShareWithWallet($user, SplitBillShare $share, int $amount)
+    {
+        // Dicek di luar kunci lebih dulu supaya kasus "saldo jelas-jelas kurang"
+        // tidak perlu membuka transaksi sama sekali. Pengecekan yang mengikat
+        // tetap di Wallet::debit(), yang mengunci baris dompet.
+        $wallet = \App\Models\Wallet::forUser((int) $user->id);
+
+        if (! $wallet->hasSufficientBalance($amount)) {
+            return response()->json([
+                'error' => 'Saldo dompet tidak mencukupi. Silakan isi saldo terlebih dahulu.',
+                'balance' => (float) $wallet->balance,
+                'required' => (float) $amount,
+            ], 422);
+        }
+
+        try {
+            $transactionId = DB::transaction(function () use ($user, $share, $amount) {
+                $locked = SplitBillShare::whereKey($share->id)->lockForUpdate()->first();
+
+                if (! $locked || $locked->status === SplitBillShare::STATUS_PAID) {
+                    return null;
+                }
+
+                $transactionId = (string) Str::uuid();
+
+                DB::table('transactions')->insert([
+                    'id' => $transactionId,
+                    'user_id' => $user->id,
+                    'total_amount' => $amount,
+                    'type' => 'split_bill',
+                    'payment_method' => 'Wallet',
+                    'expired_at' => now()->addHours(24),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $locked->forceFill([
+                    'transaction_id' => $transactionId,
+                    'status' => SplitBillShare::STATUS_PENDING,
+                ])->save();
+
+                // Di dalam kunci: begitu ini selesai statusnya sudah `paid`, jadi
+                // permintaan kedua yang antre pasti melihatnya dan mundur.
+                (new \App\Services\WalletPayment())->settle(
+                    (int) $user->id,
+                    $transactionId,
+                    (float) $amount,
+                    'Patungan: ' . $share->split_bill->title,
+                    'split_bill_share',
+                    (int) $share->id,
+                );
+
+                return $transactionId;
+            });
+        } catch (\App\Exceptions\InsufficientBalanceException $e) {
+            // Transaksi database sudah ter-rollback seluruhnya oleh lemparan ini,
+            // jadi tak ada baris transaksi/status menggantung yang perlu dibersihkan.
+            return response()->json([
+                'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
+            ], 422);
+        }
+
+        if ($transactionId === null) {
+            return response()->json(['error' => 'Tagihan ini sudah dibayar.'], 422);
+        }
+
+        return response()->json([
+            'paid' => true,
+            'transaction_id' => $transactionId,
+        ]);
+    }
+
+    /**
      * Buat transaksi Midtrans untuk bagian milik user yang sedang login.
      * Mengembalikan snap token agar frontend membuka popup pembayaran.
      */
@@ -188,18 +278,9 @@ class SplitBillController extends Controller
         // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
         $payWithWallet = $request->input('payment_method') === 'wallet';
 
-        // Saldo dicek lebih dulu agar bagian tidak tersangkut di 'pending' saat
-        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di
-        // Wallet::debit() yang mengunci baris dompet.
+        // Pembayaran saldo diselesaikan di jalurnya sendiri, di dalam kunci baris.
         if ($payWithWallet) {
-            $wallet = \App\Models\Wallet::forUser((int) $user->id);
-            if (! $wallet->hasSufficientBalance($amount)) {
-                return response()->json([
-                    'error' => 'Saldo dompet tidak mencukupi. Silakan isi saldo terlebih dahulu.',
-                    'balance' => (float) $wallet->balance,
-                    'required' => (float) $amount,
-                ], 422);
-            }
+            return $this->payShareWithWallet($user, $share, $amount);
         }
 
         $transactionId = (string) Str::uuid();
@@ -209,7 +290,7 @@ class SplitBillController extends Controller
             'user_id' => $user->id,
             'total_amount' => $amount,
             'type' => 'split_bill',
-            'payment_method' => $payWithWallet ? 'Wallet' : 'Midtrans',
+            'payment_method' => 'Midtrans',
             'expired_at' => now()->addHours(24),
             'created_at' => now(),
             'updated_at' => now(),
@@ -219,37 +300,6 @@ class SplitBillController extends Controller
             'transaction_id' => $transactionId,
             'status' => SplitBillShare::STATUS_PENDING,
         ])->save();
-
-        // Bayar dari saldo: potong saldo pembayar, lalu lunasi lewat jalur yang
-        // sama dengan Midtrans — termasuk mengkredit dompet penyelenggara.
-        if ($payWithWallet) {
-            try {
-                (new \App\Services\WalletPayment())->settle(
-                    (int) $user->id,
-                    $transactionId,
-                    (float) $amount,
-                    'Patungan: ' . $share->split_bill->title,
-                    'split_bill_share',
-                    (int) $share->id,
-                );
-            } catch (\App\Exceptions\InsufficientBalanceException $e) {
-                $share->forceFill([
-                    'transaction_id' => null,
-                    'status' => SplitBillShare::STATUS_UNPAID,
-                ])->save();
-
-                DB::table('transactions')->where('id', $transactionId)->delete();
-
-                return response()->json([
-                    'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
-                ], 422);
-            }
-
-            return response()->json([
-                'paid' => true,
-                'transaction_id' => $transactionId,
-            ]);
-        }
 
         \Midtrans\Config::$serverKey    = config('midtrans.server_key');
         \Midtrans\Config::$isProduction = config('midtrans.is_production', false);

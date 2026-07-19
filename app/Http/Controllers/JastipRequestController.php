@@ -179,10 +179,20 @@ class JastipRequestController extends Controller
         $qty       = (int) $req->quantity;
         $totalAmount = $itemPrice * $qty + $fee + self::SERVICE_FEE;
 
-        // Saldo dicek lebih dulu agar tidak meninggalkan transaksi menggantung saat
-        // saldo jelas-jelas kurang. Pengecekan yang mengikat tetap di Wallet::debit()
-        // yang mengunci baris dompet.
+        // Bayar dari saldo: tidak ada popup Snap — request langsung dilunasi lewat
+        // jalur pelunasan yang sama dengan Midtrans.
+        //
+        // Seluruh langkahnya dijalankan di dalam satu transaksi database sambil
+        // mengunci baris request. Tanpa kunci itu, dua klik yang datang hampir
+        // bersamaan sama-sama lolos pemeriksaan `status === QUOTED` di atas lalu
+        // masing-masing membuat baris `transactions` sendiri; saldo tetap aman
+        // (Wallet::debit() idempoten terhadap sumbernya) tetapi menyisakan satu
+        // transaksi kembar yang ditandai lunas tanpa punya debit sendiri.
+        // Aman memegang kunci di sini justru karena jalur saldo tidak memanggil
+        // layanan luar — beda dengan jalur Midtrans di bawah.
         if ($payWithWallet) {
+            // Dicek di luar kunci lebih dulu supaya kasus "saldo jelas-jelas kurang"
+            // tidak perlu membuka transaksi sama sekali.
             $wallet = \App\Models\Wallet::forUser((int) $user->id);
             if (! $wallet->hasSufficientBalance($totalAmount)) {
                 return response()->json([
@@ -191,18 +201,74 @@ class JastipRequestController extends Controller
                     'required' => (float) $totalAmount,
                 ], 422);
             }
+
+            try {
+                $transactionId = DB::transaction(function () use ($user, $req, $totalAmount) {
+                    $locked = JastipRequest::whereKey($req->id)->lockForUpdate()->first();
+
+                    if (! $locked || $locked->status !== JastipRequest::STATUS_QUOTED) {
+                        return null;
+                    }
+
+                    $transactionId = (string) Str::uuid();
+
+                    DB::table('transactions')->insert([
+                        'id'             => $transactionId,
+                        'user_id'        => $user->id,
+                        'total_amount'   => $totalAmount,
+                        'type'           => 'jastip_request',
+                        'payment_method' => 'Wallet',
+                        'expired_at'     => now()->addHours(24),
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
+                    ]);
+
+                    $locked->update(['transaction_id' => $transactionId]);
+
+                    // Di dalam kunci: setelahnya status sudah bukan `quoted` lagi,
+                    // jadi permintaan kedua yang antre pasti melihatnya dan mundur.
+                    (new \App\Services\WalletPayment())->settle(
+                        (int) $user->id,
+                        $transactionId,
+                        (float) $totalAmount,
+                        'Titipan: ' . $req->item_name,
+                        'jastip_request',
+                        (int) $req->id,
+                    );
+
+                    return $transactionId;
+                });
+            } catch (\App\Exceptions\InsufficientBalanceException $e) {
+                // Rollback transaksi database sudah membersihkan baris transaksi &
+                // pointer transaction_id, jadi tak ada sisa yang perlu dihapus.
+                return response()->json([
+                    'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
+                ], 422);
+            } catch (\Throwable $e) {
+                Log::error('[BARENGIN] Gagal melunasi request titipan dari saldo: ' . $e->getMessage());
+                return response()->json(['error' => 'Gagal menyimpan transaksi.'], 500);
+            }
+
+            if ($transactionId === null) {
+                return response()->json(['error' => 'Request ini belum/tidak bisa dibayar.'], 422);
+            }
+
+            return response()->json([
+                'paid'           => true,
+                'transaction_id' => $transactionId,
+            ]);
         }
 
         $transactionId = (string) Str::uuid();
 
         try {
-            DB::transaction(function () use ($transactionId, $user, $totalAmount, $req, $payWithWallet) {
+            DB::transaction(function () use ($transactionId, $user, $totalAmount, $req) {
                 DB::table('transactions')->insert([
                     'id'             => $transactionId,
                     'user_id'        => $user->id,
                     'total_amount'   => $totalAmount,
                     'type'           => 'jastip_request',
-                    'payment_method' => $payWithWallet ? 'Wallet' : 'Midtrans',
+                    'payment_method' => 'Midtrans',
                     'expired_at'     => now()->addHours(24),
                     'created_at'     => now(),
                     'updated_at'     => now(),
@@ -213,33 +279,6 @@ class JastipRequestController extends Controller
         } catch (\Throwable $e) {
             Log::error('[BARENGIN] Gagal insert transaksi request titipan: ' . $e->getMessage());
             return response()->json(['error' => 'Gagal menyimpan transaksi.'], 500);
-        }
-
-        // Bayar dari saldo: tidak ada popup Snap — request langsung dilunasi lewat
-        // jalur pelunasan yang sama dengan Midtrans.
-        if ($payWithWallet) {
-            try {
-                (new \App\Services\WalletPayment())->settle(
-                    (int) $user->id,
-                    $transactionId,
-                    (float) $totalAmount,
-                    'Titipan: ' . $req->item_name,
-                    'jastip_request',
-                    (int) $req->id,
-                );
-            } catch (\App\Exceptions\InsufficientBalanceException $e) {
-                $req->update(['transaction_id' => null]);
-                DB::table('transactions')->where('id', $transactionId)->delete();
-
-                return response()->json([
-                    'error' => 'Saldo dompet tidak mencukupi. Kurang Rp' . number_format($e->shortfall(), 0, ',', '.') . '.',
-                ], 422);
-            }
-
-            return response()->json([
-                'paid'           => true,
-                'transaction_id' => $transactionId,
-            ]);
         }
 
         \Midtrans\Config::$serverKey    = config('midtrans.server_key');

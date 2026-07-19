@@ -15,7 +15,7 @@ import L from 'leaflet';
 import {
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
     FaMapMarkerAlt, FaCar, FaInfoCircle, FaHeart, FaRegHeart,
-    FaMinus, FaPlus, FaLock, FaLocationArrow
+    FaMinus, FaPlus, FaLock
 } from "react-icons/fa";
 import { BsChatDots, BsPeople } from "react-icons/bs";
 
@@ -59,13 +59,11 @@ export default function Show({ trip }) {
     const isLoggedIn = Boolean(auth?.user);
     const { t } = useTranslation();
 
-    // Anggota (peserta disetujui atau penyelenggara) boleh memantau posisi live
-    // ketika perjalanan sedang berlangsung. Di luar itu, peta hanya untuk dilihat.
-    const isMember = Boolean(trip.is_participant || trip.organizer?.is_self);
+    // Pantau perjalanan tidak lagi dibuka dari halaman detail: satu-satunya
+    // pintunya adalah kartu di grup chat, yang muncul sendiri begitu perjalanan
+    // berlangsung dan berubah jadi keterangan "selesai" setelahnya. Peta di sini
+    // murni untuk dilihat; status berlangsung tetap ditandai di header.
     const isOngoing = trip.status === "ongoing";
-    const canTrack = isMember && isOngoing;
-
-    const goToTrack = () => router.visit(`/pergi-bareng/${trip.id}/track`);
 
     const [origin, setOrigin] = useState(null);          // titik kumpul
     const [destination, setDestination] = useState(null); // titik tujuan
@@ -523,35 +521,7 @@ export default function Show({ trip }) {
                                         <MapView origin={origin} destination={destination} />
                                     </MapContainer>
 
-                                    {/* Anggota + perjalanan berlangsung → seluruh peta jadi tombol
-                                        menuju pantau perjalanan live. Di luar itu peta hanya dilihat. */}
-                                    {canTrack && (
-                                        <button
-                                            type="button"
-                                            onClick={goToTrack}
-                                            aria-label={t("pb.show.track_live", "Pantau Perjalanan Anda")}
-                                            title={t("pb.show.track_map_hint", "Klik peta untuk pantau perjalanan")}
-                                            className="group absolute inset-0 z-[500] cursor-pointer bg-transparent transition-colors hover:bg-primary-600/10"
-                                        >
-                                            <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-primary-700 shadow-sm">
-                                                <FaLocationArrow className="text-[10px]" />
-                                                {t("pb.show.track_map_hint", "Klik peta untuk pantau perjalanan")}
-                                            </span>
-                                        </button>
-                                    )}
-
                                     <div className="absolute bottom-3 inset-x-3 z-[1000] flex flex-wrap justify-end gap-2">
-                                        {canTrack && (
-                                            <Button
-                                                size="sm"
-                                                variant="solid"
-                                                className="bg-success-600 text-white shadow-md hover:bg-success-700 gap-1.5"
-                                                onClick={goToTrack}
-                                            >
-                                                <FaLocationArrow className="text-xs" />
-                                                {t("pb.show.track_live", "Pantau Perjalanan Anda")}
-                                            </Button>
-                                        )}
                                         <Button
                                             size="sm"
                                             variant="solid"

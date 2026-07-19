@@ -41,6 +41,7 @@ export default function ChatShow({
     messages = [],
     pendingReference = null,
     splitBills = {},
+    trackStates = {},
     midtrans_client_key = null,
 }) {
     const { t } = useTranslation();
@@ -155,6 +156,11 @@ export default function ChatShow({
     // percakapan atau setelah router.reload().
     const [liveSplitBills, setLiveSplitBills] = useState(splitBills ?? {});
     useEffect(() => setLiveSplitBills(splitBills ?? {}), [splitBills]);
+
+    // Status perjalanan untuk kartu "pantau perjalanan" — disegarkan tiap poll
+    // dengan alasan yang sama: kartunya harus menutup diri saat perjalanan usai.
+    const [liveTrackStates, setLiveTrackStates] = useState(trackStates ?? {});
+    useEffect(() => setLiveTrackStates(trackStates ?? {}), [trackStates]);
 
     // Referensi pesan terkini untuk menghitung id terakhir saat polling.
     const messagesRef = useRef(localMessages);
@@ -383,6 +389,7 @@ export default function ChatShow({
                 // Status tagihan patungan ikut disegarkan tiap tick, jadi tombol
                 // "Bayar" hilang & rekap penyelenggara berubah tanpa refresh.
                 if (data.splitBills) setLiveSplitBills(data.splitBills);
+                if (data.trackStates) setLiveTrackStates(data.trackStates);
             } catch {
                 /* diamkan; coba lagi tick berikutnya */
             }
@@ -619,7 +626,10 @@ export default function ChatShow({
         <>
             <NavbarAuth />
             <Container className="max-w-[1400px]">
-                <div className="h-[calc(100vh-96px)] overflow-hidden border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
+                {/* 100dvh, bukan 100vh: di browser ponsel 100vh mengabaikan bar
+                    alamat/menu yang muncul-hilang, sehingga komposer terdorong ke
+                    bawah layar dan tertutup UI browser. */}
+                <div className="h-[calc(100dvh-96px)] overflow-hidden border-l border-r border-neutral-200 md:grid md:grid-cols-[420px_1fr]">
                     <aside className="hidden h-full min-h-0 overflow-y-auto border-r border-neutral-200 bg-white px-8 py-8 md:block">
                         <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-neutral-700">
@@ -705,7 +715,7 @@ export default function ChatShow({
                     </aside>
 
                     <section className="relative flex h-full min-h-0 flex-col bg-white">
-                        <div className="flex shrink-0 items-center gap-3 border-b border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
+                        <div className="flex shrink-0 items-center gap-2 border-b border-neutral-200 px-3 py-3 sm:gap-3 sm:px-10 sm:py-5">
                             <Link
                                 href="/chat"
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-neutral-100 md:hidden"
@@ -714,7 +724,11 @@ export default function ChatShow({
                                 <FiArrowLeft className="h-5 w-5 text-neutral-700" />
                             </Link>
 
-                            <Avatar src={headerAvatar} alt={headerTitle} />
+                            <Avatar
+                                src={headerAvatar}
+                                alt={headerTitle}
+                                className="h-9 w-9 shrink-0 sm:h-11 sm:w-11"
+                            />
 
                             {conversation?.is_group ? (
                                 <button
@@ -802,7 +816,7 @@ export default function ChatShow({
                             ) : null}
                         </div>
 
-                        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 sm:px-10 sm:py-10">
+                        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-10 sm:py-8">
                             <div className="space-y-2">
                                 {(localMessages ?? []).map((m) => {
                                     const isMine = Number(m.sender_id) === Number(authUser?.id);
@@ -844,6 +858,11 @@ export default function ChatShow({
                                                     ? liveSplitBills?.[m.reference.id]
                                                     : undefined
                                             }
+                                            trackState={
+                                                m.reference?.type === "pergi_track"
+                                                    ? liveTrackStates?.[m.reference.id]
+                                                    : undefined
+                                            }
                                             midtransClientKey={midtrans_client_key}
                                             onReplyQuoteClick={
                                                 m.reply_to?.id
@@ -858,7 +877,7 @@ export default function ChatShow({
                             </div>
                         </div>
 
-                        <div className="shrink-0 border-t border-neutral-200 px-6 py-5 sm:px-10 sm:py-6">
+                        <div className="shrink-0 border-t border-neutral-200 px-3 py-3 sm:px-10 sm:py-5">
                             {/* Kartu referensi tersemat (konteks Trip / Pergi Bareng) */}
                             {activeReference ? (
                                 <div className="mb-3">
@@ -937,7 +956,7 @@ export default function ChatShow({
                                 <div className="mb-2 text-sm text-danger-700">{attachError}</div>
                             ) : null}
 
-                            <form onSubmit={submit} className="flex items-center gap-4">
+                            <form onSubmit={submit} className="flex items-center gap-2 sm:gap-4">
                                 <div className="relative flex-1">
                                     <input
                                         type="file"
@@ -949,7 +968,7 @@ export default function ChatShow({
                                     />
                                     <label
                                         htmlFor="chat-attachment"
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500"
+                                        className="absolute left-3.5 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500 sm:left-4"
                                     >
                                         <FiPaperclip className="h-5 w-5" />
                                     </label>
@@ -963,7 +982,7 @@ export default function ChatShow({
                                                 : t("chat.message_placeholder")
                                         }
                                         className={cn(
-                                            "h-14 w-full rounded-full border border-neutral-300 bg-white pl-12 pr-4 text-sm text-neutral-700 placeholder:text-neutral-500",
+                                            "h-11 w-full rounded-full border border-neutral-300 bg-white pl-11 pr-4 text-sm text-neutral-700 placeholder:text-neutral-500 sm:h-14 sm:pl-12",
                                             "focus:border-primary-700 focus:outline-none",
                                         )}
                                     />
@@ -971,10 +990,10 @@ export default function ChatShow({
 
                                 <button
                                     type="submit"
-                                    className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary-700 text-white hover:opacity-90"
+                                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-700 text-white hover:opacity-90 sm:h-14 sm:w-14"
                                     aria-label={t("chat.send")}
                                 >
-                                    <FiSend className="h-6 w-6" />
+                                    <FiSend className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </button>
                             </form>
                         </div>

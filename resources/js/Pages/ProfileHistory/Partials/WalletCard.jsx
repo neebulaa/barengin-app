@@ -94,7 +94,7 @@ export default function WalletCard({ wallet, onTopUp }) {
                         // Tinggi dibatasi lalu digulir: mutasi bisa banyak, dan sidebar
                         // ini sticky — tanpa batas, daftar panjang akan mendorong isi
                         // sidebar melewati tinggi layar.
-                        <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto pr-1">
+                        <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto pr-2 pl-2">
                             {entries.map((e) => (
                                 <li
                                     key={e.id}
@@ -141,7 +141,7 @@ export default function WalletCard({ wallet, onTopUp }) {
                 title={t("wallet.topup_title", "Isi Saldo Dompet")}
                 description={t(
                     "wallet.topup_desc",
-                    "Pilih nominal, lalu selesaikan pembayaran lewat Midtrans. Saldo bertambah setelah pembayaran lunas.",
+                    "Saldo masuk setelah pembayaran lunas.",
                 )}
                 confirmLabel={t("wallet.topup_confirm", "Isi Saldo")}
                 cancelLabel={t("wallet.topup_cancel", "Batal")}
@@ -167,18 +167,17 @@ export default function WalletCard({ wallet, onTopUp }) {
                     </div>
 
                     <div>
-                        <label
-                            htmlFor="topup-amount"
-                            className="mb-1 block text-xs font-medium text-neutral-600"
-                        >
-                            {t("wallet.topup_amount_label", "Nominal lain")}
-                        </label>
+                        {/* Label dihapus: isinya sama persis dengan placeholder,
+                            jadi hanya menambah baris teks tanpa informasi baru.
+                            aria-label menjaga input tetap punya nama yang terbaca
+                            screen reader meski labelnya tak lagi tampil. */}
                         <input
                             id="topup-amount"
                             type="number"
                             min={MIN_TOPUP}
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
+                            aria-label={t("wallet.topup_amount_label", "Nominal lain")}
                             placeholder={t(
                                 "wallet.topup_placeholder",
                                 "Nominal lain (min Rp10.000)",

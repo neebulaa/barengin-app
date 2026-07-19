@@ -382,7 +382,33 @@ class PergiBarengController extends Controller
         $isMember = (int) $trip->initiator_id === $userId
             || $trip->pergi_bareng_participants->contains('user_id', $userId);
 
-        abort_unless($isMember, 403, 'Kamu bukan anggota perjalanan ini.');
+        // Bukan anggota → dipulangkan ke halaman detail, bukan layar 403. Peta
+        // live memperlihatkan posisi rombongan, jadi ini penjagaan privasi, bukan
+        // sekadar kerapian: tautan yang diteruskan ke luar grup tidak boleh
+        // membocorkan keberadaan orang. Halaman detail terbuka untuk umum,
+        // sehingga aman jadi tempat mendarat.
+        if (! $isMember) {
+            return redirect()
+                ->route('pergi-bareng.show', $trip->id)
+                ->with('flash', [
+                    'type' => 'info',
+                    'message' => 'Pantau perjalanan hanya untuk anggota perjalanan ini.',
+                ]);
+        }
+
+        // Peta live tidak ada gunanya setelah perjalanan selesai — rutenya dihitung
+        // dari posisi GPS penonton ke tujuan, jadi halaman ini akan menuntun orang
+        // ke tempat yang sudah tidak relevan. Kartu lama di grup chat tetap bisa
+        // diklik, karena itu penjagaannya di sisi server, bukan sekadar
+        // menyembunyikan tombolnya.
+        if ($trip->status() === 'finish') {
+            return redirect()
+                ->route('pergi-bareng.show', $trip->id)
+                ->with('flash', [
+                    'type' => 'info',
+                    'message' => 'Perjalanan ini sudah selesai, jadi pantau perjalanan sudah ditutup.',
+                ]);
+        }
 
         return Inertia::render('PergiBareng/Track', [
             'trip' => [
