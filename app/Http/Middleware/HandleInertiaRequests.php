@@ -99,10 +99,12 @@ class HandleInertiaRequests extends Middleware
                     ->whereNull('read_at')
                     ->count();
             },
-            // Jumlah baris item di keranjang jastip (session) — untuk indikator keranjang
+            // Jumlah PRODUK (baris) di keranjang jastip (session) — untuk indikator
+            // keranjang. Dihitung per baris produk, bukan total quantity: satu produk
+            // dengan 17 qty tetap dihitung 1.
             'jastip_cart_count' => function () use ($request) {
                 $cart = $request->session()->get('jastip_cart', []);
-                return collect($cart)->sum(fn ($line) => (int) ($line['quantity'] ?? 0));
+                return count($cart);
             },
             // Normalisasi flash dari berbagai pola controller -> {type, message}
             'flash' => function () use ($request) {

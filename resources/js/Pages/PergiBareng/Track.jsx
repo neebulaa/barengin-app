@@ -458,9 +458,12 @@ export default function Track({ trip }) {
                                     </span>
                                 ) : null}
                             </span>
+                            {/* Bottom sheet mengembang ke ATAS: saat tertutup chevron
+                                menunjuk ke atas (^ = tarik untuk buka), saat terbuka
+                                menunjuk ke bawah (v = dorong untuk tutup). */}
                             <FiChevronDown
                                 className={`h-5 w-5 shrink-0 text-neutral-400 transition-transform duration-200 ${
-                                    sheetOpen ? "rotate-180" : ""
+                                    sheetOpen ? "" : "rotate-180"
                                 }`}
                             />
                         </span>

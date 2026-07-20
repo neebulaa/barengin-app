@@ -22,6 +22,8 @@ class UserNotification extends Model
     public const CATEGORY_JASTIP_REQUEST = 'jastip_request';
     public const CATEGORY_SELLING        = 'selling';
     public const CATEGORY_WALLET         = 'wallet';
+    public const CATEGORY_FORUM          = 'forum';
+    public const CATEGORY_ACTIVITY       = 'activity';
 
     /** Semua kategori yang bisa dimatikan pengguna, berikut tipe di dalamnya. */
     public const CATEGORIES = [
@@ -46,6 +48,18 @@ class UserNotification extends Model
         // Uang masuk/keluar dompet — dipicu dari Wallet::credit()/debit(), jadi
         // setiap perubahan saldo dari sumber mana pun ikut terkabarkan.
         self::CATEGORY_WALLET => ['wallet.credited', 'wallet.debited'],
+        // Interaksi forum: ada yang mulai mengikuti pengguna.
+        self::CATEGORY_FORUM => ['forum.followed'],
+        // Perkembangan perjalanan/jastip yang DIIKUTI pengguna: mulai berlangsung,
+        // waktu ambil (jastip), dan selesai. Dikirim command notifications:lifecycle.
+        self::CATEGORY_ACTIVITY => [
+            'activity.trip_ongoing',
+            'activity.trip_finished',
+            'activity.pergi_bareng_ongoing',
+            'activity.pergi_bareng_finished',
+            'activity.jastip_pickup',
+            'activity.jastip_finished',
+        ],
     ];
 
     protected $fillable = [

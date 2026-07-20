@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Head, Link, router } from "@inertiajs/react";
+import { Head, router, usePage } from "@inertiajs/react";
 import { toast } from "@/lib/toast";
 import axios from "axios";
 
@@ -16,6 +16,15 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 
 const createEmptyParticipant = () => ({ name: "", passport: "", phone: "", nik: "" });
 
+// Normalisasi nomor telepon ke format field (prefix +62 sudah ada di UI):
+// buang non-digit lalu awalan 62/0 → sisakan bagian setelahnya (mis. 812...).
+const toLocalPhone = (raw) => {
+    let d = String(raw || "").replace(/\D/g, "");
+    if (d.startsWith("62")) d = d.slice(2);
+    if (d.startsWith("0")) d = d.slice(1);
+    return d;
+};
+
 // Validasi nomor HP Indonesia (dipakai bersama prefix +62).
 // Mengembalikan "empty", "invalid", atau null (valid).
 const validatePhone = (raw) => {
@@ -28,10 +37,25 @@ const validatePhone = (raw) => {
     return null;
 };
 
+// NIK Indonesia = 16 digit. Paspor = 5–12 huruf/angka. Keduanya opsional,
+// tetapi bila diisi tidak boleh mengandung simbol/karakter aneh.
+const isValidNik = (raw) => /^\d{16}$/.test(String(raw || ""));
+const isValidPassport = (raw) => /^[A-Za-z0-9]{5,12}$/.test(String(raw || ""));
+
 export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0 }) {
     const { t } = useTranslation();
+    const authUser = usePage().props?.auth?.user;
     // storageKey harus didefinisikan PERTAMA sebelum dipakai di useState
     const storageKey = `trip_${trip.id}_participants`;
+
+    // Peserta pertama diprefill dari akun yang login (nama & no. HP) agar user
+    // tak perlu mengetik ulang datanya sendiri. Peserta berikutnya tetap kosong.
+    const makeFirstParticipant = () => ({
+        name: authUser?.full_name || authUser?.name || "",
+        passport: "",
+        phone: toLocalPhone(authUser?.phone),
+        nik: "",
+    });
 
     // ── STATE ──────────────────────────────────────────────
     const [quantity, setQuantity] = useState(() => {
@@ -53,7 +77,7 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                 if (Array.isArray(parsed) && parsed.length > 0) return parsed;
             }
         } catch { /* ignore */ }
-        return [createEmptyParticipant()];
+        return [makeFirstParticipant()];
     });
 
     const [isProcessing, setIsProcessing] = useState(false);
@@ -109,8 +133,15 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
     // ── HANDLERS ───────────────────────────────────────────
 
     const handleParticipantChange = (index, field, value) => {
+        // Cegah simbol/karakter aneh langsung saat mengetik: HP & NIK hanya angka,
+        // paspor hanya huruf/angka (huruf dibuat kapital agar seragam).
+        let v = value;
+        if (field === "phone") v = value.replace(/\D/g, "").slice(0, 12);
+        else if (field === "nik") v = value.replace(/\D/g, "").slice(0, 16);
+        else if (field === "passport") v = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12);
+
         setParticipants((prev) =>
-            prev.map((item, idx) => (idx === index ? { ...item, [field]: value } : item))
+            prev.map((item, idx) => (idx === index ? { ...item, [field]: v } : item))
         );
         // Hapus error field saat user mulai mengetik
         if (errors[index]?.[field]) {
@@ -139,10 +170,13 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
         let firstInvalidIndex = -1;
 
         participants.forEach((p, idx) => {
-            const err = { name: false, phone: false };
+            const err = { name: false, phone: false, nik: false, passport: false };
             if (!p.name.trim())  { err.name  = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
             const phoneErr = validatePhone(p.phone);
             if (phoneErr) { err.phone = phoneErr; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
+            // NIK & paspor opsional — hanya divalidasi bila diisi.
+            if (p.nik?.trim() && !isValidNik(p.nik)) { err.nik = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
+            if (p.passport?.trim() && !isValidPassport(p.passport)) { err.passport = true; if (firstInvalidIndex === -1) firstInvalidIndex = idx; }
             newErrors[idx] = err;
         });
 
@@ -244,15 +278,22 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
             <Head title="Checkout Trip - Barengin" />
             <Container>
 
-                {/* Header */}
+                {/* Header — kembali ke halaman sebelumnya (detail) lewat history
+                    agar tidak menumpuk entri detail baru. Efeknya: checkout →
+                    kembali → detail, lalu detail → kembali → daftar trip. */}
                 <div className="mb-8">
-                    <Link
-                        href={`/trip-bareng/${trip.id}`}
-                        className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition"
+                    <button
+                        type="button"
+                        onClick={() =>
+                            window.history.length > 1
+                                ? window.history.back()
+                                : router.visit(`/trip-bareng/${trip.id}`)
+                        }
+                        className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition cursor-pointer"
                     >
                         <FaChevronLeft className="text-xl" />
                         {t("trip.checkout.title")}
-                    </Link>
+                    </button>
                     <p className="text-neutral-500 ml-9">{t("trip.checkout.subtitle")}</p>
                 </div>
 
@@ -314,7 +355,7 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                 key={idx}
                                 id={`participant-form-${idx}`}
                                 className={`bg-white p-6 rounded-2xl shadow-sm border transition-all duration-300 ${
-                                    errors[idx]?.name || errors[idx]?.phone
+                                    errors[idx]?.name || errors[idx]?.phone || errors[idx]?.nik || errors[idx]?.passport
                                         ? "border-red-400 ring-4 ring-red-50"
                                         : "border-neutral-100"
                                 }`}
@@ -344,13 +385,21 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                     </div>
 
                                     {/* Paspor */}
-                                    <Input
-                                        label={t("trip.checkout.passport")}
-                                        placeholder={t("trip.checkout.passport_ph")}
-                                        value={p.passport}
-                                        onChange={(e) => handleParticipantChange(idx, "passport", e.target.value)}
-                                        disabled={snapToken !== null}
-                                    />
+                                    <div>
+                                        <Input
+                                            label={t("trip.checkout.passport")}
+                                            placeholder={t("trip.checkout.passport_ph")}
+                                            value={p.passport}
+                                            onChange={(e) => handleParticipantChange(idx, "passport", e.target.value)}
+                                            disabled={snapToken !== null}
+                                            maxLength={12}
+                                        />
+                                        {errors[idx]?.passport && (
+                                            <p className="text-red-500 text-xs font-medium mt-1.5 flex items-center gap-1">
+                                                <IoMdInformationCircleOutline className="text-sm" /> {t("trip.checkout.passport_invalid")}
+                                            </p>
+                                        )}
+                                    </div>
 
                                     {/* Telepon & NIK */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -373,13 +422,22 @@ export default function Checkout({ trip, midtrans_client_key, wallet_balance = 0
                                                 </p>
                                             )}
                                         </div>
-                                        <Input
-                                            label="NIK"
-                                            placeholder="NIK"
-                                            value={p.nik}
-                                            onChange={(e) => handleParticipantChange(idx, "nik", e.target.value)}
-                                            disabled={snapToken !== null}
-                                        />
+                                        <div>
+                                            <Input
+                                                label="NIK"
+                                                placeholder="NIK"
+                                                inputMode="numeric"
+                                                value={p.nik}
+                                                onChange={(e) => handleParticipantChange(idx, "nik", e.target.value)}
+                                                disabled={snapToken !== null}
+                                                maxLength={16}
+                                            />
+                                            {errors[idx]?.nik && (
+                                                <p className="text-red-500 text-xs font-medium mt-1.5 flex items-center gap-1">
+                                                    <IoMdInformationCircleOutline className="text-sm" /> {t("trip.checkout.nik_invalid")}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

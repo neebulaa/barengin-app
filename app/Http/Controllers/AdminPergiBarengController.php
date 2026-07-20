@@ -22,6 +22,7 @@ class AdminPergiBarengController extends Controller
         'Transportasi Online',
         'Transportasi Umum',
         'Sewa Mobil',
+        'Sesuaikan dengan rute',
     ];
 
     /** Kode pendek untuk ditampilkan di tabel */
@@ -356,6 +357,17 @@ class AdminPergiBarengController extends Controller
     public function destroy($id)
     {
         $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
+
+        // Yang sedang BERLANGSUNG tidak boleh dihapus (perjalanan masih berjalan).
+        // Status lain (belum mulai / selesai) boleh — sejalan dengan tombol hapus
+        // di halaman manajemen.
+        if ($this->statusOf($trip) === 'ongoing') {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Pergi bareng yang sedang berlangsung tidak bisa dihapus.',
+            ]);
+        }
+
         $tripName = $trip->name;
         $trip->delete();
 

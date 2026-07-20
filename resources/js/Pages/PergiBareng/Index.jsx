@@ -27,7 +27,7 @@ export default function Index({ trips = {}, filters = {}, foreignLocation = fals
                 ke: filters?.ke || undefined,
                 tanggal: filters?.tanggal || undefined,
                 waktu: filters?.waktu || undefined,
-                jumlah: filters?.jumlah || undefined,
+                kendaraan: filters?.kendaraan || undefined,
                 ...params,
             },
             { preserveState: true, preserveScroll: true, replace: true },

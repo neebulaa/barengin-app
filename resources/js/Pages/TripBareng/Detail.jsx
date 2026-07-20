@@ -226,9 +226,9 @@ export default function Detail({ trip }) {
                                                 }}
                                             />
                                         ))}
-                                    {currentTrip.joined_count > 4 && (
+                                    {(currentTrip.participants?.length ?? 0) > 4 && (
                                         <div className="w-8 h-8 rounded-full border-2 border-white/40 bg-blue-100 text-primary-700 flex items-center justify-center text-xs font-bold z-10">
-                                            +{currentTrip.joined_count - 4}
+                                            +{currentTrip.participants.length - 4}
                                         </div>
                                     )}
                                 </div>

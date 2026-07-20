@@ -3,8 +3,10 @@ import {
     FaCarSide,
     FaReceipt,
     FaRegBell,
+    FaRegClock,
     FaStore,
     FaUsers,
+    FaUserPlus,
     FaWallet,
 } from "react-icons/fa";
 import { FiCheckCircle, FiInbox } from "react-icons/fi";
@@ -30,6 +32,8 @@ const ICONS = {
     jastip_request: FiInbox,
     selling: FaStore,
     wallet: MdAccountBalanceWallet,
+    forum: FaUserPlus,
+    activity: FaRegClock,
     default: FaRegBell,
 };
 

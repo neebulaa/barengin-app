@@ -108,6 +108,13 @@ class JastipController extends Controller
             ->select('jastip_items.*', DB::raw('COALESCE(sold.sold, 0) as sold_count'))
             ->latest('jastip_items.created_at');
 
+        // Sembunyikan produk yang stoknya sudah habis dari etalase. max_slot = total
+        // stok seluruh varian (lihat AdminJastipController::persistItem), jadi
+        // terjual >= max_slot berarti benar-benar habis — sama dengan definisi
+        // sold_out di formatCard(). max_slot <= 0 (stok tak diset) dibiarkan tampil
+        // agar perilaku lama tidak berubah.
+        $query->whereRaw('(jastip_items.max_slot <= 0 OR COALESCE(sold.sold, 0) < jastip_items.max_slot)');
+
         // #9: filter jadwal — 'ongoing' (sedang berlangsung) atau 'upcoming' (akan dibuka)
         if (in_array($schedule, ['ongoing', 'upcoming'], true)) {
             $query->schedule($schedule);
@@ -159,7 +166,16 @@ class JastipController extends Controller
     private function closestProductName(string $search): ?string
     {
         $needle = mb_strtolower($search);
-        $names  = JastipItem::where('status', JastipItem::STATUS_PUBLISHED)->pluck('name');
+
+        // Hanya sarankan produk yang benar-benar tampil di etalase: published,
+        // jendela aktif, dan stoknya belum habis — samakan dengan buildIndexQuery()
+        // agar tidak merekomendasikan barang yang sudah tidak bisa dibeli.
+        $names = JastipItem::query()
+            ->where('jastip_items.status', JastipItem::STATUS_PUBLISHED)
+            ->activeWindow()
+            ->leftJoinSub($this->soldSubquery(), 'sold', 'sold.jastip_item_id', '=', 'jastip_items.id')
+            ->whereRaw('(jastip_items.max_slot <= 0 OR COALESCE(sold.sold, 0) < jastip_items.max_slot)')
+            ->pluck('jastip_items.name');
 
         $best = null;
         $bestScore = 0.0;
@@ -384,7 +400,9 @@ class JastipController extends Controller
         }
         $request->session()->put(self::CART_KEY, $cart);
 
-        return response()->json(['count' => collect($cart)->sum('quantity')]);
+        // Hitung per baris produk (bukan total quantity) — sinkron dengan indikator
+        // keranjang di navbar (HandleInertiaRequests::jastip_cart_count).
+        return response()->json(['count' => count($cart)]);
     }
 
     // ── Halaman checkout ─────────────────────────────────────────────────

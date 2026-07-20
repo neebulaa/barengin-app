@@ -7,11 +7,21 @@ import { detectCity } from "@/lib/useGeoCity";
 import {
     FaMapMarkerAlt,
     FaPlane,
-    FaUser,
+    FaCarSide,
     FaSearch,
 } from "react-icons/fa";
 import { FaLocationCrosshairs } from "react-icons/fa6";
 import { useTranslation } from "@/lib/useTranslation";
+
+// Jenis kendaraan — harus PERSIS sama dengan enum `transportation` di migrasi
+// pergi_barengs agar filter (where transportation = ...) cocok.
+const VEHICLE_TYPES = [
+    "Mobil Pribadi",
+    "Transportasi Online",
+    "Transportasi Umum",
+    "Sewa Mobil",
+    "Sesuaikan dengan rute",
+];
 
 export default function PergiSearchForm({ naked = true }) {
     const { t } = useTranslation();
@@ -21,7 +31,7 @@ export default function PergiSearchForm({ naked = true }) {
     const [ke, setKe] = useState(filters.ke || "");
     const [tanggal, setTanggal] = useState(filters.tanggal || "");
     const [waktu, setWaktu] = useState(filters.waktu || "");
-    const [jumlah, setJumlah] = useState(filters.jumlah || "");
+    const [kendaraan, setKendaraan] = useState(filters.kendaraan || "");
     const [locating, setLocating] = useState(false);
 
     // Batasi ke hari ini ke depan. Untuk waktu, hanya batasi bila tanggal yang
@@ -52,7 +62,7 @@ export default function PergiSearchForm({ naked = true }) {
                 ke: ke || undefined,
                 tanggal: tanggal || undefined,
                 waktu: waktu || undefined,
-                jumlah: jumlah || undefined,
+                kendaraan: kendaraan || undefined,
                 sort: filters.sort || undefined,
             },
             { preserveScroll: true },
@@ -110,7 +120,7 @@ export default function PergiSearchForm({ naked = true }) {
                     />
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-2">
                     <Input
                         label={t("search.meet_time")}
                         type="time"
@@ -120,16 +130,24 @@ export default function PergiSearchForm({ naked = true }) {
                     />
                 </div>
 
-                <div className="lg:col-span-2">
-                    <Input
-                        label={t("search.people")}
-                        type="number"
-                        min={1}
-                        placeholder="1"
-                        leftIcon={<FaUser />}
-                        value={jumlah}
-                        onChange={(e) => setJumlah(e.target.value)}
-                    />
+                <div className="lg:col-span-3">
+                    <label className="mb-2 block text-sm text-neutral-700">
+                        {t("search.vehicle_type")}
+                    </label>
+                    <div className="relative">
+                        <select
+                            value={kendaraan}
+                            onChange={(e) => setKendaraan(e.target.value)}
+                            className="h-12 w-full rounded-xl border border-neutral-400 bg-white pl-3 pr-3 text-sm text-neutral-700 focus:border-primary-700 focus:outline-none cursor-pointer"
+                        >
+                            <option value="">{t("search.vehicle_all")}</option>
+                            {VEHICLE_TYPES.map((v) => (
+                                <option key={v} value={v}>
+                                    {v}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 <div className="lg:col-span-2">

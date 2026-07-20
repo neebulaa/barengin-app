@@ -27,14 +27,16 @@ class AdminTripController extends Controller
         $search = trim((string) $request->query('search', ''));
         $sort   = (string) $request->query('sort', 'latest');
 
-        // Jumlah peserta (paid) sebagai subquery agar bisa di-sort & dipaginasi
-        // di server — hanya pesanan pada run aktif (setelah re-trip terakhir).
+        // Kursi terisi (paid) sebagai subquery agar bisa di-sort & dipaginasi di
+        // server — hanya pesanan pada run aktif (setelah re-trip terakhir). Yang
+        // dihitung adalah TOTAL kursi (SUM quantity), bukan jumlah akun, agar
+        // konsisten dengan kapasitas trip (people_amount = jumlah kursi).
         $joinedSub = DB::table('trip_orders')
             ->join('trips as jt', 'jt.id', '=', 'trip_orders.trip_id')
             ->where('trip_orders.order_status', 'paid')
             ->whereRaw('(jt.current_run_started_at IS NULL OR trip_orders.created_at >= jt.current_run_started_at)')
             ->groupBy('trip_orders.trip_id')
-            ->select('trip_orders.trip_id', DB::raw('COUNT(DISTINCT trip_orders.user_id) as joined'));
+            ->select('trip_orders.trip_id', DB::raw('SUM(trip_orders.quantity) as joined'));
 
         // withAvg/withCount HARUS setelah select(): select() mengganti seluruh
         // daftar kolom, jadi bila dipanggil lebih dulu, kolom rating_avg &
@@ -159,45 +161,71 @@ class AdminTripController extends Controller
         $trip = Trip::where('guider_id', Auth::id())->findOrFail($id);
         $runStart = $trip->current_run_started_at;
 
-        // Satu baris per pembeli (jumlahkan kursi & total dari pesanannya).
-        $rows = DB::table('trip_orders')
+        // Ambil pesanan mentah (tidak di-agregat) agar detail tiap kursi dari
+        // kolom JSON `participants` bisa dirinci di bawah tiap pembeli. Diurutkan
+        // menaik sehingga pengelompokan di bawah mempertahankan urutan bergabung.
+        $orders = DB::table('trip_orders')
             ->join('users', 'trip_orders.user_id', '=', 'users.id')
             ->where('trip_orders.trip_id', $trip->id)
             ->where('trip_orders.order_status', 'paid')
             ->when($runStart, fn ($q) => $q->where('trip_orders.created_at', '>=', $runStart))
-            ->groupBy('users.id', 'users.full_name', 'users.username', 'users.profile_image')
             ->select(
-                'users.id',
+                'users.id as user_id',
                 'users.full_name',
                 'users.username',
                 'users.profile_image',
-                DB::raw('SUM(trip_orders.quantity) as seats'),
-                DB::raw('SUM(trip_orders.total) as total_paid'),
-                DB::raw('MIN(trip_orders.created_at) as joined_at'),
+                'trip_orders.quantity',
+                'trip_orders.total',
+                'trip_orders.participants',
+                'trip_orders.created_at',
             )
-            ->orderBy('joined_at')
+            ->orderBy('trip_orders.created_at')
             ->get();
 
-        $participants = $rows->map(fn ($r) => [
-            'user_id' => (int) $r->id,
-            'name' => $r->full_name ?? 'Peserta',
-            'username' => $r->username,
-            'avatar' => $this->resolveAvatarUrl($r->profile_image),
-            'seats' => (int) $r->seats,
-            'total_paid' => (float) $r->total_paid,
-            'joined_label' => Carbon::parse($r->joined_at)->translatedFormat('d M Y, H:i'),
-        ])->values();
+        // Satu baris per pembeli (jumlahkan kursi & total dari semua pesanannya),
+        // lengkap dengan rincian identitas tiap kursi.
+        $participants = $orders->groupBy('user_id')->map(function ($rows) {
+            $first = $rows->first();
 
-        $joined = $participants->count();
+            $seatDetails = [];
+            foreach ($rows as $r) {
+                $decoded = json_decode($r->participants ?? '', true);
+                if (! is_array($decoded)) {
+                    continue;
+                }
+                foreach ($decoded as $seat) {
+                    $seatDetails[] = [
+                        'name'     => trim((string) ($seat['name'] ?? '')) ?: '-',
+                        'phone'    => trim((string) ($seat['phone'] ?? '')) ?: null,
+                        'nik'      => trim((string) ($seat['nik'] ?? '')) ?: null,
+                        'passport' => trim((string) ($seat['passport'] ?? '')) ?: null,
+                    ];
+                }
+            }
+
+            return [
+                'user_id' => (int) $first->user_id,
+                'name' => $first->full_name ?? 'Peserta',
+                'username' => $first->username,
+                'avatar' => $this->resolveAvatarUrl($first->profile_image),
+                'seats' => (int) $rows->sum('quantity'),
+                'total_paid' => (float) $rows->sum('total'),
+                'joined_label' => Carbon::parse($rows->min('created_at'))->translatedFormat('d M Y, H:i'),
+                'seat_details' => $seatDetails,
+            ];
+        })->values();
+
+        // Kursi terisi = TOTAL kursi (bukan jumlah orang), selaras dengan kapasitas.
+        $seatsFilled = (int) $participants->sum('seats');
 
         return Inertia::render('Admin/Trip/Participants', [
             'trip' => [
                 'id' => $trip->id,
                 'name' => $trip->name,
                 'location' => $trip->location,
-                'joined' => $joined,
+                'joined' => $seatsFilled,
                 'capacity' => (int) $trip->people_amount,
-                'remaining' => max(0, (int) $trip->people_amount - $joined),
+                'remaining' => max(0, (int) $trip->people_amount - $seatsFilled),
             ],
             'participants' => $participants,
         ]);
@@ -438,12 +466,14 @@ class AdminTripController extends Controller
         DB::transaction(function () use ($request, $trip, $validated) {
             $runStart = $trip->current_run_started_at ?? '1970-01-01 00:00:00';
 
-            // Arsipkan run yang baru saja selesai (peserta & pendapatan run itu)
+            // Arsipkan run yang baru saja selesai (peserta & pendapatan run itu).
+            // Pendapatan = harga trip saja (total − biaya Rp10.000/kursi milik
+            // platform), konsisten dengan analitik & kredit dompet pemandu.
             $stats = DB::table('trip_orders')
                 ->where('trip_id', $trip->id)
                 ->where('order_status', 'paid')
                 ->where('created_at', '>=', $runStart)
-                ->selectRaw('COUNT(DISTINCT user_id) as joined, COALESCE(SUM(total), 0) as revenue')
+                ->selectRaw('COUNT(DISTINCT user_id) as joined, COALESCE(SUM(total), 0) as total, COALESCE(SUM(quantity), 0) as seats')
                 ->first();
 
             TripHistory::create([
@@ -451,7 +481,7 @@ class AdminTripController extends Controller
                 'start_date'   => $trip->start_date,
                 'end_date'     => $trip->end_date,
                 'joined_count' => (int) ($stats->joined ?? 0),
-                'revenue'      => (float) ($stats->revenue ?? 0),
+                'revenue'      => max(0.0, (float) ($stats->total ?? 0) - 10000 * (int) ($stats->seats ?? 0)),
                 'completed_at' => now(),
             ]);
 
@@ -502,11 +532,18 @@ class AdminTripController extends Controller
             ->where('trips.guider_id', Auth::id())
             ->where('trip_orders.order_status', 'paid');
 
+        // Pendapatan = harga trip saja (total dibayar dikurangi biaya layanan +
+        // asuransi Rp10.000/kursi milik platform) — konsisten dengan nominal yang
+        // dikreditkan ke dompet pemandu di MidtransController::fulfillPaidTripOrders.
+        $revenueAgg = (clone $paidOrders)
+            ->selectRaw('COALESCE(SUM(trip_orders.total), 0) as total, COALESCE(SUM(trip_orders.quantity), 0) as seats')
+            ->first();
+
         $stats = [
             'total_trips' => $trips->count(),
             'published' => $trips->where('status', '!=', Trip::STATUS_DRAFT)->count(),
             'participants' => (clone $paidOrders)->distinct()->count('trip_orders.user_id'),
-            'revenue' => (float) (clone $paidOrders)->sum('trip_orders.total'),
+            'revenue' => max(0.0, (float) $revenueAgg->total - 10000 * (int) $revenueAgg->seats),
         ];
 
         return Inertia::render('Admin/Trip/Analytics', [

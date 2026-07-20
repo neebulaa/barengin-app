@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/useTranslation";
 // Urutan tampil kategori notifikasi. Kuncinya harus cocok dengan
 // UserNotification::CATEGORIES di backend.
 const NOTIF_CATEGORIES = [
+    "activity",
     "pergi_bareng",
     "group",
     "order",
@@ -18,6 +19,7 @@ const NOTIF_CATEGORIES = [
     "split_bill",
     "jastip_request",
     "selling",
+    "forum",
 ];
 
 function Section({ icon: Icon, title, hint, children }) {

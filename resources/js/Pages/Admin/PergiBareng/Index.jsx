@@ -210,10 +210,10 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                 )}
                                                 <button
                                                     onClick={() => openGroupChat(t.id)}
-                                                    className="p-1.5 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
+                                                    className="inline-flex items-center justify-center p-1.5 bg-blue-50 text-primary-700 hover:bg-blue-100 rounded-lg transition-colors"
                                                     title={translate("admin.pergi.action_chat")}
                                                 >
-                                                    <BsChatDots size={16} />
+                                                    <BsChatDots size={14} />
                                                 </button>
                                                 {/* Bagi tagihan hanya masuk akal
                                                     setelah perjalanan selesai */}
@@ -240,13 +240,18 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                         <FiRefreshCw size={16} />
                                                     </Link>
                                                 )}
-                                                <button
-                                                    onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })}
-                                                    className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
-                                                    title={translate("admin.trip.action_delete")}
-                                                >
-                                                    <FiTrash2 size={16} />
-                                                </button>
+                                                {/* Hapus tersedia untuk semua status KECUALI
+                                                    yang sedang berlangsung — perjalanan yang
+                                                    berjalan tidak boleh dihapus. */}
+                                                {t.status !== "ongoing" && (
+                                                    <button
+                                                        onClick={() => setDeleteModal({ open: true, id: t.id, name: t.name })}
+                                                        className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                                                        title={translate("admin.trip.action_delete")}
+                                                    >
+                                                        <FiTrash2 size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

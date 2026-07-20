@@ -172,6 +172,11 @@ export default function Create({ transportations = [], prefill = null }) {
                                         <option key={opt} value={opt}>{opt}</option>
                                     ))}
                                 </select>
+                                {data.transportation === "Sesuaikan dengan rute" && (
+                                    <p className="text-xs text-neutral-500 mt-1.5">
+                                        {t("admin.pergi.form.transport_flexible_hint")}
+                                    </p>
+                                )}
                                 {fieldError("transportation")}
                             </div>
                         </div>

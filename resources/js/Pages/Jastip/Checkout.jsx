@@ -206,14 +206,12 @@ export default function Checkout({
             <Container>
                 {/* Header — konsisten dgn checkout trip */}
                 <div className="mb-8">
-                    {/* Kembali ke halaman sebelumnya (bukan selalu /jastip) */}
+                    {/* Selalu kembali ke etalase semua jastip. Sebelumnya memakai
+                        window.history.back() yang bisa memantul kembali ke checkout
+                        (loop) karena keranjang melayang mendorong checkout ke riwayat. */}
                     <button
                         type="button"
-                        onClick={() =>
-                            window.history.length > 1
-                                ? window.history.back()
-                                : router.visit("/jastip")
-                        }
+                        onClick={() => router.visit("/jastip")}
                         className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition"
                     >
                         <FaChevronLeft className="text-xl" />

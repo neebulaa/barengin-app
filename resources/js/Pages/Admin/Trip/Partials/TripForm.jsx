@@ -3,7 +3,7 @@ import Button from "@/Components/Button";
 import Input from "@/Components/Input";
 import LocationInput from "@/Components/LocationInput";
 import { useTranslation } from "@/lib/useTranslation";
-import { FiPlus, FiX, FiUploadCloud, FiTrash2, FiImage } from "react-icons/fi";
+import { FiPlus, FiX, FiUploadCloud, FiTrash2, FiImage, FiChevronDown } from "react-icons/fi";
 
 const inputClass =
     "w-full px-4 py-2.5 rounded-xl border border-neutral-400 focus:border-primary-700 outline-none text-sm transition-all";
@@ -34,6 +34,10 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
     const [facilityOptions, setFacilityOptions] = useState(facilities);
     const [showFacilityModal, setShowFacilityModal] = useState(false);
     const [newFacility, setNewFacility] = useState("");
+    // Tampilkan 5 fasilitas dulu agar daftar tidak memanjang ke bawah; sisanya
+    // dibuka lewat tombol "lihat semua".
+    const [showAllFacilities, setShowAllFacilities] = useState(false);
+    const FACILITY_PREVIEW = 5;
     const [imagePreview, setImagePreview] = useState(data.image_preview || null);
 
     const err = (key) => errors?.[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
@@ -50,6 +54,9 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
         if (!data.facilities.includes(name)) setData("facilities", [...data.facilities, name]);
         setNewFacility("");
         setShowFacilityModal(false);
+        // Buka daftar penuh agar fasilitas yang baru ditambah (di posisi > 5)
+        // langsung terlihat tercentang, tidak tersembunyi di balik "lihat semua".
+        setShowAllFacilities(true);
     };
 
     // ── Trip image ──
@@ -245,7 +252,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
                         <h3 className={cardTitle}>{t("admin.trip.form.facilities")}<Req /></h3>
                         <div className="space-y-2.5">
-                            {facilityOptions.map((name) => (
+                            {(showAllFacilities ? facilityOptions : facilityOptions.slice(0, FACILITY_PREVIEW)).map((name) => (
                                 <label key={name} className="flex items-center justify-between cursor-pointer">
                                     <span className="text-sm text-neutral-700">{name}</span>
                                     <input type="checkbox" checked={data.facilities.includes(name)} onChange={() => toggleFacility(name)}
@@ -253,6 +260,15 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                 </label>
                             ))}
                         </div>
+                        {facilityOptions.length > FACILITY_PREVIEW && (
+                            <button type="button" onClick={() => setShowAllFacilities((v) => !v)}
+                                className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary-700 hover:underline">
+                                {showAllFacilities
+                                    ? t("admin.trip.form.facilities_see_less")
+                                    : t("admin.trip.form.facilities_see_more").replace(":count", facilityOptions.length - FACILITY_PREVIEW)}
+                                <FiChevronDown className={`transition-transform ${showAllFacilities ? "rotate-180" : ""}`} />
+                            </button>
+                        )}
                         <button type="button" onClick={() => setShowFacilityModal(true)}
                             className="mt-4 w-full border border-neutral-200 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 transition">
                             <FiPlus /> {t("admin.trip.form.add_facility")}

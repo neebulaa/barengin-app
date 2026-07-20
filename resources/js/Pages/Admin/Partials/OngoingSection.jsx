@@ -99,13 +99,7 @@ export default function OngoingSection({
                 </span>
             </div>
 
-            <div
-                className={
-                    hasTrack
-                        ? "grid gap-3 grid-cols-1"
-                        : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                }
-            >
+            <div className={"grid gap-3 grid-cols-1"}>
                 {items.map((item) => (
                     <div
                         key={item.id}

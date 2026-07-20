@@ -83,6 +83,14 @@ class WalletController extends Controller
                 'email'      => $user->email,
                 'phone'      => $user->phone ?? '08000000000',
             ],
+            // URL tujuan setelah pembayaran untuk channel yang REDIRECT keluar
+            // halaman (VA, sebagian e-wallet). WAJIB di-set: tanpa ini Midtrans
+            // memakai "Finish Redirect URL" default dashboard — yang bisa mengarah
+            // ke halaman trip success, sehingga isi saldo malah mendarat di sana.
+            // Channel popup tetap ditangani callback JS (onSuccess) di WalletCard.
+            'callbacks' => [
+                'finish' => route('profile-history'),
+            ],
         ];
 
         try {

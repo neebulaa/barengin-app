@@ -119,9 +119,9 @@ class PergiBarengController extends Controller
         $sortBy  = $request->query('sort', 'schedule');
         $dari    = trim((string) $request->query('dari', ''));
         $ke      = trim((string) $request->query('ke', ''));
-        $tanggal = $request->query('tanggal');
-        $waktu   = $request->query('waktu');
-        $jumlah  = (int) $request->query('jumlah', 0);
+        $tanggal   = $request->query('tanggal');
+        $waktu     = $request->query('waktu');
+        $kendaraan = trim((string) $request->query('kendaraan', ''));
 
         // 2. Siapkan query dasar beserta relasinya
         $query = PergiBareng::with(['initiator.received_ratings', 'pergi_bareng_participants'])
@@ -151,6 +151,9 @@ class PergiBarengController extends Controller
         }
         if ($waktu) {
             $query->whereTime('time_appointment', '>=', $waktu);
+        }
+        if ($kendaraan !== '') {
+            $query->where('transportation', $kendaraan);
         }
 
         // --- LOGIKA SORTING DATABASE ---
@@ -210,13 +213,6 @@ class PergiBarengController extends Controller
             ];
         });
 
-        // Filter berdasarkan jumlah kursi tersisa (dihitung setelah format)
-        if ($jumlah > 0) {
-            $formattedTrips = $formattedTrips->filter(
-                fn ($trip) => $trip['remainingSeats'] >= $jumlah
-            )->values();
-        }
-
         // --- LOGIKA SORTING COLLECTION ---
         if ($sortBy === 'seats') {
             $formattedTrips = $formattedTrips->sortByDesc('remainingSeats')->values();
@@ -244,12 +240,12 @@ class PergiBarengController extends Controller
             // Peringatan di daftar saat user mengetik lokasi di luar Indonesia.
             'foreignLocation' => $foreignLocation,
             'filters' => [
-                'dari'    => $dari,
-                'ke'      => $ke,
-                'tanggal' => $tanggal,
-                'waktu'   => $waktu,
-                'jumlah'  => $jumlah ?: '',
-                'sort'    => $sortBy,
+                'dari'      => $dari,
+                'ke'        => $ke,
+                'tanggal'   => $tanggal,
+                'waktu'     => $waktu,
+                'kendaraan' => $kendaraan,
+                'sort'      => $sortBy,
             ],
         ]);
     }
@@ -296,11 +292,15 @@ class PergiBarengController extends Controller
             ]);
         }
 
-        // Cegah pengajuan / keikutsertaan ganda
+        // Satu permintaan tertunda dalam satu waktu — arahkan ke status permintaan.
         if ($trip->pergi_bareng_requests->contains('user_id', $userId)) {
             return redirect()->route('pergi-bareng.request-sent', $trip->id);
         }
-        if ($trip->pergi_bareng_participants->contains('user_id', $userId)) {
+
+        // Peserta yang sudah tergabung BOLEH mengajukan kursi tambahan selama
+        // perjalanan belum berlangsung. Begitu berlangsung/selesai, tidak lagi.
+        if ($trip->pergi_bareng_participants->contains('user_id', $userId)
+            && $trip->status() !== 'will_start') {
             return redirect()->route('pergi-bareng.show', $trip->id)
                 ->with('flash', ['type' => 'info', 'message' => 'Anda sudah tergabung dalam trip ini.']);
         }

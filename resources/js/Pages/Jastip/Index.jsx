@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
+import { toast } from "@/lib/toast";
 import Container from "@/Components/Container";
 import Input from "@/Components/Input";
 import PlaceAutocomplete from "@/Components/PlaceAutocomplete";
@@ -100,6 +101,18 @@ export default function Index({
             schedule,
             ...overrides,
         };
+        // Validasi rentang harga: maksimal harus lebih besar dari minimal.
+        // Bila terbalik, beri tahu pengguna & jangan terapkan filter.
+        const min = params.price_min;
+        const max = params.price_max;
+        if (
+            min !== "" && min != null &&
+            max !== "" && max != null &&
+            Number(min) > Number(max)
+        ) {
+            toast.info(t("jastip.shop.price_invalid"));
+            return;
+        }
         // Bersihkan nilai kosong agar URL rapi
         Object.keys(params).forEach((k) => {
             if (params[k] === "" || params[k] == null || (Array.isArray(params[k]) && params[k].length === 0)) {

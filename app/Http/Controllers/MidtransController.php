@@ -371,6 +371,27 @@ class MidtransController extends Controller
                 DB::table('trip_participants')->insert($rows);
             }
 
+            // Kredit dompet PEMANDU: pendapatan trip = total dibayar dikurangi
+            // biaya layanan + asuransi (Rp5.000 + Rp5.000 = Rp10.000 per kursi,
+            // lihat TripsController::processPayment) yang menjadi milik platform.
+            // Uangnya sendiri berada di akun Midtrans platform; dompet mencatat hak
+            // pemandu — sama seperti pola split bill. Idempotent: blok fulfill ini
+            // hanya jalan untuk order dengan fulfilled_at NULL, dan Wallet::credit()
+            // menolak kredit ganda dari sumber (trip_order, id) yang sama.
+            $trip = DB::table('trips')->where('id', $order->trip_id)->first();
+            if ($trip) {
+                $platformFee = 10000 * (int) $order->quantity;
+                $tripRevenue = max(0.0, (float) $order->total - $platformFee);
+                if ($tripRevenue > 0) {
+                    \App\Models\Wallet::forUser((int) $trip->guider_id)->credit(
+                        $tripRevenue,
+                        'Pendapatan trip: ' . $trip->name,
+                        'trip_order',
+                        (int) $order->id,
+                    );
+                }
+            }
+
             self::addBuyerToTripGroup((int) $order->trip_id, (int) $order->user_id);
 
             DB::table('trip_orders')

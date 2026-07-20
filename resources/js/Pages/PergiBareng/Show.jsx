@@ -15,7 +15,7 @@ import L from 'leaflet';
 import {
     FaCalendarAlt, FaRegClock, FaUserFriends, FaCheckCircle,
     FaMapMarkerAlt, FaCar, FaInfoCircle, FaHeart, FaRegHeart,
-    FaMinus, FaPlus, FaLock
+    FaMinus, FaPlus, FaLock, FaLocationArrow
 } from "react-icons/fa";
 import { BsChatDots, BsPeople } from "react-icons/bs";
 
@@ -59,11 +59,15 @@ export default function Show({ trip }) {
     const isLoggedIn = Boolean(auth?.user);
     const { t } = useTranslation();
 
-    // Pantau perjalanan tidak lagi dibuka dari halaman detail: satu-satunya
-    // pintunya adalah kartu di grup chat, yang muncul sendiri begitu perjalanan
-    // berlangsung dan berubah jadi keterangan "selesai" setelahnya. Peta di sini
-    // murni untuk dilihat; status berlangsung tetap ditandai di header.
+    // Status berlangsung ditandai di header, dan (bila pengguna anggota) membuka
+    // tombol "Pantau Perjalanan" di kartu aksi menuju peta live.
     const isOngoing = trip.status === "ongoing";
+
+    // Anggota perjalanan = peserta yang sudah disetujui atau penyelenggaranya.
+    const isMember = trip.is_participant || trip.organizer?.is_self;
+    // Tombol pantau perjalanan hanya untuk anggota saat perjalanan berlangsung
+    // (route track memang menolak non-anggota & status non-ongoing).
+    const canTrack = isOngoing && isMember;
 
     const [origin, setOrigin] = useState(null);          // titik kumpul
     const [destination, setDestination] = useState(null); // titik tujuan
@@ -568,11 +572,24 @@ export default function Show({ trip }) {
                                     <Button isButtonLink href="/login" type="primary" className="w-full justify-center gap-2">
                                         <FaLock className="text-xs" /> {t("pb.show.login_to_join")}
                                     </Button>
+                                ) : canTrack ? (
+                                    // Sedang berlangsung & pengguna anggota → pantau perjalanan.
+                                    <Button
+                                        isButtonLink
+                                        href={`/pergi-bareng/${trip.id}/track`}
+                                        type="primary"
+                                        className="w-full justify-center gap-2"
+                                    >
+                                        <FaLocationArrow className="text-xs" /> {t("pb.show.track_journey")}
+                                    </Button>
                                 ) : trip.organizer?.is_self ? (
                                     <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-center text-sm text-neutral-600">
                                         {t("pb.show.you_organizer")}
                                     </div>
-                                ) : trip.is_participant ? (
+                                ) : trip.is_participant && trip.status !== "will_start" ? (
+                                    // Sudah tergabung & perjalanan sudah selesai → tak bisa
+                                    // menambah kursi lagi. (Yang berlangsung ditangani canTrack;
+                                    // yang belum mulai jatuh ke form agar bisa request tambahan.)
                                     <div className="bg-success-50 border border-success-100 rounded-xl p-3 text-center text-sm font-semibold text-success-700">
                                         {t("pb.show.already_joined")}
                                     </div>

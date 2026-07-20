@@ -25,8 +25,19 @@ class TripsController extends Controller
         $query = DB::table('trips')
             ->join('users', 'trips.guider_id', '=', 'users.id')
             ->select('trips.*', 'users.id as host_id', 'users.full_name as guide_name', 'users.profile_image')
-            ->whereDate('trips.end_date', '>=', now()) // sembunyikan trip yang sudah lewat
-            ->where('trips.status', '!=', 'draft'); // hanya trip yang sudah dipublish
+            // Sembunyikan trip yang SUDAH berlangsung (tanggal mulai < hari ini)
+            // maupun yang sudah lewat — hanya trip yang belum berangkat yang tampil.
+            ->whereDate('trips.start_date', '>=', now())
+            ->where('trips.status', '!=', 'draft') // hanya trip yang sudah dipublish
+            // Sembunyikan trip yang kursinya sudah HABIS (total kursi terjual pada
+            // run aktif >= kapasitas). Kursi = SUM(quantity) pesanan berbayar.
+            ->whereRaw('trips.people_amount > (
+                SELECT COALESCE(SUM(o.quantity), 0)
+                  FROM trip_orders o
+                 WHERE o.trip_id = trips.id
+                   AND o.order_status = ?
+                   AND (trips.current_run_started_at IS NULL OR o.created_at >= trips.current_run_started_at)
+            )', ['paid']);
 
         // Pencarian longgar: "Bromo" ikut menemukan trip yang lokasinya ditulis
         // sebagai provinsinya ("Jawa Timur"), termasuk trip lain di kota yang sama.
@@ -43,7 +54,16 @@ class TripsController extends Controller
         // Sorting di sisi server agar konsisten di seluruh halaman (bukan hanya per halaman)
         switch ($sort) {
             case 'rating':
-                $query->orderByDesc('trips.rating');
+                // Urutkan berdasarkan rating PEMANDU (rata-rata user_ratings, type
+                // trip_bareng) — nilai yang sama dengan yang tampil di kartu. Kolom
+                // `trips.rating` tidak dipakai di UI, jadi mengurutkannya membuat
+                // hasil terasa "acak". Trip tanpa rating (NULL) jatuh ke bawah.
+                $query->orderByDesc(
+                    DB::table('user_ratings')
+                        ->selectRaw('AVG(rating_amount)')
+                        ->whereColumn('rated_user_id', 'trips.guider_id')
+                        ->where('type', 'trip_bareng')
+                );
                 break;
             case 'price_asc':
                 $query->orderBy('trips.price', 'asc');
@@ -77,13 +97,14 @@ class TripsController extends Controller
             $endDate = Carbon::parse($trip->end_date);
             $duration = $startDate->diffInDays($endDate) . ' Days';
 
-            // Peserta = user unik yang sudah membayar pada run aktif
-            $joined = DB::table('trip_orders')
+            // Kursi terisi = TOTAL kursi yang dibayar (SUM quantity) pada run aktif.
+            // Satu orang bisa memesan beberapa kursi, jadi yang dihitung adalah
+            // jumlah kursi, bukan jumlah orang unik.
+            $joined = (int) DB::table('trip_orders')
                 ->where('trip_id', $trip->id)
                 ->where('order_status', 'paid')
                 ->when($trip->current_run_started_at, fn ($q) => $q->where('created_at', '>=', $trip->current_run_started_at))
-                ->distinct()
-                ->count('user_id');
+                ->sum('quantity');
 
             // Sisa kursi otomatis dihitung dari jumlah asli di tabel DB
             $remaining = $trip->people_amount - $joined;
@@ -163,7 +184,10 @@ class TripsController extends Controller
             ])
             ->values();
 
-        $joined = $participants->count();
+        // Kursi terisi = TOTAL kursi dibayar (SUM quantity). Daftar `participants`
+        // di atas tetap per-orang (untuk avatar), tetapi angka yang ditampilkan
+        // adalah kursi, bukan jumlah orang.
+        $joined = $this->joinedCount($trip->id);
 
         // 2. Ambil Rata-Rata Rating Guide (type: trip_bareng)
         $guiderRating = DB::table('user_ratings')
@@ -313,6 +337,32 @@ class TripsController extends Controller
         // 'wallet' membayar dari saldo; selain itu tetap lewat Midtrans Snap.
         $payWithWallet = $request->input('payment_method') === 'wallet';
 
+        // Jaring pengaman validasi peserta (selain validasi frontend): tolak data
+        // yang mengandung simbol/karakter aneh sebelum pesanan dibuat.
+        if (! is_array($participants) || count($participants) < 1) {
+            return response()->json(['error' => 'Data peserta tidak lengkap.'], 422);
+        }
+        foreach (array_values($participants) as $i => $p) {
+            $no       = $i + 1;
+            $name     = trim((string) ($p['name'] ?? ''));
+            $phone    = preg_replace('/\D/', '', (string) ($p['phone'] ?? ''));
+            $nik      = trim((string) ($p['nik'] ?? ''));
+            $passport = trim((string) ($p['passport'] ?? ''));
+
+            if ($name === '') {
+                return response()->json(['error' => "Nama peserta {$no} wajib diisi."], 422);
+            }
+            if (! preg_match('/^0?8\d{8,11}$/', $phone)) {
+                return response()->json(['error' => "Nomor HP peserta {$no} tidak valid."], 422);
+            }
+            if ($nik !== '' && ! preg_match('/^\d{16}$/', $nik)) {
+                return response()->json(['error' => "NIK peserta {$no} harus 16 digit angka."], 422);
+            }
+            if ($passport !== '' && ! preg_match('/^[A-Za-z0-9]{5,12}$/', $passport)) {
+                return response()->json(['error' => "Nomor paspor peserta {$no} tidak valid."], 422);
+            }
+        }
+
         // Validasi sisa kuota
         $joined    = $this->joinedCount($id);
         $remaining = $trip->people_amount - $joined;
@@ -446,6 +496,14 @@ class TripsController extends Controller
                 'email'      => $user->email,
                 'phone'      => $user->phone ?? '08000000000',
             ],
+            // URL tujuan setelah pembayaran untuk channel yang REDIRECT keluar
+            // halaman (VA, sebagian e-wallet). Tanpa ini, Midtrans memakai "Finish
+            // Redirect URL" dari dashboard yang defaultnya https://example.com —
+            // itulah "Example Domain" yang dilihat sebagian user. Channel popup
+            // tetap ditangani callback JS (onSuccess) di Checkout.
+            'callbacks' => [
+                'finish' => route('trip-bareng.success', $id),
+            ],
         ];
 
         try {
@@ -486,8 +544,16 @@ class TripsController extends Controller
         $startDate = Carbon::parse($trip->start_date);
         $endDate = Carbon::parse($trip->end_date);
 
-        // Jumlah peserta = user unik yang sudah membayar (konsisten dgn detail & index)
-        $joined = $this->joinedCount($trip->id);
+        // "Teman yang menunggu" = jumlah ORANG lain yang sudah bergabung (bukan
+        // kursi): hitung peserta unik lalu kurangi 1 untuk si pembeli sendiri.
+        // Berbasis orang, jadi kursi ganda milik satu peserta tidak ikut dihitung.
+        $runStart = $trip->current_run_started_at;
+        $distinctParticipants = (int) DB::table('trip_orders')
+            ->where('trip_id', $trip->id)
+            ->where('order_status', 'paid')
+            ->when($runStart, fn ($q) => $q->where('created_at', '>=', $runStart))
+            ->distinct()
+            ->count('user_id');
 
         $order = [
             'transaction_id' => 'OTRIP-' . str_pad($id, 6, '0', STR_PAD_LEFT),
@@ -496,7 +562,7 @@ class TripsController extends Controller
             'date_range' => $startDate->format('d M') . ' - ' . $endDate->format('d M Y'),
             'quantity' => 1,
             'image' => $this->resolveTripImage($trip->image),
-            'friends_waiting' => $joined, // <-- Ganti rand(3, 15) menjadi data asli ($joined)
+            'friends_waiting' => max(0, $distinctParticipants - 1),
         ];
 
         return Inertia::render('TripBareng/Success', [
@@ -520,12 +586,13 @@ class TripsController extends Controller
         // tidak lagi menghitung kursi terisi.
         $runStart = DB::table('trips')->where('id', $tripId)->value('current_run_started_at');
 
+        // TOTAL kursi terjual (SUM quantity), bukan jumlah orang unik: satu orang
+        // boleh memesan lebih dari satu kursi.
         return (int) DB::table('trip_orders')
             ->where('trip_id', $tripId)
             ->where('order_status', 'paid')
             ->when($runStart, fn ($q) => $q->where('created_at', '>=', $runStart))
-            ->distinct()
-            ->count('user_id');
+            ->sum('quantity');
     }
 
     private function resolveTripImage(?string $path): string

@@ -27,10 +27,21 @@ class ForumFollowController extends Controller
         if ($existing) {
             $existing->delete();
         } else {
-            Follow::create([
+            $follow = Follow::create([
                 'follower_id' => $authUser->id,
                 'following_id' => $target->id,
             ]);
+
+            // Kabari pengguna yang diikuti. Dedupe per baris follow: unfollow lalu
+            // follow lagi menghasilkan baris baru (id baru) → notifikasi baru,
+            // tapi klik follow berulang pada relasi yang sama tidak menggandakan.
+            \App\Models\UserNotification::send(
+                (int) $target->id,
+                'forum.followed',
+                ['follower' => $authUser->full_name ?? $authUser->username],
+                '/forum/users/' . $authUser->username,
+                'forum.followed:follow:' . $follow->id,
+            );
         }
 
         return back();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserNotification;
+use App\Services\LifecycleNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -13,6 +14,10 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+
+        // Tanpa cron: segarkan notifikasi lifecycle (mulai/selesai/waktu ambil)
+        // milik pengguna ini saat membuka halaman notifikasi. Di-throttle di dalam.
+        LifecycleNotifier::freshenForUser((int) $user->id);
 
         $filter = $request->query('filter') === 'unread' ? 'unread' : 'all';
 
@@ -37,6 +42,11 @@ class NotificationController extends Controller
      */
     public function poll()
     {
+        // Tanpa cron: navbar mem-poll endpoint ini secara berkala, jadi ini juga
+        // menjadi "mesin" penyegar notifikasi lifecycle (di-throttle per pengguna),
+        // sehingga lencana bel tetap bertambah walau tak ada cron berjalan.
+        LifecycleNotifier::freshenForUser((int) Auth::id());
+
         return response()->json([
             'unread' => $this->unreadCount(Auth::id()),
         ]);
