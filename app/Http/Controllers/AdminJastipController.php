@@ -277,6 +277,17 @@ class AdminJastipController extends Controller
     public function toggleRequests($id)
     {
         $item = JastipItem::where('user_id', Auth::id())->findOrFail($id);
+
+        // Hanya saat dipublish. Sejalan dengan JastipItem::scopeOpenForRequests()
+        // yang mensyaratkan end_date belum lewat - menyalakan flag di luar status
+        // ini tidak berefek apa pun karena requestnya tetap ditolak.
+        if ($item->jastiperStatus() !== 'published') {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Request titipan hanya bisa diatur saat jastip masih dipublish (masa pemesanan belum berakhir).',
+            ]);
+        }
+
         $item->update(['allow_requests' => ! $item->allow_requests]);
 
         return back()->with('flash', [

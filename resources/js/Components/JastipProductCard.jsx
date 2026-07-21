@@ -33,6 +33,10 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
     const badgeLabel = lifecycle ? t(`jastip.jastiper_status.${lifecycle}`, lifecycle) : t(`jastip.status.${item.status}`, item.status);
     const isFinished = lifecycle === "finished";
     const isPickupTime = lifecycle === "pickup_time";
+    // Hanya saat dipublish. Ini sejalan dengan scopeOpenForRequests() di server yang
+    // mensyaratkan end_date belum lewat - di luar status ini request tetap ditolak,
+    // jadi tombolnya cuma akan menipu.
+    const acceptsRequests = lifecycle === "published";
 
     return (
         <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
@@ -107,9 +111,8 @@ export default function JastipProductCard({ item, manage = false, onEdit, onPubl
                                 <FiNavigation size={15} />
                             </button>
                         )}
-                        {/* Buka/tutup penerimaan request titipan - hanya item aktif
-                            (bukan draft, belum selesai). Jastip selesai/draft tak bisa terima request. */}
-                        {!item.is_draft && !isFinished && onToggleRequests && (
+                        {/* Buka/tutup penerimaan request titipan - hanya saat dipublish. */}
+                        {acceptsRequests && onToggleRequests && (
                             <button
                                 type="button"
                                 onClick={onToggleRequests}
