@@ -32,6 +32,12 @@ class DatabaseSeeder extends Seeder
             JastipStatusSeeder::class,
             PergiBarengStatusSeeder::class,
             TripStatusSeeder::class,
+            // "User lama" yang mengikuti banyak layanan admin (untuk simulasi
+            // review & pantau); dijalankan setelah item admin per-status ada.
+            VeteranUserSeeder::class,
+            // Backfill rincian peserta per kursi untuk SEMUA pesanan trip yang
+            // masih kosong; ditaruh terakhir agar mencakup data seeder di atas.
+            TripSeatDetailSeeder::class,
             // ActivityLogSeeder dinonaktifkan: log kegiatan kini terisi otomatis dari
             // aktivitas nyata (login, publish trip, hapus data, dll) via ActivityLog::record().
         ]);
