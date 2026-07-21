@@ -383,9 +383,20 @@ export default function ChatShow({
 
         tick();
         const interval = setInterval(tick, 5000);
+
+        // Browser mencekik setInterval di tab latar belakang (Chrome sampai ~1x per
+        // menit), jadi begitu tab dibuka lagi tick berikutnya bisa lama sekali -
+        // status grup & kartu pantau terlihat basi padahal server sudah benar.
+        // Memicu sekali saat tab kembali terlihat membuatnya langsung segar.
+        const onVisible = () => {
+            if (!document.hidden) tick();
+        };
+        document.addEventListener("visibilitychange", onVisible);
+
         return () => {
             cancelled = true;
             clearInterval(interval);
+            document.removeEventListener("visibilitychange", onVisible);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [conversation?.id]);
@@ -405,9 +416,17 @@ export default function ChatShow({
             }
         };
         const interval = setInterval(tick, 12000);
+
+        // Alasan sama dengan poll pesan di atas.
+        const onVisible = () => {
+            if (!document.hidden) tick();
+        };
+        document.addEventListener("visibilitychange", onVisible);
+
         return () => {
             cancelled = true;
             clearInterval(interval);
+            document.removeEventListener("visibilitychange", onVisible);
         };
     }, []);
 

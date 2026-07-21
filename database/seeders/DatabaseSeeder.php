@@ -38,6 +38,9 @@ class DatabaseSeeder extends Seeder
             // Backfill rincian peserta per kursi untuk SEMUA pesanan trip yang
             // masih kosong; ditaruh terakhir agar mencakup data seeder di atas.
             TripSeatDetailSeeder::class,
+            // Samakan grup chat pergi bareng dengan daftar pesertanya - seeder di
+            // atas menyisipkan peserta langsung, melewati store()/approve().
+            PergiBarengGroupSyncSeeder::class,
             // ActivityLogSeeder dinonaktifkan: log kegiatan kini terisi otomatis dari
             // aktivitas nyata (login, publish trip, hapus data, dll) via ActivityLog::record().
         ]);

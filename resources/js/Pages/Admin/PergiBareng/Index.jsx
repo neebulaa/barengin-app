@@ -51,7 +51,17 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
         tick(); // jangan menunggu satu interval penuh saat halaman dibuka
         const interval = setInterval(tick, 15000);
 
-        return () => clearInterval(interval);
+        // Tab latar belakang bikin setInterval dicekik browser, jadi segarkan
+        // sekali begitu tab kembali terlihat.
+        const onVisible = () => {
+            if (!document.hidden) tick();
+        };
+        document.addEventListener("visibilitychange", onVisible);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener("visibilitychange", onVisible);
+        };
     }, [refreshCounts]);
 
     // Kunjungan Inertia membawa angka baru dari server; buang hasil poll lama

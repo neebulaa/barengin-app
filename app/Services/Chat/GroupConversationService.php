@@ -124,6 +124,36 @@ class GroupConversationService{
         return $missing->count();
     }
 
+    // Kembaran syncTripGroupMembers untuk pergi bareng: pastikan grupnya ada, lalu
+    // masukkan penyelenggara + semua pesertanya.
+    //
+    // Alur normal sudah menanganinya sendiri (store() membuat grup, approve()
+    // melampirkan peserta). Ini untuk data yang masuk lewat jalur lain - terutama
+    // seeder yang menyisipkan langsung ke pergi_bareng_participants.
+    public function syncPergiBarengGroupMembers(int $pergiBarengId): int
+    {
+        $trip = \App\Models\PergiBareng::find($pergiBarengId);
+        if (! $trip) {
+            return 0;
+        }
+
+        $conversation = $this->ensurePergiBarengGroup($pergiBarengId, (int) $trip->initiator_id);
+
+        $participantIds = \Illuminate\Support\Facades\DB::table('pergi_bareng_participants')
+            ->where('pergi_bareng_id', $pergiBarengId)
+            ->distinct()
+            ->pluck('user_id');
+
+        $existing = $conversation->participants()->pluck('users.id');
+        $missing  = $participantIds->diff($existing);
+
+        foreach ($missing as $uid) {
+            $conversation->participants()->attach((int) $uid, ['last_read_at' => now()]);
+        }
+
+        return $missing->count();
+    }
+
     private function attachIfMissing(Conversation $conversation, ?int $userId): void
     {
         if (! $userId) {
