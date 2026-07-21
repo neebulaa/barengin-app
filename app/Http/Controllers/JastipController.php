@@ -690,12 +690,31 @@ class JastipController extends Controller
             })
             ->values();
 
+        // Grup dibuat saat pelunasan (MidtransController::fulfillPaidJastipOrders).
+        // Kalau pesanan masih pending, hasilnya kosong dan tombolnya tidak muncul.
+        $groups = DB::table('jastip_order_items')
+            ->join('jastip_items', 'jastip_order_items.jastip_item_id', '=', 'jastip_items.id')
+            ->join('conversations', function ($join) {
+                $join->on('conversations.jastip_item_id', '=', 'jastip_items.id')
+                    ->where('conversations.is_group', true);
+            })
+            ->where('jastip_order_items.jastip_order_id', $order->id)
+            ->select('jastip_items.id as item_id', 'jastip_items.name', 'conversations.id as conversation_id')
+            ->distinct()
+            ->get()
+            ->map(fn ($g) => [
+                'name' => $g->name,
+                'url'  => '/chat/' . $g->conversation_id . '?tab=groups',
+            ])
+            ->values();
+
         return Inertia::render('Jastip/Success', [
             'order' => [
                 'code'       => 'JSTP-' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
                 'status'     => $order->order_status,
                 'total'      => (float) $tx->total_amount,
                 'items'      => $items,
+                'groups'     => $groups,
             ],
         ]);
     }

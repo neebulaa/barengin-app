@@ -138,6 +138,7 @@ class MidtransController extends Controller
 
         if ($orderStatus === 'paid') {
             self::fulfillPaidTripOrders($orderId);
+            self::fulfillPaidJastipOrders($orderId);
             self::notifyPaid($orderId);
             self::notifySellersOfPaidJastip($orderId);
         }
@@ -326,6 +327,62 @@ class MidtransController extends Controller
             DB::table('trip_orders')
                 ->where('id', $order->id)
                 ->update(['fulfilled_at' => now(), 'updated_at' => now()]);
+        }
+    }
+
+    // Pembeli jastip langsung masuk grup barangnya begitu lunas - satu transaksi
+    // bisa memuat beberapa item (bahkan dari jastiper berbeda), jadi grupnya per item.
+    private static function fulfillPaidJastipOrders(string $transactionId): void
+    {
+        $buyerId = (int) DB::table('transactions')->where('id', $transactionId)->value('user_id');
+
+        if (! $buyerId) {
+            return;
+        }
+
+        $itemIds = DB::table('jastip_order_items')
+            ->join('jastip_orders', 'jastip_order_items.jastip_order_id', '=', 'jastip_orders.id')
+            ->where('jastip_orders.transaction_id', $transactionId)
+            ->where('jastip_orders.order_status', 'paid')
+            ->pluck('jastip_order_items.jastip_item_id')
+            ->unique();
+
+        foreach ($itemIds as $itemId) {
+            self::addBuyerToJastipGroup((int) $itemId, $buyerId);
+        }
+    }
+
+    // Idempoten: keanggotaan hanya ditambah bila belum ada, jadi webhook yang
+    // datang berulang (atau sync manual) tidak menggandakan apa pun.
+    private static function addBuyerToJastipGroup(int $itemId, int $buyerId): void
+    {
+        $item = DB::table('jastip_items')->where('id', $itemId)->first();
+
+        if (! $item) {
+            return;
+        }
+
+        $conversation = Conversation::firstOrCreate(
+            ['jastip_item_id' => $itemId, 'is_group' => true],
+            ['trip_id' => null, 'pergi_bareng_id' => null],
+        );
+
+        $members  = collect([$buyerId, $item->user_id])->filter()->unique();
+        $existing = $conversation->participants()->pluck('users.id');
+
+        foreach ($members->diff($existing) as $uid) {
+            $conversation->participants()->attach($uid, ['last_read_at' => now()]);
+
+            // Jastiper tak perlu dikabari soal grup jualannya sendiri.
+            if ((int) $uid !== (int) $item->user_id) {
+                \App\Models\UserNotification::send(
+                    (int) $uid,
+                    'group.joined',
+                    ['name' => $item->name, 'kind' => 'jastip'],
+                    '/chat/' . $conversation->id,
+                    'group.joined:conv:' . $conversation->id . ':user:' . $uid,
+                );
+            }
         }
     }
 

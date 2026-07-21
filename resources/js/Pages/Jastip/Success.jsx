@@ -4,7 +4,7 @@ import Container from "@/Components/Container";
 import Button from "@/Components/Button";
 import MainLayout from "@/Layouts/MainLayout";
 import { useTranslation } from "@/lib/useTranslation";
-import { BsCheckLg } from "react-icons/bs";
+import { BsCheckLg, BsChatDots } from "react-icons/bs";
 import { FiClock } from "react-icons/fi";
 
 const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
@@ -12,6 +12,7 @@ const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 export default function Success({ order }) {
     const { t } = useTranslation();
     const isPaid = order.status === "paid";
+    const groups = order.groups ?? [];
 
     return (
         <div className="flex min-h-screen flex-col items-center bg-neutral-50 pb-32 pt-16">
@@ -76,13 +77,36 @@ export default function Success({ order }) {
 
                 {/* Actions */}
                 <div className="flex w-full max-w-[520px] flex-col gap-4">
+                    {/* Grup dibuat otomatis saat lunas. Satu pesanan bisa memuat
+                        item dari jastiper berbeda, jadi grupnya bisa lebih dari satu. */}
+                    {groups.map((g, i) => (
+                        <Button
+                            key={i}
+                            isButtonLink
+                            href={g.url}
+                            type="primary"
+                            size="md"
+                            rounded
+                            className="w-full justify-center gap-2 font-bold text-white"
+                        >
+                            <BsChatDots className="shrink-0 text-base" />
+                            {groups.length > 1
+                                ? `${t("jastip.success.open_group")} - ${g.name}`
+                                : t("jastip.success.open_group")}
+                        </Button>
+                    ))}
                     <Button
                         isButtonLink
                         href="/profile-history?tab=transactions"
-                        type="primary"
+                        type={groups.length > 0 ? "neutral" : "primary"}
+                        variant={groups.length > 0 ? "outline" : undefined}
                         size="md"
                         rounded
-                        className="w-full font-bold text-white"
+                        className={
+                            groups.length > 0
+                                ? "w-full bg-white font-bold text-neutral-700"
+                                : "w-full font-bold text-white"
+                        }
                     >
                         {t("jastip.success.detail_btn")}
                     </Button>

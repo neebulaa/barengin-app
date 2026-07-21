@@ -1000,6 +1000,7 @@
     "jastip.success.paid": "Paid",
     "jastip.success.pending_badge": "Pending",
     "jastip.success.detail_btn": "View Transaction Details",
+    "jastip.success.open_group": "Open Jastip Group",
     "jastip.success.skip": "Skip",
     "jastip.form.location": "Jastip Location",
     "jastip.form.location_note": "Set where buyers collect the item and where it is purchased.",
