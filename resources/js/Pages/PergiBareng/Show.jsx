@@ -422,7 +422,7 @@ export default function Show({ trip }) {
                                                 <img src={p.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold flex items-center gap-1 truncate">{p.name} {p.verified && <FaCheckCircle className="text-primary-500 text-xs shrink-0"/>}</p>
-                                                    <p className="text-xs text-neutral-500">{p.seat_label || t("pb.show.participant")}</p>
+                                                    <p className="text-xs text-neutral-500">{t("pb.show.one_seat")}</p>
                                                 </div>
                                             </Link>
                                         ) : (
@@ -430,7 +430,7 @@ export default function Show({ trip }) {
                                                 <img src={p.avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar"/>
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold flex items-center gap-1 truncate">{p.name} {p.verified && <FaCheckCircle className="text-primary-500 text-xs shrink-0"/>}</p>
-                                                    <p className="text-xs text-neutral-500">{p.seat_label || t("pb.show.participant")}</p>
+                                                    <p className="text-xs text-neutral-500">{t("pb.show.one_seat")}</p>
                                                 </div>
                                             </div>
                                         )}

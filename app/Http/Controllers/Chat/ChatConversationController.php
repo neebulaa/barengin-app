@@ -258,6 +258,15 @@ class ChatConversationController extends Controller
         $removal = new \App\Services\ParticipantRemoval();
 
         if ($conversation->pergi_bareng) {
+            // Kursi terkunci setelah perjalanan berjalan (pembagian tagihan harus
+            // adil), jadi mengeluarkan dari grup pun ikut ditolak - kalau tidak,
+            // orangnya lepas dari grup tapi kursinya tertinggal.
+            abort_if(
+                $removal->pergiBarengSeatsLocked($conversation->pergi_bareng),
+                422,
+                'Perjalanan sudah berlangsung, peserta tidak bisa dikeluarkan lagi agar pembagian tagihan tetap adil.',
+            );
+
             $removal->fromPergiBareng($conversation->pergi_bareng, (int) $user->id);
         } elseif ($conversation->trip) {
             $removal->fromTrip($conversation->trip, (int) $user->id);

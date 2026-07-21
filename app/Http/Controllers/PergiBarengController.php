@@ -93,11 +93,11 @@ class PergiBarengController extends Controller
                     'is_following' => $followedIds->has($p->user_id),
                 ];
 
+                // Satu baris per kursi. Tiap baris sudah jelas mewakili 1 kursi,
+                // jadi tidak perlu penomoran "kursi ke-N dari M".
                 $qty = max(1, (int) $p->quantity);
 
-                return collect(range(1, $qty))->map(fn ($seat) => array_merge($entry, [
-                    'seat_label' => $qty > 1 ? "Kursi {$seat} dari {$qty}" : null,
-                ]));
+                return collect(range(1, $qty))->map(fn () => $entry);
             })->values(),
             'financing_estimates' => $trip->financing_estimate
             ? $trip->financing_estimate->map(fn ($fe) => [

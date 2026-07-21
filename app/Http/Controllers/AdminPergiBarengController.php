@@ -401,6 +401,9 @@ class AdminPergiBarengController extends Controller
                 'joined' => $joined,
                 'capacity' => $trip->people_amount,
                 'remaining' => max(0, $trip->people_amount - $joined),
+                'status' => $this->statusOf($trip),
+                // Kursi dikunci setelah perjalanan berjalan demi keadilan split bill.
+                'seats_locked' => (new \App\Services\ParticipantRemoval())->pergiBarengSeatsLocked($trip),
             ],
             'requests' => $requests,
             'participants' => $participants,
@@ -419,6 +422,7 @@ class AdminPergiBarengController extends Controller
         return back()->with('flash', match ($result) {
             'seat_removed'  => ['type' => 'success', 'message' => '1 kursi peserta dilepas.'],
             'fully_removed' => ['type' => 'success', 'message' => 'Kursi terakhirnya dilepas, peserta keluar dari pergi bareng & grup chat.'],
+            'locked'        => ['type' => 'error', 'message' => 'Perjalanan sudah berlangsung, peserta tidak bisa dikeluarkan lagi agar pembagian tagihan tetap adil.'],
             default         => ['type' => 'info', 'message' => 'Kursi peserta tidak ditemukan.'],
         });
     }
@@ -427,7 +431,16 @@ class AdminPergiBarengController extends Controller
     {
         $trip = PergiBareng::where('initiator_id', Auth::id())->findOrFail($id);
 
-        $removed = (new \App\Services\ParticipantRemoval())->fromPergiBareng($trip, (int) $userId);
+        $removal = new \App\Services\ParticipantRemoval();
+
+        if ($removal->pergiBarengSeatsLocked($trip)) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Perjalanan sudah berlangsung, peserta tidak bisa dikeluarkan lagi agar pembagian tagihan tetap adil.',
+            ]);
+        }
+
+        $removed = $removal->fromPergiBareng($trip, (int) $userId);
 
         return back()->with('flash', $removed
             ? ['type' => 'success', 'message' => 'Peserta dikeluarkan dari pergi bareng & grup chat.']

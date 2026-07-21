@@ -16,8 +16,24 @@ use Illuminate\Support\Facades\DB;
 // tombol "Keluarkan" di grup chat, disatukan di sini biar tak menyimpang.
 class ParticipantRemoval
 {
+    // Begitu perjalanan berjalan, kursi dikunci: pembagian tagihan dihitung dari
+    // daftar peserta, jadi mengeluarkan orang di tengah atau setelah perjalanan
+    // membuat sisanya menanggung bagian dia.
+    //
+    // Diperiksa di service, bukan hanya di controller, supaya ketiga jalur
+    // pelepasan (admin per-kursi, admin kick, keluarkan dari grup chat) tidak bisa
+    // menembusnya sendiri-sendiri.
+    public function pergiBarengSeatsLocked(PergiBareng $trip): bool
+    {
+        return in_array($trip->status(), ['ongoing', 'finish'], true);
+    }
+
     public function fromPergiBareng(PergiBareng $trip, int $userId): bool
     {
+        if ($this->pergiBarengSeatsLocked($trip)) {
+            return false;
+        }
+
         $removed = PergiBarengParticipant::where('pergi_bareng_id', $trip->id)
             ->where('user_id', $userId)
             ->delete();
@@ -51,6 +67,10 @@ class ParticipantRemoval
     // tidak punya kursi tersisa di perjalanan ini.
     public function removeSeatFromPergiBareng(PergiBareng $trip, int $participantId): string
     {
+        if ($this->pergiBarengSeatsLocked($trip)) {
+            return 'locked';
+        }
+
         $row = PergiBarengParticipant::where('pergi_bareng_id', $trip->id)
             ->whereKey($participantId)
             ->first();

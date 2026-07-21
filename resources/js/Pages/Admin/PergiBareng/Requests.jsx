@@ -32,12 +32,12 @@ export default function Requests({ trip, requests = [], participants = [] }) {
     // habis - itu ditentukan server.
     const seatKey = (p) => `${p.participant_id}-${p.seat}`;
 
-    const seatLabel = (p) =>
-        p.quantity > 1
-            ? t("admin.pergi.seat_of")
-                  .replace(":seat", p.seat)
-                  .replace(":total", p.quantity)
-            : `1 ${t("admin.pergi.seats_suffix")}`;
+    // Tiap baris = 1 kursi, jadi labelnya selalu sama.
+    const seatLabel = () => `1 ${t("admin.pergi.seats_suffix")}`;
+
+    // Setelah perjalanan berjalan, kursi dikunci demi keadilan pembagian
+    // tagihan. Server juga menolaknya; ini sekadar agar tombolnya tak menipu.
+    const seatsLocked = Boolean(trip.seats_locked);
 
     const kick = (p) => {
         const isLastSeat = p.quantity <= 1;
@@ -155,6 +155,12 @@ export default function Requests({ trip, requests = [], participants = [] }) {
                 <h2 className="text-lg font-bold text-neutral-700">{t("admin.pergi.participants_title")}</h2>
             </div>
 
+            {seatsLocked && (
+                <p className="px-5 py-3 bg-amber-50 text-amber-700 text-xs border-b border-amber-100">
+                    {t("admin.pergi.kick_locked")}
+                </p>
+            )}
+
             <div className="p-4 sm:p-6">
                 {participants.length === 0 ? (
                     <EmptyState
@@ -174,7 +180,7 @@ export default function Requests({ trip, requests = [], participants = [] }) {
                                         <img src={p.avatar} alt={p.name} className="w-11 h-11 rounded-full object-cover border border-neutral-200" onError={(e) => (e.target.src = "/assets/default-profile.png")} />
                                         <div className="min-w-0">
                                             <p className="font-semibold text-neutral-700 text-sm truncate">{p.name}</p>
-                                            <p className="text-xs text-neutral-500">{seatLabel(p)}</p>
+                                            <p className="text-xs text-neutral-500">{seatLabel()}</p>
                                         </div>
                                     </Link>
                                 ) : (
@@ -182,10 +188,11 @@ export default function Requests({ trip, requests = [], participants = [] }) {
                                         <img src={p.avatar} alt={p.name} className="w-11 h-11 rounded-full object-cover border border-neutral-200" onError={(e) => (e.target.src = "/assets/default-profile.png")} />
                                         <div className="min-w-0">
                                             <p className="font-semibold text-neutral-700 text-sm truncate">{p.name}</p>
-                                            <p className="text-xs text-neutral-500">{seatLabel(p)}</p>
+                                            <p className="text-xs text-neutral-500">{seatLabel()}</p>
                                         </div>
                                     </div>
                                 )}
+                                {!seatsLocked && (
                                 <button
                                     onClick={() => kick(p)}
                                     disabled={kickingId === seatKey(p)}
@@ -194,6 +201,7 @@ export default function Requests({ trip, requests = [], participants = [] }) {
                                 >
                                     <FiUserX size={16} /> {t("admin.pergi.kick")}
                                 </button>
+                                )}
                             </div>
                         ))}
                     </div>
