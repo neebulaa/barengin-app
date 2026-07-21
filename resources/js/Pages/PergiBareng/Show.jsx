@@ -227,13 +227,16 @@ export default function Show({ trip }) {
             
             <div className="bg-white border-b border-neutral-200 py-4">
                 <Container>
-                    <button
-                        type="button"
-                        onClick={() => (window.history.length > 1 ? window.history.back() : router.visit("/pergi-bareng"))}
+                    {/* Selalu ke daftar, bukan history.back(): kalau pengguna tiba
+                        dari halaman tunggu permintaan, "kembali" akan memantulkannya
+                        ke sana lagi dan terjebak bolak-balik. Label tombolnya pun
+                        memang menjanjikan daftar. */}
+                    <Link
+                        href="/pergi-bareng"
                         className="inline-flex items-center text-2xl font-bold text-neutral-700 hover:text-primary-700 mb-2 gap-3 transition"
                     >
                         <FaChevronLeft className="text-xl" /> {t("pb.show.back")}
-                    </button>
+                    </Link>
                 </Container>
             </div> 
 
