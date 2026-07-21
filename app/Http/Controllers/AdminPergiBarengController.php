@@ -40,6 +40,23 @@ class AdminPergiBarengController extends Controller
         return $trip->status() === 'will_start' ? 'waiting' : $trip->status();
     }
 
+    // Lencana "ada permintaan gabung" tidak boleh menunggu refresh manual. Halaman
+    // managemen mem-poll ini berkala - sengaja hanya angka, bukan render ulang
+    // daftar, supaya murah dan tidak mengganggu kotak pencarian/paginasi.
+    public function pendingCounts()
+    {
+        $counts = DB::table('pergi_bareng_requests')
+            ->join('pergi_barengs', 'pergi_bareng_requests.pergi_bareng_id', '=', 'pergi_barengs.id')
+            ->where('pergi_barengs.initiator_id', Auth::id())
+            ->groupBy('pergi_bareng_requests.pergi_bareng_id')
+            ->pluck(DB::raw('COUNT(*)'), 'pergi_bareng_requests.pergi_bareng_id');
+
+        return response()->json([
+            'counts' => $counts,
+            'total'  => (int) $counts->sum(),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));

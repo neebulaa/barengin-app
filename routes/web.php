@@ -244,6 +244,8 @@ Route::prefix('admin')->group(function () {
         Route::get('/', [AdminPergiBarengController::class, 'index'])->name('index');
         Route::get('/create', [AdminPergiBarengController::class, 'create'])->name('create');
         Route::get('/analytics', [AdminPergiBarengController::class, 'analytics'])->name('analytics');
+        // Harus sebelum /{id} - walau {id} sudah whereNumber, biar niatnya jelas.
+        Route::get('/pending-counts', [AdminPergiBarengController::class, 'pendingCounts'])->name('pending-counts');
         Route::post('/', [AdminPergiBarengController::class, 'store'])->name('store');
         Route::delete('/{id}', [AdminPergiBarengController::class, 'destroy'])->whereNumber('id')->name('destroy');
 

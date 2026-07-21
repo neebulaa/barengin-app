@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Head, Link, router } from "@inertiajs/react";
+import React, { useCallback, useEffect, useState } from "react";
+import axios from "axios";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import Button from "@/Components/Button";
 import ConfirmModal from "@/Components/ConfirmModal";
@@ -17,6 +18,8 @@ import SplitBillModal from "./Partials/SplitBillModal";
 
 export default function Index({ trips = {}, ongoing = [], filters = {} }) {
     const { t: translate } = useTranslation();
+    const { auth } = usePage().props;
+    const authUser = auth?.user;
     const rows = trips.data ?? [];
     const [billModal, setBillModal] = useState({ open: false, trip: null });
     const { values, set, goPage } = useServerTable("/admin/pergi-bareng", {
@@ -24,6 +27,72 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
         sort: filters.sort ?? "latest",
     });
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: "" });
+
+    // Lencana permintaan gabung dijaga tetap hidup lewat polling ringan - sepola
+    // dengan NotificationBell - supaya permintaan baru langsung memerah tanpa
+    // perlu refresh manual. Hanya angkanya yang di-poll, daftarnya tidak dirender
+    // ulang, jadi pencarian & paginasi yang sedang dipakai tidak terganggu.
+    const [liveCounts, setLiveCounts] = useState(null);
+
+    const refreshCounts = useCallback(async () => {
+        try {
+            const { data } = await axios.get("/admin/pergi-bareng/pending-counts");
+            if (data?.counts) setLiveCounts(data.counts);
+        } catch {
+            /* diamkan - lencana cukup pakai nilai terakhir */
+        }
+    }, []);
+
+    useEffect(() => {
+        const tick = () => {
+            if (document.hidden) return;
+            refreshCounts();
+        };
+        tick(); // jangan menunggu satu interval penuh saat halaman dibuka
+        const interval = setInterval(tick, 15000);
+
+        return () => clearInterval(interval);
+    }, [refreshCounts]);
+
+    // Kunjungan Inertia membawa angka baru dari server; buang hasil poll lama
+    // supaya lencana tidak "hidup kembali" setelah permintaan selesai diproses.
+    useEffect(() => {
+        setLiveCounts(null);
+    }, [trips]);
+
+    // Realtime: begitu ada yang menekan "Ikut Pergi Bareng", server menyiarkan
+    // jumlah terkini ke channel pribadi penyelenggara, jadi lencana memerah tanpa
+    // menunggu tick polling. Polling di atas tetap jalan sebagai jaring pengaman
+    // kalau Pusher tidak aktif atau siarannya lolos.
+    useEffect(() => {
+        if (!window.Echo || !authUser?.id) return;
+
+        const channelName = `user.${authUser.id}`;
+        const channel = window.Echo.private(channelName);
+
+        channel.listen(".pergi.request.received", (payload) => {
+            const id = Number(payload?.pergi_bareng_id);
+            const pending = Number(payload?.pending);
+            if (!id || Number.isNaN(pending)) return;
+
+            // Baris yang belum pernah di-poll diisi dari angka render awal, biar
+            // lencana baris lain tidak ikut hilang saat state ini pertama dibuat.
+            setLiveCounts((prev) => {
+                const base =
+                    prev ??
+                    Object.fromEntries(rows.map((r) => [r.id, Number(r.pending_requests ?? 0)]));
+                return { ...base, [id]: pending };
+            });
+        });
+
+        return () => {
+            window.Echo.leave(`private-${channelName}`);
+        };
+    }, [authUser?.id, rows]);
+
+    // Baris yang tak lagi punya permintaan tidak muncul di respons poll -> 0.
+    const pendingOf = (t) =>
+        liveCounts ? Number(liveCounts[t.id] ?? 0) : Number(t.pending_requests ?? 0);
 
     const openGroupChat = (id) => router.post(`/chat/pergi-bareng/${id}/group`);
 
@@ -192,9 +261,9 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
                                                     title={translate("admin.pergi.action_requests")}
                                                 >
                                                     <FiUsers size={16} />
-                                                    {t.pending_requests > 0 && (
+                                                    {pendingOf(t) > 0 && (
                                                         <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                                                            {t.pending_requests}
+                                                            {pendingOf(t)}
                                                         </span>
                                                     )}
                                                 </Link>

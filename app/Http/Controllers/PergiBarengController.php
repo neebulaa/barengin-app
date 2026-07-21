@@ -335,6 +335,14 @@ class PergiBarengController extends Controller
             'pergi_bareng.requested:pb_req:' . $req->id,
         );
 
+        // Lencana di halaman managemen penyelenggara memerah seketika. Polling tiap
+        // 15 detik tetap jadi jaring pengaman kalau siaran gagal / Pusher mati.
+        broadcast(new \App\Events\PergiBarengRequestReceived(
+            (int) $trip->initiator_id,
+            (int) $trip->id,
+            PergiBarengRequest::where('pergi_bareng_id', $trip->id)->count(),
+        ));
+
         return redirect()->route('pergi-bareng.request-sent', $trip->id);
     }
 
