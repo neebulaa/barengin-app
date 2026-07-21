@@ -56,6 +56,7 @@ export default function Show({ trip }) {
     const { t } = useTranslation();
 
     const isOngoing = trip.status === "ongoing";
+    const isFinished = trip.status === "finish";
 
     const isMember = trip.is_participant || trip.organizer?.is_self;
     const canTrack = isOngoing && isMember;
@@ -255,6 +256,14 @@ export default function Show({ trip }) {
                                                     <span className="relative inline-flex h-2 w-2 rounded-full bg-success-600" />
                                                 </span>
                                                 {t("pb.show.status_ongoing", "Sedang Berlangsung")}
+                                            </span>
+                                        )}
+                                        {/* Perjalanan selesai: tanpa titik berdenyut,
+                                            karena tidak ada lagi yang berjalan. */}
+                                        {isFinished && (
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-600">
+                                                <FaCheckCircle className="text-neutral-500" />
+                                                {t("pb.show.status_finish", "Perjalanan Selesai")}
                                             </span>
                                         )}
                                     </div>
@@ -565,6 +574,12 @@ export default function Show({ trip }) {
                                         <Button isButtonLink href={`/pergi-bareng/${trip.id}/request-sent`} variant="outline" className="w-full justify-center">
                                             {t("pb.show.view_status")}
                                         </Button>
+                                    </div>
+                                ) : isFinished ? (
+                                    // Perjalanan sudah ditutup penyelenggara - tidak
+                                    // ada lagi kursi yang masuk akal untuk diminta.
+                                    <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-center text-sm font-semibold text-neutral-600">
+                                        {t("pb.show.finished_notice", "Perjalanan ini sudah selesai.")}
                                     </div>
                                 ) : isFull ? (
                                     <Button type="neutral" disabled className="w-full justify-center opacity-60 cursor-not-allowed">

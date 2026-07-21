@@ -304,6 +304,8 @@
     "pb.show.quota_left": "slots left",
     "pb.show.join_submit": "Join Now",
     "pb.show.status_ongoing": "Ongoing",
+    "pb.show.status_finish": "Journey Finished",
+    "pb.show.finished_notice": "This journey has already finished.",
     "pb.show.track_live": "Track Your Journey",
     "pb.show.track_map_hint": "Tap the map to track the journey",
     "pb.join.title": "Trip Details",

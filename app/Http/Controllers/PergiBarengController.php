@@ -274,6 +274,12 @@ class PergiBarengController extends Controller
             return redirect()->route('pergi-bareng.request-sent', $trip->id);
         }
 
+        // Perjalanan yang sudah ditutup penyelenggara tidak menerima kursi baru.
+        if ($trip->status() === 'finish') {
+            return redirect()->route('pergi-bareng.show', $trip->id)
+                ->with('flash', ['type' => 'info', 'message' => 'Perjalanan ini sudah selesai, jadi tidak menerima peserta baru.']);
+        }
+
         // Peserta lama boleh minta kursi tambahan selama belum berangkat.
         if ($trip->pergi_bareng_participants->contains('user_id', $userId)
             && $trip->status() !== 'will_start') {

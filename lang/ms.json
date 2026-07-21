@@ -304,6 +304,8 @@
     "pb.show.quota_left": "kuota berbaki",
     "pb.show.join_submit": "Sertai Sekarang",
     "pb.show.status_ongoing": "Sedang Berlangsung",
+    "pb.show.status_finish": "Perjalanan Selesai",
+    "pb.show.finished_notice": "Perjalanan ini sudah tamat.",
     "pb.show.track_live": "Pantau Perjalanan Anda",
     "pb.show.track_map_hint": "Ketik peta untuk pantau perjalanan",
     "pb.join.title": "Butiran Perjalanan",
