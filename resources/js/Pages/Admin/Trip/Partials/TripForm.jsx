@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Button from "@/Components/Button";
 import Input from "@/Components/Input";
 import LocationInput from "@/Components/LocationInput";
@@ -35,13 +35,34 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
     const FACILITY_PREVIEW = 5;
     const [imagePreview, setImagePreview] = useState(data.image_preview || null);
 
-    const err = (key) => errors?.[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
+    // Error dari server bertahan sampai submit berikutnya, jadi field yang sudah
+    // diperbaiki tetap tersorot merah. Begitu sebuah field disentuh, errornya
+    // dibuang - submit berikutnya akan memunculkannya lagi kalau memang masih salah.
+    const [dismissed, setDismissed] = useState(() => new Set());
 
-    // Error server didahulukan; kalau belum ada, pakai temuan sisi klien supaya
-    // pengguna langsung tahu tanpa menunggu submit.
+    // Tiap respons validasi baru menghasilkan objek errors baru -> tampilkan lagi semua.
+    useEffect(() => {
+        setDismissed((prev) => (prev.size ? new Set() : prev));
+    }, [errors]);
+
+    const dismiss = (key) =>
+        setDismissed((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+
+    const serverErr = (key) => (dismissed.has(key) ? null : errors?.[key]);
+
+    const err = (key) => serverErr(key) && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>;
+
+    // Error server didahulukan; kalau sudah dibuang/absen, pakai temuan sisi klien
+    // yang selalu dihitung dari nilai terkini.
     const fieldErr = (key, clientMsg) => {
-        const msg = errors?.[key] || clientMsg;
+        const msg = serverErr(key) || clientMsg;
         return msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
+    };
+
+    // Semua perubahan lewat sini supaya error field yang bersangkutan ikut hilang.
+    const setField = (field, value) => {
+        dismiss(field);
+        setData(field, value);
     };
 
     const toMinutes = (time) => {
@@ -52,13 +73,13 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
     const toggleFacility = (name) => {
         const has = data.facilities.includes(name);
-        setData("facilities", has ? data.facilities.filter((f) => f !== name) : [...data.facilities, name]);
+        setField("facilities", has ? data.facilities.filter((f) => f !== name) : [...data.facilities, name]);
     };
     const addFacility = () => {
         const name = newFacility.trim();
         if (!name) return;
         if (!facilityOptions.includes(name)) setFacilityOptions([...facilityOptions, name]);
-        if (!data.facilities.includes(name)) setData("facilities", [...data.facilities, name]);
+        if (!data.facilities.includes(name)) setField("facilities", [...data.facilities, name]);
         setNewFacility("");
         setShowFacilityModal(false);
         setShowAllFacilities(true);
@@ -67,12 +88,13 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
     const handleTripImage = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setData("image", file);
+        setField("image", file);
         setImagePreview(URL.createObjectURL(file));
     };
 
     const updateActivity = (i, field, value) => {
         const next = data.activities.map((a, idx) => (idx === i ? { ...a, [field]: value } : a));
+        dismiss(`activities.${i}.${field}`);
         setData("activities", next);
     };
     const addActivity = () => setData("activities", [...data.activities, emptyActivity()]);
@@ -101,7 +123,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                     <p className="text-xs text-neutral-400 mt-1">{t("admin.trip.reopen.locked_hint")}</p>
                                 </>
                             ) : (
-                                <Input type="text" size="sm" value={data.name} onChange={(e) => setData("name", e.target.value)}
+                                <Input type="text" size="sm" value={data.name} onChange={(e) => setField("name", e.target.value)}
                                     placeholder={t("admin.trip.form.trip_name_ph")} />
                             )}
                             {err("name")}
@@ -116,7 +138,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                                     <p className="text-xs text-neutral-400 mt-1">{t("admin.trip.reopen.locked_hint")}</p>
                                 </>
                             ) : (
-                                <LocationInput value={data.location} onChange={(v) => setData("location", v)}
+                                <LocationInput value={data.location} onChange={(v) => setField("location", v)}
                                     placeholder={t("admin.trip.form.location_ph")} className={inputClass} />
                             )}
                             {err("location")}
@@ -124,7 +146,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
 
                         <div className="mb-4">
                             <label className={labelClass}>{t("admin.trip.form.about")}<Req /></label>
-                            <textarea rows={4} value={data.description} onChange={(e) => setData("description", e.target.value)}
+                            <textarea rows={4} value={data.description} onChange={(e) => setField("description", e.target.value)}
                                 placeholder={t("admin.trip.form.about_ph")}
                                 className={inputClass + " resize-none"} />
                             {err("description")}
@@ -134,17 +156,17 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                             <div>
                                 <label className={labelClass}>{t("admin.trip.form.people_amount")}<Req /></label>
                                 <Input type="number" size="sm" min="1" value={data.people_amount}
-                                    onChange={(e) => setData("people_amount", e.target.value)} placeholder="0" />
+                                    onChange={(e) => setField("people_amount", e.target.value)} placeholder="0" />
                                 {err("people_amount")}
                             </div>
                             <div>
                                 <label className={labelClass}>{t("admin.trip.form.start_date")}<Req /></label>
-                                <Input type="date" size="sm" min={minStartDate} value={data.start_date} onChange={(e) => setData("start_date", e.target.value)} />
+                                <Input type="date" size="sm" min={minStartDate} value={data.start_date} onChange={(e) => setField("start_date", e.target.value)} />
                                 {err("start_date")}
                             </div>
                             <div>
                                 <label className={labelClass}>{t("admin.trip.form.end_date")}<Req /></label>
-                                <Input type="date" size="sm" min={data.start_date || minStartDate} value={data.end_date} onChange={(e) => setData("end_date", e.target.value)} />
+                                <Input type="date" size="sm" min={data.start_date || minStartDate} value={data.end_date} onChange={(e) => setField("end_date", e.target.value)} />
                                 {err("end_date")}
                             </div>
                         </div>
@@ -154,7 +176,7 @@ export default function TripForm({ data, setData, errors, processing, onSubmit, 
                         <h3 className={cardTitle}>{t("admin.trip.form.price_section")}</h3>
                         <label className={labelClass}>{t("admin.trip.form.price_per_person")}<Req /></label>
                         <Input type="number" size="sm" min="0" leftAddon="Rp" value={data.price}
-                            onChange={(e) => setData("price", e.target.value)} placeholder="contoh: 1500000" />
+                            onChange={(e) => setField("price", e.target.value)} placeholder="contoh: 1500000" />
                         {err("price")}
                         <p className="text-xs text-neutral-400 mt-2">{t("admin.trip.form.price_note")}</p>
                     </div>
