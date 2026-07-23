@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "@inertiajs/react";
 import TagPillList from "./TagPillList";
 import ImageLightbox from "@/Components/ImageLightbox";
+import { sanitizeForumHtml } from "@/lib/sanitizeHtml";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
 import { FiMapPin } from "react-icons/fi";
@@ -105,7 +106,9 @@ export default function PostCard({ post, onTagClick, onLike }) {
 
                     <div
                         className="mt-1 text-neutral-800 leading-relaxed prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: post.content }}
+                        dangerouslySetInnerHTML={{
+                            __html: sanitizeForumHtml(post.content),
+                        }}
                     />
 
                     {post.tags?.length ? (

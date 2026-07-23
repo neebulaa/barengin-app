@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Models\User;
-use App\Models\ActivityLog;
-use Inertia\Inertia;
-use Illuminate\Support\Str;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-// use App\Model\ActivityLog;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Password;
+use App\Models\ActivityLog;
+use App\Models\User;
 use App\Rules\StrongPassword;
-
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+// use App\Model\ActivityLog;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 function usernameToFullName(string $username): string
 {
@@ -25,56 +24,59 @@ function usernameToFullName(string $username): string
     $name = preg_replace('/\d+$/', '', $name);
     // Menghilangkan spasi ganda
     $name = trim(preg_replace('/\s+/', ' ', $name));
+
     return Str::title($name);
 }
 
 class AuthController extends Controller
 {
-    public function login(){
+    public function login()
+    {
         return inertia('Auth/Login');
     }
 
-    public function signup(){
+    public function signup()
+    {
         return inertia('Auth/Register');
     }
 
-    public function register(Request $request){
+    public function register(Request $request)
+    {
         $validated = $request->validate([
-            "username" => [
-                "required",
-                "min:3",
-                "max:20",
-                "unique:users,username",
-                "regex:/^[a-z0-9_.]+$/i",
+            'username' => [
+                'required',
+                'min:3',
+                'max:20',
+                'unique:users,username',
+                'regex:/^[a-z0-9_.]+$/i',
             ],
-            "email" => [
-                "required",
-                "email:rfc,dns",
-                "unique:users,email"
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'unique:users,email',
             ],
-            
-            "password" => [
-                "required",
+
+            'password' => [
+                'required',
                 new StrongPassword,
-                "confirmed"
+                'confirmed',
             ],
-            "password_confirmation" => [
-                "required"
+            'password_confirmation' => [
+                'required',
             ],
-            "remember" => [
-                "sometimes",
-                "boolean"
-            ]
+            'remember' => [
+                'sometimes',
+                'boolean',
+            ],
         ]);
         // Pesan kustom (mis. username.regex) diambil dari lang/{locale}/validation.php
         // sehingga otomatis mengikuti bahasa yang dipilih pengguna.
 
-
         $user = User::create([
-            "username" => $validated["username"],
-            "email" => $validated["email"],
-            "password" => $validated["password"],
-            "full_name" => usernameToFullName($validated["username"])
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+            'full_name' => usernameToFullName($validated['username']),
         ]);
 
         $remember = $request->boolean('remember');
@@ -82,34 +84,57 @@ class AuthController extends Controller
 
         ActivityLog::record('Mendaftar sebagai pengguna baru', $user);
 
-        return redirect("/onboarding");
+        return redirect('/onboarding');
     }
 
-    public function authenticate(Request $request){
+    public function authenticate(Request $request)
+    {
         $request->validate([
-            "login" => "required",
-            "password" => "required",
-            "remember" => "sometimes|boolean",
+            'login' => 'required',
+            'password' => 'required',
+            'remember' => 'sometimes|boolean',
         ]);
+
+        // F-03 - Pembatasan laju brute force. Kunci dibentuk per (login + IP):
+        // akun yang sama dari IP yang sama dikunci setelah 5 percobaan GAGAL
+        // selama 60 detik. Berhasil login akan menghapus hitungan (clear).
+        $throttleKey = Str::transliterate(Str::lower((string) $request->input('login')).'|'.$request->ip());
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            ActivityLog::record('Login diblokir sementara (rate limit) untuk '.$request->input('login'), null);
+
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => __('auth.throttle', ['seconds' => $seconds]),
+            ]);
+        }
 
         $loginField = filter_var($request->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
         $credentials = [
             $loginField => $request->login,
-            'password' => $request->password
+            'password' => $request->password,
         ];
 
         $remember = $request->boolean('remember');
 
-        if (!Auth::attempt($credentials, $remember)) {
+        if (! Auth::attempt($credentials, $remember)) {
+            // Percobaan gagal menambah hitungan throttle (decay 60 detik).
+            RateLimiter::hit($throttleKey);
+
             // Catat percobaan login gagal (aktor tak dikenal) untuk audit keamanan
-            ActivityLog::record('Percobaan login gagal (' . $loginField . ': ' . $request->login . ')', null);
+            ActivityLog::record('Percobaan login gagal ('.$loginField.': '.$request->login.')', null);
 
             return back()->with('flash', [
                 'type' => 'error', // three category yaa ada error, success, info
                 'message' => __('auth.failed'),
             ]);
         }
+
+        // Login berhasil - reset penghitung agar tidak menghukum sesi sah.
+        RateLimiter::clear($throttleKey);
 
         $request->session()->regenerate();
 
@@ -142,11 +167,13 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 
-    public function forgotPassword(){
+    public function forgotPassword()
+    {
         return Inertia::render('Auth/ForgotPassword');
     }
 
-    public function sendResetLink(Request $request){
+    public function sendResetLink(Request $request)
+    {
         $validated = $request->validate([
             'email' => ['required', 'email'],
         ]);
@@ -164,17 +191,18 @@ class AuthController extends Controller
         return back()->with('flash', [
             'type' => 'error',
             'message' => __($status),
-        ]); 
+        ]);
     }
 
-    public function resetPassword($token){
+    public function resetPassword($token)
+    {
         $email = request('email');
         $reset = DB::table('password_reset_tokens')
             ->where('email', $email)
             ->first();
 
         // token or email not found
-        if (!$reset || !Hash::check($token, $reset->token)) {
+        if (! $reset || ! Hash::check($token, $reset->token)) {
             return redirect('/login');
         }
 
@@ -185,7 +213,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $email)->first();
 
-        if (!$user) {
+        if (! $user) {
             return redirect('/login');
         }
 

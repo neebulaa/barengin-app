@@ -1,5 +1,13 @@
 <?php
 
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminJastipController;
+use App\Http\Controllers\AdminJastipRequestController;
+use App\Http\Controllers\AdminLanguageController;
+use App\Http\Controllers\AdminMessageController;
+use App\Http\Controllers\AdminPergiBarengController;
+use App\Http\Controllers\AdminTripController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OnboardingController;
@@ -7,32 +15,24 @@ use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Chat\ChatConversationController;
 use App\Http\Controllers\Chat\ChatReadController;
 use App\Http\Controllers\Chat\ChatUserController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\ForumFollowController;
 use App\Http\Controllers\ForumLocationController;
 use App\Http\Controllers\ForumPeopleController;
 use App\Http\Controllers\ForumProfileController;
-use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\JastipController;
+use App\Http\Controllers\JastipRequestController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PergiBarengController;
-use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileHistoryController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\TripsController;
-use App\Http\Controllers\JastipController;
-use App\Http\Controllers\AdminUserController;
-use App\Http\Controllers\AdminMessageController;
-use App\Http\Controllers\AdminPergiBarengController;
-use App\Http\Controllers\AdminTripController;
-use App\Http\Controllers\AdminJastipController;
-use App\Http\Controllers\AdminJastipRequestController;
-use App\Http\Controllers\JastipRequestController;
-use App\Http\Controllers\AdminDashboardController;
-use App\Http\Controllers\ContactController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\LocaleController;
-use App\Http\Controllers\AdminLanguageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -44,7 +44,11 @@ Route::post('/locale/{code}', [LocaleController::class, 'update'])->name('locale
 // Guest
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'login'])->name('login');
-    Route::post('/login', [AuthController::class, 'authenticate'])->name('login.store');
+    // F-03 - Backstop laju per-IP (mencegah banjir percobaan dgn rotasi
+    // username). Penguncian per-akun ada di AuthController@authenticate.
+    Route::post('/login', [AuthController::class, 'authenticate'])
+        ->middleware('throttle:20,1')
+        ->name('login.store');
 
     Route::get('/register', [AuthController::class, 'signup'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.store');
@@ -79,7 +83,7 @@ Route::middleware('auth')->group(function () {
         ->name('forum.show');
 
     Route::post('/forum/posts', [PostController::class, 'store'])->name('forum.posts.store');
-    
+
     Route::post('/forum/posts/{post}/comments', [ForumController::class, 'storeComment'])
         ->name('forum.posts.comments.store');
     Route::post('/forum/comments/{comment}/replies', [ForumController::class, 'storeReply'])
@@ -135,13 +139,12 @@ Route::prefix('pergi-bareng')->group(function () {
     });
 });
 
-
 // Midtrans webhook - server-to-server, tanpa auth & CSRF
 Route::post('/midtrans/notification', [MidtransController::class, 'notification'])->name('midtrans.notification');
 
 // Chat
 Route::middleware('auth')->group(function () {
-    Route::get('/chat',[ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
     // Harus di atas /chat/{conversation}.
     Route::get('/chat/poll', [ChatController::class, 'pollConversations'])->name('chat.poll');
     Route::get('/chat/unread-count', [ChatController::class, 'unreadCount'])->name('chat.unread-count');
@@ -155,8 +158,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/pergi-bareng/{id}/group', [ChatConversationController::class, 'openOrCreatePergiBarengGroup'])->whereNumber('id')->name('chat.pergibareng.group.open');
     Route::post('/chat/jastip/{id}/group', [ChatConversationController::class, 'openOrCreateJastipGroup'])->whereNumber('id')->name('chat.jastip.group.open');
     Route::delete('/chat/{conversation}/participants/{user}', [ChatConversationController::class, 'removeParticipant'])->whereNumber('conversation')->whereNumber('user')->name('chat.participants.remove');
-    
-    Route::get('/chat/exp', function(){
+
+    Route::get('/chat/exp', function () {
         return inertia('Chat/Index2');
     })->name('chat.exp');
 });

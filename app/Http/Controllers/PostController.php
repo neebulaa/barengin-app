@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Post;
-use App\Models\Tag;
-use App\Models\PostImage;
 use App\Models\Location;
+use App\Models\Post;
+use App\Models\PostImage;
+use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Mews\Purifier\Facades\Purifier;
 
 class PostController extends Controller
 {
@@ -36,8 +38,22 @@ class PostController extends Controller
 
         $userId = Auth::id();
 
-        DB::transaction(function () use ($validated, $request, $userId) {
-            $contentHtml = $validated['content_html'];
+        // Sanitasi HTML di sisi server dengan allow-list ketat (HTMLPurifier)
+        // SEBELUM disimpan. Ini menutup Stored XSS pada forum: seluruh handler
+        // event (onerror/onload), tag <script>/<img>/<svg>, dan atribut
+        // berbahaya dibuang, hanya menyisakan format teks dasar (bold/italic/
+        // underline + baris). Jangan pernah percaya markup dari klien.
+        $contentHtml = Purifier::clean($validated['content_html'], 'forum_post');
+
+        // Payload yang murni berbahaya menyusut menjadi kosong setelah sanitasi.
+        // Tolak agar tidak menyimpan postingan hampa (konsisten dgn syarat teks).
+        if (trim(strip_tags($contentHtml)) === '') {
+            throw ValidationException::withMessages([
+                'content_html' => 'Isi konten postingan terlebih dahulu. Gambar bersifat opsional.',
+            ]);
+        }
+
+        DB::transaction(function () use ($validated, $request, $userId, $contentHtml) {
 
             // location handling
             $locationId = null;
@@ -52,7 +68,7 @@ class PostController extends Controller
                 }
             }
 
-            if (is_array($place) && !empty($place['id'])) {
+            if (is_array($place) && ! empty($place['id'])) {
                 $provider = $place['provider'] ?? 'osm';
                 $providerPlaceId = (string) $place['id'];
 
@@ -114,7 +130,7 @@ class PostController extends Controller
 
             // tags handling
             $tagNames = $this->normalizeChipTags($validated['tag_names'] ?? []);
-            if (!empty($tagNames)) {
+            if (! empty($tagNames)) {
                 $tagIds = [];
                 foreach ($tagNames as $name) {
                     $tag = Tag::firstOrCreate([
@@ -138,11 +154,13 @@ class PostController extends Controller
 
         foreach ($tags as $t) {
             $name = (string) $t;
-            $name = ltrim($name, "#");
+            $name = ltrim($name, '#');
             $name = preg_replace('/\s+/u', ' ', $name) ?? $name;
             $name = trim($name);
 
-            if ($name === '') continue;
+            if ($name === '') {
+                continue;
+            }
 
             if (mb_strlen($name) > 50) {
                 $name = mb_substr($name, 0, 50);
@@ -156,7 +174,9 @@ class PostController extends Controller
 
         foreach ($out as $name) {
             $key = mb_strtolower($name);
-            if (isset($seen[$key])) continue;
+            if (isset($seen[$key])) {
+                continue;
+            }
             $seen[$key] = true;
             $unique[] = $name;
         }
