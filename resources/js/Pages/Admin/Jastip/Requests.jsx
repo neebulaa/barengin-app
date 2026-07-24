@@ -7,7 +7,7 @@ import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { formatRupiah as rupiah } from "@/lib/format";
-import { FiInbox, FiAlertCircle, FiTag, FiX } from "react-icons/fi";
+import { FiInbox, FiAlertCircle, FiTag, FiX, FiChevronDown } from "react-icons/fi";
 import { BsChatDots } from "react-icons/bs";
 
 // Badge status request titipan
@@ -138,6 +138,7 @@ export default function Requests({ requests = {}, item_options = [], filters = {
                                 <option key={o.id} value={o.id}>{o.label}</option>
                             ))}
                         </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
                     </div>
                     <div className="relative">
                         <select
@@ -150,6 +151,7 @@ export default function Requests({ requests = {}, item_options = [], filters = {
                                 <option key={s} value={s}>{t(`jastip.request.status.${s}`)}</option>
                             ))}
                         </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
                     </div>
                 </div>
             </div>

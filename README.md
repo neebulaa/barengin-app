@@ -1,59 +1,281 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="public/assets/barengin_logows.png" width="360" alt="Barengin logo">
 </p>
 
-## About Laravel
+<p align="center">
+  <strong>Travel together. Shop together. Split the bill together.</strong>
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+  A social travel app for joining group trips, planning outings with friends,
+  ordering personal-shopping (jastip) items, chatting, and splitting shared costs.
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+<p align="center">
+  <a href="#-what-is-barengin">About</a> ·
+  <a href="#-tech-stack">Tech Stack</a> ·
+  <a href="#-features">Features</a> ·
+  <a href="#-getting-started">Getting Started</a> ·
+  <a href="#-connecting-services">Services</a>
+</p>
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white" alt="Laravel 12">
+  <img src="https://img.shields.io/badge/PHP-8.2+-777BB4?logo=php&logoColor=white" alt="PHP 8.2+">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19">
+  <img src="https://img.shields.io/badge/Inertia.js-2-9553E9?logo=inertia&logoColor=white" alt="Inertia 2">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind 4">
+</p>
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## 🧭 What is Barengin?
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+The name comes from the Indonesian word *bareng*, meaning *together*. That's the whole idea: doing
+things with other people instead of alone. Barengin puts four of those things in one app:
 
-## Laravel Sponsors
+- **Trip Bareng** for booking a seat on a guided group trip.
+- **Pergi Bareng** for starting or joining a casual outing, tracking everyone live on a map, and splitting the bill.
+- **Jastip** for asking a traveller to buy something for you, or posting a request to get a quote.
+- **Forum** for sharing trips, tagging places, and following people.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+You also get real-time chat, an in-app wallet, ratings and a leaderboard, three languages
+(English, Indonesian, Malay), and an admin area to run it all.
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## 💻 Tech Stack
 
-## Contributing
+Barengin is a single Laravel app that serves a React front-end through Inertia, so there's no
+separate API to run. Just this one project.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+<table border="1" cellpadding="8" cellspacing="0">
+  <tr><th align="left">Area</th><th align="left">What we use</th></tr>
+  <tr><td>Backend</td><td>Laravel 12 (PHP 8.2+)</td></tr>
+  <tr><td>Frontend</td><td>React 19 + Inertia.js 2</td></tr>
+  <tr><td>Styling</td><td>Tailwind CSS 4</td></tr>
+  <tr><td>Build tool</td><td>Vite 7</td></tr>
+  <tr><td>Database</td><td>MySQL / MariaDB (or SQLite for a quick start)</td></tr>
+  <tr><td>Auth</td><td>Laravel Sanctum + Google sign-in</td></tr>
+  <tr><td>Payments</td><td>Midtrans</td></tr>
+  <tr><td>Real-time</td><td>Pusher (falls back to polling)</td></tr>
+  <tr><td>Maps</td><td>Leaflet + OpenStreetMap</td></tr>
+</table>
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## ✨ Features
 
-## Security Vulnerabilities
+- **Trip Bareng** with seat booking, checkout, and post-trip ratings.
+- **Pergi Bareng** outings with join requests, a live map that's shared to the group chat at departure, and a built-in split bill.
+- **Jastip** with a product catalog, custom requests and quotes, cart, checkout, and order tracking.
+- **Forum** with posts, images, tags, location tagging, comments, likes, and follows.
+- **Chat** for people and groups, with live notifications and a leaderboard.
+- **Admin area** with dashboards and analytics, plus tools to manage users, the catalog, requests, messages, and languages.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## 🚀 Getting Started
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### You'll need
+
+- **PHP 8.2+** and **Composer**
+- **Node.js 20+** and **npm**
+- **MySQL 8+ / MariaDB 10.4+** (or SQLite)
+
+### Steps
+
+**1. Clone and install**
+
+```bash
+git clone <your-repo-url> barengin-app
+cd barengin-app
+composer install
+npm install
+```
+
+**2. Create your `.env` file**
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+**3. Connect a database.** Open `.env` and fill in your details:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=barengin
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+> In a hurry? Leave `DB_CONNECTION=sqlite` and skip this step. The app runs on a local file, no database server needed.
+
+**4. Build the database and demo data**
+
+```bash
+php artisan migrate --seed
+php artisan storage:link
+```
+
+**5. Start everything** (server, queue, logs, and Vite in one command)
+
+```bash
+composer run dev
+```
+
+Open **http://localhost:8000** and you're in. 🎉
+
+### Log in as a demo user
+
+The seeder creates ready-to-use accounts. Password for all of them is `password123`.
+
+<table border="1" cellpadding="8" cellspacing="0">
+  <tr><th align="left">Role</th><th align="left">Email</th></tr>
+  <tr><td>Admin</td><td>admin@barengin.com</td></tr>
+  <tr><td>Guider (trip host)</td><td>budi@barengin.com</td></tr>
+  <tr><td>Regular user</td><td>lili@gmail.com</td></tr>
+</table>
+
+That's all you need to explore the app. Payments, Google login, real-time chat, and maps need a
+little extra setup, covered next. Add only the ones you want.
+
+---
+
+## 🔌 Connecting Services
+
+Every service here is optional. Come back to a section when you want that feature working.
+
+### 💳 Payments (Midtrans)
+
+Used for trip and jastip checkout, and wallet top-ups.
+
+1. Create an account at [dashboard.midtrans.com](https://dashboard.midtrans.com).
+2. Switch to **Sandbox** mode so you can test without real money.
+3. Open **Settings → Access Keys** and copy your **Server Key** and **Client Key**.
+4. Add them to `.env`:
+   ```env
+   MIDTRANS_SERVER_KEY=your-server-key
+   MIDTRANS_CLIENT_KEY=your-client-key
+   MIDTRANS_IS_PRODUCTION=false
+   ```
+5. In **Settings → Configuration**, set the **Payment Notification URL** to
+   `http://your-domain/midtrans/notification`.
+
+### 🔑 Google sign-in
+
+Lets people log in with one click.
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com) and create a project.
+2. Go to **APIs & Services → Credentials**, then **Create Credentials → OAuth client ID**.
+3. Choose **Web application** as the type.
+4. Add `http://localhost:8000/auth/google/callback` under **Authorized redirect URIs**.
+5. Copy the ID and secret into `.env`:
+   ```env
+   GOOGLE_CLIENT_ID=your-client-id
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+   ```
+
+### 💬 Real-time chat (Pusher)
+
+Chat works without this, it just checks for new messages every few seconds instead of instantly.
+
+1. Sign up at [pusher.com/channels](https://pusher.com/channels) and create a **Channels** app.
+2. Pick a cluster near you (for example `ap1` for Southeast Asia).
+3. From the app's **App Keys** tab, copy the values into `.env`:
+   ```env
+   BROADCAST_CONNECTION=pusher
+   PUSHER_APP_ID=your-app-id
+   PUSHER_APP_KEY=your-app-key
+   PUSHER_APP_SECRET=your-app-secret
+   PUSHER_APP_CLUSTER=ap1
+
+   VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
+   VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
+   ```
+4. Restart `composer run dev` so the front-end picks up the new keys.
+
+### 🗺️ Location search (Nominatim)
+
+Powers the "search for a place" boxes. It uses free OpenStreetMap data and needs no key. For
+production, just add a contact email to stay within their usage policy:
+
+```env
+NOMINATIM_EMAIL=you@example.com
+NOMINATIM_USER_AGENT=Barengin/1.0
+```
+
+---
+
+## 🧩 Other Services (no setup needed)
+
+Barengin also uses a few free services for maps and images. These need no keys, they're listed here
+just so you know what's talking to the outside world.
+
+<table border="1" cellpadding="8" cellspacing="0">
+  <tr><th align="left">Service</th><th align="left">What it's for</th></tr>
+  <tr><td>BigDataCloud</td><td>Turns your GPS location into a city name</td></tr>
+  <tr><td>OSRM</td><td>Draws the driving route on the live map</td></tr>
+  <tr><td>OpenStreetMap tiles</td><td>The map background you see</td></tr>
+  <tr><td>Unsplash / Pravatar</td><td>Placeholder photos and avatars</td></tr>
+</table>
+
+---
+
+## ⏰ Background Jobs
+
+Some features run on a timer (live tracking, pick-up cards, notifications). Locally you don't have
+to do anything, `composer run dev` runs the queue for you. On a real server, run Laravel's scheduler
+every minute and keep a queue worker alive:
+
+```bash
+* * * * * cd /path/to/barengin-app && php artisan schedule:run >> /dev/null 2>&1
+```
+
+```bash
+php artisan queue:work --tries=1
+```
+
+---
+
+## 🗂️ Where Things Live
+
+```
+app/
+├── Http/Controllers/   # Web and admin logic (Trip, PergiBareng, Jastip, Chat, Forum...)
+├── Http/Middleware/    # Roles, locale, streaks, last-seen...
+├── Models/             # Eloquent models
+└── Console/Commands/   # Scheduled tasks
+resources/js/
+├── Pages/              # React pages, one folder per feature
+└── i18n/               # en.json / id.json / ms.json
+routes/
+├── web.php             # App routes
+└── console.php         # The schedule
+database/
+├── migrations/         # Schema
+└── seeders/            # Demo users, trips, catalog, forum posts...
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+composer test          # run the test suite
+./vendor/bin/pint      # format code
+```
+
+---
+
+## 📄 License
+
+Built on the Laravel framework, which is open-sourced under the [MIT license](https://opensource.org/licenses/MIT).
+
+---
+
+<p align="center">Made with ❤️ for doing things <em>bareng-bareng</em>.</p>
