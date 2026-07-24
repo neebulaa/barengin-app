@@ -8,6 +8,7 @@ import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
 import { useServerTable } from "@/lib/useServerTable";
+import { formatRupiah as rupiah } from "@/lib/format";
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiUploadCloud, FiEye, FiAlertCircle, FiMapPin, FiRefreshCw, FiChevronDown, FiClock, FiUsers } from "react-icons/fi";
 import { BsChatDots } from "react-icons/bs";
 import OngoingSection from "@/Pages/Admin/Partials/OngoingSection";
@@ -43,7 +44,6 @@ export default function Index({ trips = {}, ongoing = [], filters = {} }) {
         });
     };
 
-    const rupiah = (n) => "Rp " + Number(n).toLocaleString("id-ID");
 
     // Buka grup chat trip (pemandu). Backend akan membuat/menyertakan grup lalu
     // mengalihkan ke halaman chat.

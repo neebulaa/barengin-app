@@ -5,8 +5,7 @@ import EmptyState from "@/Components/EmptyState";
 import { useTranslation } from "@/lib/useTranslation";
 import { FiChevronLeft, FiChevronDown, FiUsers, FiUserX } from "react-icons/fi";
 
-const rupiah = (n) =>
-    "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
+import { formatRupiah as rupiah } from "@/lib/format";
 
 export default function Participants({ trip, participants = [] }) {
     const { t } = useTranslation();

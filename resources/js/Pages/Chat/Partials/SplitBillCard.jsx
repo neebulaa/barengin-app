@@ -7,8 +7,7 @@ import { useTranslation } from "@/lib/useTranslation";
 import { useMidtransSnap } from "@/lib/useMidtransSnap";
 import { toast } from "@/lib/toast";
 
-const rupiah = (n) =>
-    "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
+import { formatRupiah as rupiah } from "@/lib/format";
 
 export default function SplitBillCard({ reference, state, clientKey }) {
     const { t } = useTranslation();

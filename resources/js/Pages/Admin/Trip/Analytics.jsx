@@ -2,24 +2,14 @@ import React from "react";
 import { Head } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import AccountPerformanceCard from "@/Components/AccountPerformanceCard";
+import StatCard from "@/Components/StatCard";
 import { useTranslation } from "@/lib/useTranslation";
+import { formatRupiah as rupiah } from "@/lib/format";
 import { FaSuitcase } from "react-icons/fa6";
 import { FiUsers, FiCheckCircle, FiDollarSign } from "react-icons/fi";
 
-function StatCard({ icon, label, value }) {
-    return (
-        <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5">
-            <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2">
-                <span className="text-primary-700">{icon}</span> {label}
-            </div>
-            <p className="text-2xl font-bold text-neutral-700">{value}</p>
-        </div>
-    );
-}
-
 export default function Analytics({ stats, rating }) {
     const { t } = useTranslation();
-    const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
     return (
         <>
             <div className="mb-6">

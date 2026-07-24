@@ -2,12 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { router } from "@inertiajs/react";
 import Button from "@/Components/Button";
+import Modal from "@/Components/Modal";
 import { MdReceiptLong } from "react-icons/md";
 import { FiX } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
-const rupiah = (n) =>
-    "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
+import { formatRupiah as rupiah } from "@/lib/format";
 
 /**
  * Modal "Bagi Tagihan" untuk penyelenggara pergi bareng yang sudah selesai.
@@ -106,11 +106,17 @@ export default function SplitBillModal({ trip, open, onClose }) {
         );
     };
 
-    if (!open) return null;
-
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/40 p-4">
-            <div className="max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        // Modal pembayaran: sengaja tidak bisa ditutup lewat klik backdrop / Esc
+        // supaya tagihan yang sedang disusun tidak hilang tak sengaja.
+        <Modal
+            open={open}
+            onClose={onClose}
+            size="lg"
+            className="max-h-[90vh] overflow-hidden"
+            closeOnBackdrop={false}
+            closeOnEsc={false}
+        >
                 <div className="flex items-center justify-between border-b border-neutral-100 p-5">
                     <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
@@ -284,7 +290,6 @@ export default function SplitBillModal({ trip, open, onClose }) {
                             : t("split_bill.send", "Kirim ke grup")}
                     </Button>
                 </div>
-            </div>
-        </div>
+        </Modal>
     );
 }

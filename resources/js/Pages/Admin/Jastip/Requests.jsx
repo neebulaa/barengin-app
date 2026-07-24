@@ -6,6 +6,7 @@ import FormModal from "@/Components/FormModal";
 import EmptyState from "@/Components/EmptyState";
 import Pagination from "@/Components/Pagination";
 import { useTranslation } from "@/lib/useTranslation";
+import { formatRupiah as rupiah } from "@/lib/format";
 import { FiInbox, FiAlertCircle, FiTag, FiX } from "react-icons/fi";
 import { BsChatDots } from "react-icons/bs";
 
@@ -54,7 +55,6 @@ export default function Requests({ requests = {}, item_options = [], filters = {
             onSuccess: () => setRejectModal({ open: false, id: null, name: "" }),
         });
 
-    const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
     const selectClass =
         "appearance-none rounded-xl border border-neutral-400 bg-white py-2.5 pl-4 pr-9 text-sm outline-none transition-all focus:border-primary-700 cursor-pointer";
 

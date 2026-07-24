@@ -1,6 +1,5 @@
 
-const rupiah = (n) =>
-    "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
+import { formatRupiah as rupiah } from "@/lib/format";
 
 function interpolate(template, params) {
     let out = String(template ?? "");

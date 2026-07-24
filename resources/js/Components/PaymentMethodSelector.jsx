@@ -3,8 +3,7 @@ import { MdAccountBalanceWallet } from "react-icons/md";
 import { FiCreditCard, FiAlertCircle } from "react-icons/fi";
 import { useTranslation } from "@/lib/useTranslation";
 
-const rupiah = (n) =>
-    "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
+import { formatRupiah as rupiah } from "@/lib/format";
 
 /**
  * Pemilih metode pembayaran: saldo dompet atau Midtrans.

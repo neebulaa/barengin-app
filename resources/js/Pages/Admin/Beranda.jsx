@@ -5,21 +5,12 @@ import TripCard from "@/Components/TripCard";
 import PergiBarengCard from "@/Components/PergiBarengCard";
 import JastipProductCard from "@/Components/JastipProductCard";
 import Pagination from "@/Components/Pagination";
+import StatCard from "@/Components/StatCard";
 import { useTranslation } from "@/lib/useTranslation";
+import { formatNumber } from "@/lib/format";
 import { FiUsers, FiDownload, FiArrowRight } from "react-icons/fi";
 import { FaSuitcase, FaCar } from "react-icons/fa6";
 import { MdOutlineShoppingBag } from "react-icons/md";
-
-function StatCard({ icon, label, value }) {
-    return (
-        <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5">
-            <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2">
-                <span className="text-primary-700">{icon}</span> {label}
-            </div>
-            <p className="text-2xl font-bold text-neutral-700">{Number(value).toLocaleString("id-ID")}</p>
-        </div>
-    );
-}
 
 const AVATAR_BG = [
     "bg-blue-100 text-blue-600",
@@ -73,10 +64,10 @@ export default function Beranda({ stats, latestTrips = [], latestPergi = [], pop
 
             {/* Statistik */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={<FiUsers />} label={t("admin.home.total_users")} value={stats.users} />
-                <StatCard icon={<FaSuitcase />} label={t("admin.home.total_trips")} value={stats.trips} />
-                <StatCard icon={<MdOutlineShoppingBag />} label={t("admin.home.total_jastip")} value={stats.jastip} />
-                <StatCard icon={<FaCar />} label={t("admin.home.total_pergi")} value={stats.pergi_bareng} />
+                <StatCard icon={<FiUsers />} label={t("admin.home.total_users")} value={formatNumber(stats.users)} />
+                <StatCard icon={<FaSuitcase />} label={t("admin.home.total_trips")} value={formatNumber(stats.trips)} />
+                <StatCard icon={<MdOutlineShoppingBag />} label={t("admin.home.total_jastip")} value={formatNumber(stats.jastip)} />
+                <StatCard icon={<FaCar />} label={t("admin.home.total_pergi")} value={formatNumber(stats.pergi_bareng)} />
             </div>
 
             {/* Trip terbaru */}

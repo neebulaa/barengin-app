@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "@inertiajs/react";
 import { FaTimes, FaStar } from "react-icons/fa";
 import Button from "@/Components/Button";
+import Modal from "@/Components/Modal";
 import { useTranslation } from "@/lib/useTranslation";
 
 /**
@@ -49,15 +50,8 @@ export default function ReviewModal({ target, onClose }) {
     };
 
     return (
-        <div
-            className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4"
-            onClick={onClose}
-        >
-            <form
-                onSubmit={handleSubmit}
-                className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <Modal open onClose={onClose} size="md" className="max-h-[90vh] overflow-y-auto">
+            <form onSubmit={handleSubmit}>
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 px-6 pt-6">
                     <div>
@@ -173,7 +167,7 @@ export default function ReviewModal({ target, onClose }) {
                     </Button>
                 </div>
             </form>
-        </div>
+        </Modal>
     );
 }
 

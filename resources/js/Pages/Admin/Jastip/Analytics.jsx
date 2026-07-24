@@ -3,28 +3,15 @@ import { Head, Link } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import SalesChart from "@/Components/SalesChart";
 import AccountPerformanceCard from "@/Components/AccountPerformanceCard";
+import StatCard from "@/Components/StatCard";
 import { useTranslation } from "@/lib/useTranslation";
+import { formatRupiah as rupiah } from "@/lib/format";
 import { FiShoppingCart, FiTrendingUp, FiUsers, FiStar } from "react-icons/fi";
-
-function StatCard({ icon, label, value, suffix }) {
-    return (
-        <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-sm">
-            <div className="mb-2 flex items-center gap-2 text-sm text-neutral-500">
-                <span className="text-primary-700">{icon}</span> {label}
-            </div>
-            <p className="text-2xl font-bold text-neutral-700">
-                {value}
-                {suffix && <span className="ml-1 text-sm font-medium text-neutral-400">{suffix}</span>}
-            </p>
-        </div>
-    );
-}
 
 const FALLBACK_IMG = "/assets/default-image.png";
 
 export default function Analytics({ stats, monthly = [], bestSeller, rating }) {
     const { t } = useTranslation();
-    const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
     return (
         <>

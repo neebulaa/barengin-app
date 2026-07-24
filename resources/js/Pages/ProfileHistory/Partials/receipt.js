@@ -1,3 +1,5 @@
+import { formatRupiah as rupiah } from "@/lib/format";
+
 /**
  * Membuat file bukti transaksi (HTML mandiri) lalu mengunduhnya.
  * Logo Barengin di-embed sebagai data URI agar file tetap utuh saat dibuka offline.
@@ -7,7 +9,6 @@ export async function downloadReceipt(transaction) {
     if (!d) return;
 
     const logo = await loadLogoDataUri();
-    const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
     const itemsRows = d.items
         .map(

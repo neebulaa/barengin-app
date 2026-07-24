@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link } from "@inertiajs/react";
 import { FaTimes, FaChevronRight } from "react-icons/fa";
 import Button from "@/Components/Button";
+import Modal from "@/Components/Modal";
 import ImageLightbox from "@/Components/ImageLightbox";
 import { useTranslation } from "@/lib/useTranslation";
 
-const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+import { formatRupiah as rupiah } from "@/lib/format";
 
 // Heading status dilokalkan dari status transaksi (bukan teks server).
 const STATUS_LABEL = {
@@ -67,14 +68,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
 
     return (
         <>
-        <div
-            className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4"
-            onClick={onClose}
-        >
-            <div
-                className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <Modal open onClose={onClose} size="lg" className="max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4">
                     <h2 className="text-lg font-semibold text-neutral-900">
@@ -278,8 +272,7 @@ export default function TransactionDetailModal({ transaction, onClose, onReview 
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+        </Modal>
 
         <ImageLightbox
             images={itemImages}

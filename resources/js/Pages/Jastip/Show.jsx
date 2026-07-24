@@ -20,7 +20,7 @@ import {
 } from "react-icons/fa6";
 import { BsChatText } from "react-icons/bs";
 
-const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+import { formatRupiah as rupiah } from "@/lib/format";
 
 export default function Show({ product, related = [] }) {
     const { t } = useTranslation();

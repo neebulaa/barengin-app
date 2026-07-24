@@ -16,7 +16,7 @@ const STATUS_BADGE = {
     cancelled: "bg-neutral-100 text-neutral-500",
 };
 
-const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+import { formatRupiah as rupiah } from "@/lib/format";
 
 // Kartu satu request titipan di tab "Titipan Saya". Saat statusnya `quoted`,
 // menampilkan rincian penawaran + tombol bayar (saldo dompet atau Midtrans Snap).

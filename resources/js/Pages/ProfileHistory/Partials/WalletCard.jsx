@@ -4,8 +4,7 @@ import { FiChevronDown, FiChevronUp, FiPlus } from "react-icons/fi";
 import FormModal from "@/Components/FormModal";
 import { useTranslation } from "@/lib/useTranslation";
 
-const rupiah = (n) =>
-    "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0));
+import { formatRupiah as rupiah } from "@/lib/format";
 
 /** Nominal cepat & batas minimal - selaras dengan WalletController. */
 const QUICK_AMOUNTS = [50000, 100000, 250000, 500000];

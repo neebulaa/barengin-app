@@ -7,7 +7,7 @@ import { useTranslation } from "@/lib/useTranslation";
 import { BsCheckLg, BsChatDots } from "react-icons/bs";
 import { FiClock } from "react-icons/fi";
 
-const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+import { formatRupiah as rupiah } from "@/lib/format";
 
 export default function Success({ order }) {
     const { t } = useTranslation();

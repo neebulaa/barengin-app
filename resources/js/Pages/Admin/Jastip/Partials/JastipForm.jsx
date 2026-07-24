@@ -9,6 +9,7 @@ import { toast } from "@/lib/toast";
 import { INDONESIA_PROVINCES } from "@/lib/indonesiaProvinces";
 import { regenciesOf } from "@/lib/indonesiaRegencies";
 import { COUNTRIES, countryCodeOf } from "@/lib/countries";
+import { formatRupiah as rupiah } from "@/lib/format";
 import { FiPlus, FiX, FiTrash2, FiImage, FiMapPin, FiShoppingBag } from "react-icons/fi";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -27,8 +28,6 @@ export const emptyVariant = () => ({
     value: "", price: "", stock: "", min_buy: "1",
     image: null, image_url: null, image_name: null,
 });
-
-const rupiah = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
 export default function JastipForm({
     data,
